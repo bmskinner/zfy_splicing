@@ -36,20 +36,21 @@ get.genome.data <- function(){
 # Get the identifiers for genes of interest
 get.gene.locations <- function(){
   # Manual locations from Ensembl
-  zfx.y.locations <- matrix(c("chicken", "ZFX",  "ENSGALG00010003052", "1:118296163-118318819", "ENSGALT00010007119",
-                              "opossum", "ZFX",  "ENSMODG00000007512", "4:42457506-42528732",   "ENSMODT00000009508",
-                              "mouse",   "Zfx",  "ENSMUSG00000079509", "X:93118237-93167308",   "ENSMUST00000088102",
-                              "mouse",   "Zfy1", "ENSMUSG00000053211", "Y:725128-797409",       "ENSMUST00000189888",
-                              "mouse",   "Zfy2", "ENSMUSG00000000103", "Y:2106015-2170409",     "ENSMUST00000187148",
-                              "human",   "ZFX",  "ENSG00000005889",    "X:24149173-24216255",   "ENST00000304543",
-                              "human",   "ZFY",  "ENSG00000067646",    "Y:2935281-2982506",     "ENST00000155093",
-                              "macaque", "ZFX",  "ENSMMUG00000009801", "X:23975826-24043762",   "ENSMMUT00000013690",
-                              "macaque", "ZFY",  "ENSMMUG00000046378", "Y:258478-289188",       "ENSMMUT00000057467",
-                              "rabbit",  "ZFX",  "ENSOCUG00000003815", "X:10077068-10114732",   "ENSOCUT00000003815",
-                              "rat",     "Zfx",  "ENSRNOG00000005624", "X:58804691-58853265",   "ENSRNOT00000076613",
-                              "rat",     "Zfy2", "ENSRNOG00000053042", "JACYVU010000493.1:234470-273381", "ENSRNOT00000077708"), 
-                            byrow = TRUE, ncol = 5)
-  colnames(zfx.y.locations) <- c("CommonName", "Gene","EnsemblId", "ManualLocation", "CanonicalTranscript")
+  zfx.y.locations <- matrix(c("chicken", "ZFX",  "ENSGALG00010003052", "ENSGALT00010007119",
+                              "opossum", "ZFX",  "ENSMODG00000007512", "ENSMODT00000009508",
+                              "mouse",   "Zfx",  "ENSMUSG00000079509", "ENSMUST00000088102",
+                              "mouse",   "Zfy1", "ENSMUSG00000053211", "ENSMUST00000189888",
+                              "mouse",   "Zfy2", "ENSMUSG00000000103", "ENSMUST00000187148",
+                              "mouse",   "Zfa", "ENSMUSG00000121690",  "ENSMUST00000180673",
+                              "human",   "ZFX",  "ENSG00000005889",    "ENST00000304543",
+                              "human",   "ZFY",  "ENSG00000067646",    "ENST00000155093",
+                              "macaque", "ZFX",  "ENSMMUG00000009801", "ENSMMUT00000013690",
+                              "macaque", "ZFY",  "ENSMMUG00000046378", "ENSMMUT00000057467",
+                              "rabbit",  "ZFX",  "ENSOCUG00000003815", "ENSOCUT00000003815",
+                              "rat",     "Zfx",  "ENSRNOG00000005624", "ENSRNOT00000076613",
+                              "rat",     "Zfy2", "ENSRNOG00000053042", "ENSRNOT00000077708"), 
+                            byrow = TRUE, ncol = 4)
+  colnames(zfx.y.locations) <- c("CommonName", "Gene","EnsemblId", "CanonicalTranscript")
   zfx.y.locations
 }
 
