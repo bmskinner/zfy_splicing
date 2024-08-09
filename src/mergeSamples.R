@@ -13,9 +13,11 @@ filtered.samples <- do.call(rbind, lapply(list.files(path="metadata", pattern = 
 # Create command to merge bams in groups
 groups <- filtered.samples %>% 
   dplyr::group_by(Organism, Organism_part, Timepoint, CommonName) %>% # not by sex - no difference seen in first pass
-  dplyr::mutate(bam.file = paste0("data/", CommonName, "/", Run, ".bam")) %>%
+  dplyr::mutate(bam.file = paste0("data/", CommonName, "/", Run, ".bam"),
+                lock.file = paste0("data/", CommonName, "/", Run, ".lck")) %>%
   dplyr::summarise(bams = paste(bam.file, collapse = " "),
                    all.bams.present = all(file.exists(bam.file)),
+                   lock.files.exist  = any(file.exists(lock.file)), # bam may be in process of being written
                    count = n()) %>%
   dplyr::mutate(merged.bam = paste0("data/merged/", CommonName, ".", Organism_part, ".", Timepoint, ".bam"),
                 samtools.merge.arguments = paste("merge -@ 7 -r -o", merged.bam,  bams))  %>%
@@ -25,7 +27,7 @@ groups <- filtered.samples %>%
 # Merge the bams
 cat("Merging bams\n")
 to.merge <- groups %>% # don't repeat merging
-  dplyr::filter(all.bams.present & !merged.bam.exists) # ensure we only try to merge when all bams of a group are available
+  dplyr::filter(all.bams.present & !merged.bam.exists & !lock.files.exist) # ensure we only try to merge when all bams of a group are available and complete
 if(nrow(to.merge)>0){
   mapply(system2, command="samtools", args=to.merge$samtools.merge.arguments)
 }
