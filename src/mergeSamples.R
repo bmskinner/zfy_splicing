@@ -84,3 +84,6 @@ for(i in 1:nrow(to.sashimi)){
   }
 }
 
+# Zip the results
+system2("tar", "-czf values.tar.gz data/merged/*.Rds")
+
