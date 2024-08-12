@@ -77,6 +77,7 @@ if(nrow(to.sashimi)==0){
 cat("Extracting splice sites from", nrow(to.sashimi), "samples\n")
 for(i in 1:nrow(to.sashimi)){
   data <- to.sashimi[i,]
+  cat("Checking for", data$junctions.file, "\n")
   if(!file.exists(data$junctions.file)){
     cmd <-  paste0("activate ggsashimi && src/ggsashimi.py -b ", data$merged.bam, " -c ", data$FlankedLocations, " -g genomes/", data$GTF, " -o ", data$junctions.file, " -F png")
     cat("source", cmd, "\n")
