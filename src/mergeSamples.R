@@ -66,6 +66,7 @@ create.xlsx(groups, "report/grouped.bams.xlsx")
 
 # Extract splice junctions for each combination
 to.sashimi <-  groups %>% # don't repeat merging
+  dplyr::mutate(merged.bam.exists = file.exists(merged.bam)) %>%
   dplyr::filter(merged.bam.exists) %>% # ensure we only try to sashimi when all bams of a group are available
   dplyr::mutate(junctions.file = paste0("data/merged/", CommonName, ".", Organism_part, ".", Timepoint, ".", EnsemblId, ".Rds"))
 
@@ -77,7 +78,6 @@ if(nrow(to.sashimi)==0){
 cat("Extracting splice sites from", nrow(to.sashimi), "samples\n")
 for(i in 1:nrow(to.sashimi)){
   data <- to.sashimi[i,]
-  cat("Checking for", data$junctions.file, "\n")
   if(!file.exists(data$junctions.file)){
     cmd <-  paste0("activate ggsashimi && src/ggsashimi.py -b ", data$merged.bam, " -c ", data$FlankedLocations, " -g genomes/", data$GTF, " -o ", data$junctions.file, " -F png")
     cat("source", cmd, "\n")
