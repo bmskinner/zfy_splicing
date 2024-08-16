@@ -6,7 +6,7 @@ CHICKEN_SAMPLES=$(cat metadata/chicken.filt.csv | cut -f 1 -d , | tail -n +2)
 OPOSSUM_SAMPLES=$(cat metadata/opossum.filt.csv | cut -f 1 -d , | tail -n +2)
 MOUSE_SAMPLES=$(cat metadata/mouse.filt.csv | cut -f 1 -d , | tail -n +2)
 HUMAN_SAMPLES=$(cat metadata/human.filt.csv | cut -f 1 -d , | tail -n +2)
-RABBIT_SAMPLES=$(cat metadata/rabbit.filt.csv | cut -f 1 -d , | tail -n +2)
+# RABBIT_SAMPLES=$(cat metadata/rabbit.filt.csv | cut -f 1 -d , | tail -n +2)
 RAT_SAMPLES=$(cat metadata/rat.filt.csv | cut -f 1 -d , | tail -n +2)
 MACAQUE_SAMPLES=$(cat metadata/macaque.filt.csv | cut -f 1 -d , | tail -n +2)
 
@@ -76,9 +76,9 @@ for ERR in ${HUMAN_SAMPLES}; do
 	map_sample human ${ERR} GRCh38
 done
 
-for ERR in ${RABBIT_SAMPLES}; do
-	map_sample rabbit ${ERR} OryCun2.0
-done
+# for ERR in ${RABBIT_SAMPLES}; do
+# 	map_sample rabbit ${ERR} OryCun2.0
+# done
 
 for ERR in ${RAT_SAMPLES}; do
 	map_sample rat ${ERR} mRatBN7.2

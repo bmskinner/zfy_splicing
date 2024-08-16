@@ -64,20 +64,20 @@ read.csv("metadata/human.csv") %>%
   dplyr::select(Run, DevStage, sex, Timepoint, Organism_part, Organism) %>%
   write.csv(., file = "metadata/human.filt.csv", row.names = FALSE, quote = TRUE)
 
-# Rabbit E-MTAB-6782
-read.csv("metadata/rabbit.csv") %>%
-  dplyr::rename(DevStage = Experimental_Factor._developmental_stage..exp.,
-                OrganismPart = Experimental_Factor._organism_part..exp.) %>%
-    dplyr::mutate(Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
-                                        DevStage == "postnatal day 0" ~ "birth",
-                                        DevStage == "postnatal day 14" ~ "mid-meiosis",
-                                        DevStage == "postnatal day 84" ~ "adult",
-                                        DevStage == "postnatal day 186 to 548" ~ "adult",
-                                        .default = "other"
-  )) %>%
-  dplyr::filter(Timepoint != "other" & Timepoint != "embryo") %>%
-  dplyr::select(Run, DevStage, sex, Timepoint, Organism_part, Organism) %>%
-  write.csv(., file = "metadata/rabbit.filt.csv", row.names = FALSE, quote = TRUE)
+# Rabbit E-MTAB-6782 - no need to include, there is no Y assembly yet
+# read.csv("metadata/rabbit.csv") %>%
+#   dplyr::rename(DevStage = Experimental_Factor._developmental_stage..exp.,
+#                 OrganismPart = Experimental_Factor._organism_part..exp.) %>%
+#     dplyr::mutate(Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
+#                                         DevStage == "postnatal day 0" ~ "birth",
+#                                         DevStage == "postnatal day 14" ~ "mid-meiosis",
+#                                         DevStage == "postnatal day 84" ~ "adult",
+#                                         DevStage == "postnatal day 186 to 548" ~ "adult",
+#                                         .default = "other"
+#   )) %>%
+#   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") %>%
+#   dplyr::select(Run, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+#   write.csv(., file = "metadata/rabbit.filt.csv", row.names = FALSE, quote = TRUE)
 
 
 # Rat E-MTAB-6811
@@ -124,10 +124,6 @@ sample.classifications <- filtered.samples %>%
                 MappedTimepoint = Timepoint) %>%
   dplyr::summarise(count = n()) %>%
   dplyr::ungroup()
-
-
-
-
 
 # Export summary tables
 create.xlsx(filtered.samples, "report/analysed.samples.xlsx")
