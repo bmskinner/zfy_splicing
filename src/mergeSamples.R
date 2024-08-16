@@ -5,6 +5,7 @@ library(tidyverse)
 library(rtracklayer)
 library(GenomicRanges)
 library(parallel)
+library(fs)
 source("src/functions.R")
 # Read the filtered samples, match folder names
 filtered.samples <- do.call(rbind, lapply(list.files(path="metadata", pattern = "*.filt.csv", full.names = TRUE), 
@@ -79,12 +80,14 @@ cat("Extracting splice sites from", nrow(to.sashimi), "samples\n")
 for(i in 1:nrow(to.sashimi)){
   data <- to.sashimi[i,]
   if(!file.exists(data$junctions.file)){
-    cmd <-  paste0("activate ggsashimi && src/ggsashimi.py -b ", data$merged.bam, " -c ", data$FlankedLocations, " -g genomes/", data$GTF, " -o ", data$junctions.file, " -F png")
+    cmd <-  paste0("activate ggsashimi && python src/ggsashimi.py -b ", data$merged.bam, " -c ", data$FlankedLocations, " -g genomes/", data$GTF, " -o ", data$junctions.file, " -F png")
     cat("source", cmd, "\n")
     system2("source",cmd)
   }
 }
 
 # Zip the results
+fs::file_delete()
 system2("tar", "-czf values.tar.gz data/merged/*.Rds")
+cat("Done!\n")
 
