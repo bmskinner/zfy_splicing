@@ -1,6 +1,7 @@
 library(parallel)
 library(xlsx)
 
+# Make a factor of times to allow ordering of plots
 TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult"), levels = c("birth", "mid-meiosis", "adult"))
 
 # Write the given data frame to an Excel file
@@ -25,7 +26,7 @@ get.genome.data <- function(){
                       "opossum", "Monodelphis_domestica.ASM229v1.112.gtf",
                       "mouse", "Mus_musculus.GRCm39.112.gtf",
                       "human", "Homo_sapiens.GRCh38.112.gtf",
-                      "rabbit", "Oryctolagus_cuniculus.OryCun2.0.112.gtf",
+                      # "rabbit", "Oryctolagus_cuniculus.OryCun2.0.112.gtf",
                       "rat", "Rattus_norvegicus.mRatBN7.2.112.gtf",
                       "macaque", "Macaca_mulatta.Mmul_10.112.gtf"),
                     byrow = TRUE, ncol = 2 )
@@ -41,17 +42,128 @@ get.gene.locations <- function(){
                               "mouse",   "Zfx",  "ENSMUSG00000079509", "ENSMUST00000088102",
                               "mouse",   "Zfy1", "ENSMUSG00000053211", "ENSMUST00000189888",
                               "mouse",   "Zfy2", "ENSMUSG00000000103", "ENSMUST00000187148",
-                              "mouse",   "Zfa", "ENSMUSG00000121690",  "ENSMUST00000180673",
+                              # "mouse",   "Zfa", "ENSMUSG00000121690",  "ENSMUST00000180673",
                               "human",   "ZFX",  "ENSG00000005889",    "ENST00000304543",
                               "human",   "ZFY",  "ENSG00000067646",    "ENST00000155093",
                               "macaque", "ZFX",  "ENSMMUG00000009801", "ENSMMUT00000013690",
                               "macaque", "ZFY",  "ENSMMUG00000046378", "ENSMMUT00000057467",
-                              "rabbit",  "ZFX",  "ENSOCUG00000003815", "ENSOCUT00000003815",
+                              # "rabbit",  "ZFX",  "ENSOCUG00000003815", "ENSOCUT00000003815",
                               "rat",     "Zfx",  "ENSRNOG00000005624", "ENSRNOT00000076613",
                               "rat",     "Zfy2", "ENSRNOG00000053042", "ENSRNOT00000077708"), 
                             byrow = TRUE, ncol = 4)
   colnames(zfx.y.locations) <- c("CommonName", "Gene","EnsemblId", "CanonicalTranscript")
   zfx.y.locations
+}
+
+# Annotate which exons contain interesting features for labelling plots
+get.annotated.exons <- function(){
+  features <- matrix(c(
+                       # Mouse Zfy1
+                       "ENSMUSE00001036800", "1", "",
+                       "ENSMUSE00001015775", "2", "SP",
+                       "ENSMUSE00000993470", "3", "",
+                       "ENSMUSE00000568758", "4", "",
+                       "ENSMUSE00001050190", "5", "",
+                       "ENSMUSE00001068922", "6", "",
+                       "ENSMUSE00001324629", "7", "DBD",
+                       
+                       # Mouse Zfy2
+                       "ENSMUSE00000992753", "1", "",
+                       "ENSMUSE00000984092", "2", "SP",
+                       "ENSMUSE00001047922", "3", "",
+                       "ENSMUSE00000704557", "4", "",
+                       "ENSMUSE00001005853", "5", "",
+                       "ENSMUSE00001089521", "6", "",
+                       "ENSMUSE00001334440", "7", "DBD",
+                       
+                       # Mouse Zfx
+                       "ENSMUSE00001269295", "1", "",
+                       "ENSMUSE00000149474", "2", "",
+                       "ENSMUSE00000149476", "3", "",
+                       "ENSMUSE00000149475", "4", "",
+                       "ENSMUSE00000477715", "5", "",
+                       "ENSMUSE00000149469", "6", "",
+                       "ENSMUSE00000744375", "7", "DBD",
+
+                       # Chicken ZFX
+                       "ENSGALE00010028768", "1", "",
+                       "ENSGALE00010028778", "2", "SP",
+                       "ENSGALE00010028781", "3", "",
+                       "ENSGALE00010028783", "4", "",
+                       "ENSGALE00010028784", "5", "",
+                       "ENSGALE00010028785", "6", "",
+                       "ENSGALE00010028786", "7", "DBD",
+                       
+                       # Opossum ZFX
+                       "ENSMODE00000078848", "1", "",
+                       "ENSMODE00000078849", "2", "SP",
+                       "ENSMODE00000078850", "3", "",
+                       "ENSMODE00000078860", "4", "",
+                       "ENSMODE00000078869", "5", "",
+                       "ENSMODE00000307185", "6", "",
+                       "ENSMODE00000373268", "7", "DBD",
+                       
+                       # Human ZFX
+                       "ENSE00002688681", "1", "",
+                       "ENSE00001176296", "2", "SP",
+                       "ENSE00003592125", "3", "",
+                       "ENSE00003471331", "4", "",
+                       "ENSE00001598623", "5", "",
+                       "ENSE00002732075", "6", "",
+                       "ENSE00001708883", "7", "DBD",
+                       
+                       # Human ZFY
+                       "ENSE00003889480", "1", "",
+                       "ENSE00003895848", "2", "SP",
+                       "ENSE00003764421", "3", "",
+                       "ENSE00003768468", "4", "",
+                       "ENSE00003889859", "5", "",
+                       "ENSE00003891660", "6", "",
+                       "ENSE00003895708", "7", "DBD",
+                       
+                       # Rat Zfx
+                       "ENSRNOE00000647045", "1", "",
+                       "ENSRNOE00000599588", "2", "",
+                       "ENSRNOE00000054034", "3", "SP",
+                       "ENSRNOE00000613060", "4", "",
+                       "ENSRNOE00000053082", "5", "",
+                       "ENSRNOE00000053178", "6", "",
+                       "ENSRNOE00000296274", "7", "",
+                       "ENSRNOE00000514747", "8", "DBD",
+                       
+                       # Rat Zfy2
+                       "ENSRNOE00000541567", "1", "",
+                       "ENSRNOE00000544130", "2", "SP",
+                       "ENSRNOE00000537273", "3", "",
+                       "ENSRNOE00000546137", "4", "",
+                       "ENSRNOE00000568193", "5", "",
+                       "ENSRNOE00000517140", "6", "",
+                       "ENSRNOE00000539578", "7", "DBD",
+                       
+                       # Macaque ZFX
+                       "ENSMMUE00000095158", "1", "",
+                       "ENSMMUE00000413272", "2", "",
+                       "ENSMMUE00000388194", "3", "SP",
+                       "ENSMMUE00000095132", "4", "",
+                       "ENSMMUE00000095135", "5", "",
+                       "ENSMMUE00000095138", "6", "",
+                       "ENSMMUE00000095142", "7", "",
+                       "ENSMMUE00000095147", "8", "DBD",
+                       
+                       # Macaque ZFY
+                       "ENSMMUE00000393097", "1", "",
+                       "ENSMMUE00000415995", "2", "SP",
+                       "ENSMMUE00000337864", "3", "",
+                       "ENSMMUE00000095156", "4", "",
+                       "ENSMMUE00000355682", "5", "",
+                       "ENSMMUE00000095161", "6", "",
+                       "ENSMMUE00000407322", "7", "DBD"
+                       
+                       ),
+                     
+                     byrow=TRUE, ncol = 3)
+  colnames(features) <- c("ExonId", "CodingExonNumber", "Feature")
+  features
 }
 
 # Global data frame with gene ids for all species
