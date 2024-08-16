@@ -27,6 +27,8 @@ groups <- filtered.samples %>%
 
 # Merge the bams
 cat("Merging bams\n")
+
+fs::dir_create("data/merged")
 to.merge <- groups %>% # don't repeat merging
   dplyr::filter(all.bams.present & !merged.bam.exists & !lock.files.exist) # ensure we only try to merge when all bams of a group are available and complete
 if(nrow(to.merge)>0){
@@ -87,7 +89,7 @@ for(i in 1:nrow(to.sashimi)){
 }
 
 # Zip the results
-fs::file_delete()
+fs::file_delete("values.tar.gz")
 system2("tar", "-czf values.tar.gz data/merged/*.Rds")
 cat("Done!\n")
 

@@ -17,6 +17,8 @@ map_sample () {
 	SPECIES=$(echo $1 | tr -d '"')
 	ERR=$(echo $2 | tr -d '"')
 	GENOME=$(echo $3 | tr -d '"')
+
+	mkdir -p data/${SPECIES}
 	
 	# Create if missing
 	if [ ! -e data/${SPECIES}/${ERR}.bam ]; then

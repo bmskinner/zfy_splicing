@@ -7,12 +7,14 @@ library(data.table)
 library(patchwork)
 library(grid)
 library(scales)
+library(fs)
 source("src/functions.R")
 
-#### Main functions #### 
-
+# Ensure output dirs exist
+fs::dir_create(c("report/species", "report/timepoints", "report/tissues"))
 gtf.data <- read.gtf.data()
-# gtf.data <- list(chicken=rtracklayer::import("genomes/Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.112.gtf"))
+
+#### Main functions #### 
 
 is.reverse.strand <- function(transcript.id, gtf.data){
   exons <- gtf.data[gtf.data$type=="exon" & gtf.data$transcript_id==transcript.id]
@@ -287,6 +289,7 @@ make.species.panel <- function(species, timepoint, gene.id){
 
 # Create a sashimi panel plot for all species of the given tissue and timepoint
 make.tissue.panel <- function(tissue, timepoint){
+  cat("Making", tissue, "at", timepoint, "\n")
   data.files <- list.files(path = "data/merged", pattern = paste0(".*\\.", tissue, "\\.", timepoint, "\\..*.Rds"), full.names = TRUE)
   if(length(data.files)==0) return()
   data <- lapply(data.files, read.rds.file)
@@ -361,7 +364,7 @@ mapply(make.tissue.panel, tissue.groups$Organism_part, tissue.groups$Timepoint)
 mapply(make.timepoint.panel, timepoint.groups$CommonName, timepoint.groups$Organism_part, timepoint.groups$EnsemblId)
 # make.timepoint.panel("chicken", "testis", "ENSGALG00010003052")
 
-#### Condense info #### 
+#### Condense introns for neater plotting #### 
 
 # Plot junctions directly on exon track
 make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=5, label="tissue", 
@@ -680,7 +683,7 @@ make.condensed.species.panels <- function(species, timepoint, gene.id){
   
   gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$EnsemblId==gene.id,]$Gene
   
-  out.png.file <- paste0("report/species/", species, ".", timepoint, ".", gene.id, ".", gene.name, ".combined.png")
+  out.png.file <- paste0("report/species/", species, ".", timepoint, ".", gene.id, ".", gene.name, ".condensed.png")
   cat("Making", out.png.file, "\n")
   
   plots <- lapply(data, \(x)  make.gene.track.sashimi.panel(x,label=paste0(x$tissue), show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
@@ -699,7 +702,7 @@ make.condensed.tissue.panels <- function(tissue, timepoint){
   if(length(data.files)==0) return()
   data <- lapply(data.files, read.rds.file)
   
-  out.png.file <- paste0("report/tissues/", tissue, ".", timepoint, ".combined.png")
+  out.png.file <- paste0("report/tissues/", tissue, ".", timepoint, ".condensed.png")
   
   plots <- lapply(data, \(x) make.gene.track.sashimi.panel(x, label= paste0(x$species, "\n", x$gene.name), 
                                                            show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
@@ -728,20 +731,15 @@ make.condensed.timepoint.panels <- function(species, tissue, gene.id){
   
   gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$EnsemblId==gene.id,]$Gene
   
-  out.png.file <-  paste0("report/timepoints/", species, ".", tissue, ".", gene.id, ".", gene.name, "combined.png")
+  out.png.file <-  paste0("report/timepoints/", species, ".", tissue, ".", gene.id, ".", gene.name, "condensed.png")
   
   plots <- lapply(data, \(x) make.gene.track.sashimi.panel(x, label=paste0(x$species, " ", gene.name, "\n",  x$timepoint),
                                                            show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
-  track <- make.gene.track(data[[1]])
-  plots[[length(plots)+1]] <- track
-  
+
   patchwork::wrap_plots(plots, nrow = length(plots))
   ggsave(plot = last_plot(), filename =out.png.file, dpi = 300, units = "mm", width = 170, height = 240)
 }
 
-
-# test.data <- make.combined.panels("chicken", "adult", "ENSGALG00010003052")
-# test.data <- make.combined.panels("mouse", "adult", "ENSMUSG00000053211")
 # test.data <- make.combined.panels("human", "adult", "ENSG00000005889")
 mapply(make.condensed.species.panels, species.groups$CommonName, species.groups$Timepoint,species.groups$EnsemblId)
 
@@ -751,181 +749,3 @@ mapply(make.condensed.tissue.panels, tissue.groups$Organism_part, tissue.groups$
 # make.condensed.timepoint.panels("mouse", "forebrain", "ENSMUSG00000121690")
 mapply(make.condensed.timepoint.panels, timepoint.groups$CommonName, timepoint.groups$Organism_part, timepoint.groups$EnsemblId)
 
-#### Condense info more #### 
-
-# given a gtf file and a gene to be plotted, make every exon the same width and 
-# every intron the same width. Apply these new coordinates to the given junctions also.
-# However, exons can overlap. Ensure to correct for this.
-# condense.exon.bounds <- function(gtf.data, gene.id){
-#   exons <- gtf.data[gtf.data$type=="exon" & gtf.data$gene_id==gene.id]
-#   
-#   reduced <- GenomicRanges::shift(GenomicRanges::reduce(exons), shift=-min(GenomicRanges::start(exons)))
-#   reduced$Group <- 1:length(reduced)
-#   print(reduced)
-#   
-#   exons <- GenomicRanges::shift(exons, shift=-min(GenomicRanges::start(exons)))
-#   
-#   exons <- exons %>%
-#     as.data.frame() %>%
-#     dplyr::select(start, end,  exon_id, strand) %>%
-#     # dplyr::mutate(ordered.start = ifelse(strand=="-", end, start),
-#     #               ordered.end  =  ifelse(strand=="-", start, end) ) %>%
-# 
-#     dplyr::distinct()
-#     # dplyr::mutate(condensed.start = dplyr::row_number()*2-1,
-#     #               condensed.end   = condensed.start+1) %>%
-#     # dplyr::select(exon.start = start, exon.end=end, condensed.start, condensed.end, exon_id, strand)
-#   exons
-# }
-# 
-# map.condensed.exon.bounds <- function(junctions, exons){
-#   
-#   s <- exons[,c(1, 3)]
-#   e <- exons[,c(2, 4)]
-#   
-#   colnames(s) <- c("original", "condensed")
-#   colnames(e) <- c("original", "condensed")
-#   ex <- rbind(s, e)
-#   
-#   junctions %>%
-#     dplyr::mutate(exon.end = x-1, exon.start = xend) %>%
-#     merge(., ex, by.x = "exon.end", by.y="original" ) %>%
-# 
-#     merge(., ex, by.x = "exon.start", by.y="original" ) %>%
-#     dplyr::select(-x, -xend) %>%
-#     dplyr::rename(xend = condensed.x, x=condensed.y)
-# }
-# 
-# condense.exon.bounds(gtf.data$chicken, "ENSGALG00010003052")
-# map.condensed.exon.bounds(test[[1]]$junction_list, condense.exon.bounds(gtf.data$chicken, "ENSGALG00010003052"))
-# 
-# make.condensed.panel <- function(sashimi.data, min.spanning.reads=5, label="tissue"){
-#   cat("Making sashimi panel\n")
-#   exons <- condense.exon.bounds(gtf.data[[sashimi.data$species]], sashimi.data$gene.id)
-#   junctions <- map.condensed.exon.bounds(sashimi.data$junction_list, exons)
-#   anns <- sashimi.data$ann_list
-#   
-#   # Set coordinates for the x axis
-#   is.minus.strand <- any(anns$exons$strand=="-")
-#   xmin <- 0
-#   xmax <- max(junctions$x, junctions$xend)
-#   
-#   xtmp <- xmin
-#   xmin <- ifelse(is.minus.strand, xmax, xmin)
-#   xmax <- ifelse(is.minus.strand, xtmp, xmax)
-#   
-#   ymax <- max(junctions$count)
-#   
-#   junctions <- junctions %>% 
-#     dplyr::filter(count>=min.spanning.reads)
-#   
-#   if(nrow(junctions)>0){
-#     # Calculate charting coordinates
-#     junctions$total.count <- sum(junctions$count)
-#     junctions$isEven <- sapply(1:nrow(junctions), \(x) x%%2==0)
-#   }
-#   
-#   
-#   # Create the coverage plot
-#   splot <- ggplot() + 
-#     coord_cartesian(ylim = c(0-(ymax*0.5), ymax*1.5), 
-#                     xlim = c(xmin, xmax))+
-#     scale_x_continuous(expand=c(0,0.25))+
-#     labs(y = sashimi.data[[label]])+
-#     # Draw the exon squares
-#     geom_rect(data=exons, aes(xmin=condensed.start, xmax=condensed.end, ymin=-5, ymax=5), fill="black")
-#   
-#   
-#   add.junction <- function(splot, xmin, xmax, ymin, ymax, is.even, count, is.canonical){
-#     
-#     # Define the spline shapes that make the junction lines
-#     spline.color <- ifelse(is.canonical, "grey", "black")
-#     spline.size  <- ifelse(is.canonical, 1, 2)
-#     
-#     l.spline.btm <- grid::xsplineGrob(x=c(0, 0, 1, 1), y=c(1, 0, 0, 0), shape=1, gp=gpar(lwd=spline.size, col=spline.color))
-#     l.spline.top <- grid::xsplineGrob(x=c(0, 0, 1, 1), y=c(0, 1, 1, 1), shape=1, gp=gpar(lwd=spline.size, col=spline.color))
-#     r.spline.btm <- grid::xsplineGrob(x=c(1, 1, 0, 0), y=c(1, 0, 0, 0), shape=1, gp=gpar(lwd=spline.size, col=spline.color))
-#     r.spline.top <- grid::xsplineGrob(x=c(1, 1, 0, 0), y=c(0, 1, 1, 1), shape=1, gp=gpar(lwd=spline.size, col=spline.color))
-#     
-#     # Determine which splines to use for minus strand versus plus strand transcripts
-#     l.grob.btm <- l.spline.btm 
-#     if(is.minus.strand) l.grob.btm <- r.spline.btm
-#     
-#     l.grob.top <- l.spline.top
-#     if(is.minus.strand) l.grob.top <- r.spline.top
-#     
-#     r.grob.btm <- r.spline.btm 
-#     if(is.minus.strand) r.grob.btm <- l.spline.btm
-#     
-#     r.grob.top <- r.spline.top
-#     if(is.minus.strand) r.grob.top <- l.spline.top
-#     
-#     xmid <- (xmin + xmax) / 2
-#     ymid <- ((ymin + ymax) / 2) * 1.25
-#     
-#     # Left arc
-#     if(is.even){ # Junctions below zero
-#       splot <- splot+annotation_custom(grob = l.grob.btm, 
-#                                        xmin = xmin, 
-#                                        xmax = xmid, 
-#                                        ymin = -ymid*0.25, 
-#                                        ymax = 0)
-#     } else {
-#       splot <- splot+annotation_custom(grob = l.grob.top, 
-#                                        xmin = xmin, 
-#                                        xmax = xmid, 
-#                                        ymax = ymid, 
-#                                        ymin = 0)
-#     }
-#     
-#     # Right arc    
-#     if(is.even){ # Junctions below zero
-#       splot <- splot+annotation_custom(grob = r.grob.btm, 
-#                                        xmin = xmid, 
-#                                        xmax = xmax, 
-#                                        ymin = -ymid*0.25, 
-#                                        ymax = 0)
-#     } else {
-#       splot <- splot+annotation_custom(grob = r.grob.top, 
-#                                        xmin = xmid, 
-#                                        xmax = xmax, 
-#                                        ymax = ymid, 
-#                                        ymin = 0)
-#     }
-#     
-#     splot <- splot + annotate("label", x = xmid, 
-#                               y = ifelse(is.even, -ymid*0.25, ymid), 
-#                               label = as.character(count),
-#                               size=2)
-#     
-#     return(splot)
-#   }
-#   
-#   # Add the junctions, adjusting for plus vs minus strand
-#   if(nrow(junctions)>0){
-#     for(i in 1:nrow(junctions)){
-#       splot <- add.junction(splot, junctions[i,]$x, junctions[i,]$xend, junctions[i,]$y, 
-#                             junctions[i,]$yend, junctions[i,]$isEven, junctions[i,]$count,
-#                             junctions[i,]$is.canonical)
-#     }
-#   }
-#   
-# 
-#   
-#   
-#   # Format the final plot
-#   splot <- splot +
-#     
-#     theme_minimal()+
-#     theme(axis.line = element_blank(),
-#           axis.title.x = element_blank(),
-#           axis.title.y = element_text(angle = 0, hjust = 1, vjust = 0.5),
-#           axis.text.x = element_blank(),
-#           axis.ticks.x = element_blank())
-#   
-#   list(plot=splot, junctions=junctions)
-# }
-# 
-# 
-# 
-# make.condensed.panel(test[[1]])

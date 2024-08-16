@@ -5,6 +5,7 @@
 
 # Genome indexes created for hisat2. Note we can't use gz fa file in hisat2-build
 
+mkdir -p genomes
 cd genomes
 
 # Chicken GRCg7b

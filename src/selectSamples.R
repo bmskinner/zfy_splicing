@@ -1,6 +1,7 @@
 #!/bin/Rscript
 library(tidyverse)
 library(xlsx)
+library(fs)
 source("src/functions.R")
 # Convert developmental stages to timepoints of interest for ZFX/Y
 
@@ -126,5 +127,6 @@ sample.classifications <- filtered.samples %>%
   dplyr::ungroup()
 
 # Export summary tables
+fs::dir_create("report")
 create.xlsx(filtered.samples, "report/analysed.samples.xlsx")
 create.xlsx(sample.classifications, "report/sample.classifictions.xlsx")
