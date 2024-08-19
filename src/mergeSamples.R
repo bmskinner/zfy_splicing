@@ -8,8 +8,7 @@ library(parallel)
 library(fs)
 source("src/functions.R")
 # Read the filtered samples, match folder names
-filtered.samples <- do.call(rbind, lapply(list.files(path="metadata", pattern = "*.filt.csv", full.names = TRUE), 
-                                          \(f) read.csv(f) %>% dplyr::mutate(CommonName = str_replace(str_replace(f, "metadata/", ""), ".filt.csv", ""))))
+filtered.samples <- read.filtered.samples()
 
 # Create command to merge bams in groups
 groups <- filtered.samples %>% 

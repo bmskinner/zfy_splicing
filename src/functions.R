@@ -22,15 +22,15 @@ create.xlsx = function(data, file.name){
 
 # Get the names of GTF files for a genome
 get.genome.data <- function(){
-  genomes <- matrix(c("chicken", "Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.112.gtf",
-                      "opossum", "Monodelphis_domestica.ASM229v1.112.gtf",
-                      "mouse", "Mus_musculus.GRCm39.112.gtf",
-                      "human", "Homo_sapiens.GRCh38.112.gtf",
-                      # "rabbit", "Oryctolagus_cuniculus.OryCun2.0.112.gtf",
-                      "rat", "Rattus_norvegicus.mRatBN7.2.112.gtf",
-                      "macaque", "Macaca_mulatta.Mmul_10.112.gtf"),
-                    byrow = TRUE, ncol = 2 )
-  colnames(genomes) <- c("CommonName", "GTF")
+  genomes <- matrix(c("chicken", "Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.112.gtf", "GRCg7b",     "Gallus gallus",
+                      "opossum", "Monodelphis_domestica.ASM229v1.112.gtf",            "ASM229v1",   "Monodelphis domestica",
+                      "mouse",   "Mus_musculus.GRCm39.112.gtf",                       "GRCm39",     "Mus musculus",
+                      "human",   "Homo_sapiens.GRCh38.112.gtf",                       "GRCh38",     "Homo sapiens",
+                      # "rabbit", "Oryctolagus_cuniculus.OryCun2.0.112.gtf",          "OryCun2.0",  "Oryctolagus cuniculus",
+                      "rat",     "Rattus_norvegicus.mRatBN7.2.112.gtf",               "mRatBN7.2",  "Rattus norvegicus",
+                      "macaque", "Macaca_mulatta.Mmul_10.112.gtf",                    "Mmul_10",    "Macaca mulatta"),
+                    byrow = TRUE, ncol = 4 )
+  colnames(genomes) <- c("CommonName", "GTF", "Genome", "CommonName")
   genomes
 }
 
@@ -184,7 +184,8 @@ read.gtf.data <- function(){
 
 read.filtered.samples <- function(){
   do.call(rbind, lapply(list.files(path="metadata", pattern = "*.filt.csv", full.names = TRUE), 
-                        \(f) read.csv(f) %>% dplyr::mutate(CommonName = str_replace(str_replace(f, "metadata/", ""), ".filt.csv", ""))))
+                        \(f) read.csv(f) %>% dplyr::mutate(Project = str_replace(str_replace(f, "metadata/", ""), ".filt.csv", ""))))
+  
 }
 
 
