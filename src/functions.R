@@ -182,11 +182,16 @@ read.gtf.data <- function(){
   gtf.data
 }
 
+read.filtered.samples <- function(){
+  do.call(rbind, lapply(list.files(path="metadata", pattern = "*.filt.csv", full.names = TRUE), 
+                        \(f) read.csv(f) %>% dplyr::mutate(CommonName = str_replace(str_replace(f, "metadata/", ""), ".filt.csv", ""))))
+}
+
+
 # Read the metadata to find samples. Aggregate to groups based on tissue type
 # and note which samples still need processing
 make.sample.groups <- function(){
-  filtered.samples <- do.call(rbind, lapply(list.files(path="metadata", pattern = "*.filt.csv", full.names = TRUE), 
-                                            \(f) read.csv(f) %>% dplyr::mutate(CommonName = str_replace(str_replace(f, "metadata/", ""), ".filt.csv", ""))))
+  filtered.samples <- read.filtered.samples()
   
   # Create command to merge bams in groups
   filtered.samples %>% 
