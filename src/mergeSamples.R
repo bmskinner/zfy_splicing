@@ -39,8 +39,8 @@ cat("Indexing bams\n")
 to.index <-  groups %>% # only index if the bam is present and there is no index
   dplyr::mutate(merged.bam.exists = file.exists(merged.bam)) %>% # update if merged bam exists
   dplyr::filter(merged.bam.exists & !index.exists)
-# Index with CSI since opossum chromosomes are longer than the max for bai
 
+# Index with CSI since opossum chromosomes are longer than the max for bai
 if(nrow(to.index)>0){
   mapply(system2, command="samtools", args=paste("index -@ 7 -c ", to.index$merged.bam))
 }

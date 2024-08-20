@@ -30,7 +30,7 @@ get.genome.data <- function(){
                       "rat",     "Rattus_norvegicus.mRatBN7.2.112.gtf",               "mRatBN7.2",  "Rattus norvegicus",
                       "macaque", "Macaca_mulatta.Mmul_10.112.gtf",                    "Mmul_10",    "Macaca mulatta"),
                     byrow = TRUE, ncol = 4 )
-  colnames(genomes) <- c("CommonName", "GTF", "Genome", "CommonName")
+  colnames(genomes) <- c("CommonName", "GTF", "Genome", "Species")
   genomes
 }
 
