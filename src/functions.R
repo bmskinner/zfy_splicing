@@ -1,5 +1,6 @@
 library(parallel)
 library(xlsx)
+library(tidyverse)
 
 # Make a factor of times to allow ordering of plots
 TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult"), levels = c("birth", "mid-meiosis", "adult"))

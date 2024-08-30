@@ -1,6 +1,9 @@
 # ZFY splicing analysis 
 
-Data from Cardosa-Moreira 2019 for 7 species across multiple tissues and timepoints.
+Data from RNA-seq analysis of whole tissues from
+
+- PRJEB26695 Cardosa-Moreira 2019 (7 species across multiple tissues and timepoints)
+- PRJEB33381 (adult tissues)
 
 Here we remap all samples to the latest genome assemblies, allowing multiple read mapping (since Zfx/Zfy are very similar).
 
@@ -21,6 +24,9 @@ Rscript ./src/selectSamples.R
 
 # Map to the latest genome assemblies
 ./src/mapSamples.sh
+
+# check the trimming, fastqc and mapping
+Rscript ./src/checkQC.R
 
 # Combine bam files and extract splice sites
 Rscript ./src/mergeSamples.R

@@ -367,7 +367,7 @@ mapply(make.timepoint.panel, timepoint.groups$CommonName, timepoint.groups$Organ
 #### Condense introns for neater plotting #### 
 
 # Plot junctions directly on exon track
-make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=5, label="tissue", 
+make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=10, label="tissue", 
                                           show.x.axis=TRUE, is.collapse.introns=FALSE){
   
   # Annotatable exon features
@@ -686,7 +686,7 @@ make.condensed.species.panels <- function(species, timepoint, gene.id){
   out.png.file <- paste0("report/species/", species, ".", timepoint, ".", gene.id, ".", gene.name, ".condensed.png")
   cat("Making", out.png.file, "\n")
   
-  plots <- lapply(data, \(x)  make.gene.track.sashimi.panel(x,label=paste0(x$tissue), show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
+  plots <- lapply(data, \(x)  make.gene.track.sashimi.panel(x,label=paste0(species, " ", gene.name, "\n", x$tissue), show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
   
   patchwork::wrap_plots(plots, nrow = length(plots))
   ggsave(plot = last_plot(), filename =out.png.file, dpi = 300, units = "mm", width = 170, height = 240)
@@ -740,7 +740,7 @@ make.condensed.timepoint.panels <- function(species, tissue, gene.id){
   ggsave(plot = last_plot(), filename =out.png.file, dpi = 300, units = "mm", width = 170, height = 240)
 }
 
-# test.data <- make.combined.panels("human", "adult", "ENSG00000005889")
+# test.data <- make.combined.panels("macaque", "adult", "ENSMMUG00000046378")
 mapply(make.condensed.species.panels, species.groups$CommonName, species.groups$Timepoint,species.groups$EnsemblId)
 
 # make.condensed.tissue.panels("forebrain", "adult")

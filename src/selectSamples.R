@@ -145,6 +145,37 @@ read.csv("metadata/PRJEB33381.csv") %>%
   dplyr::select(Run, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
   write.table(., file = "metadata/PRJEB33381.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
 
+#### Samples from generic search mouse testis ####
+
+# Goal here is to find non-adult WT mice with known age in days
+read.csv("metadata/mouse.testis.csv") %>%
+  dplyr::rename(OrganismPart = Experimental_Factor._organism_part..exp.,
+                Species = Experimental_Factor._organism..exp.,
+                DevStage = Developmental_stage) %>%
+  dplyr::filter(Assay.Type == "RNA-Seq" & cell_type == "") %>%
+  dplyr::filter(!is.na(AGE) & AGE!="" & AGE!="not collected" & !str_starts(AGE, "E")& AGE!="adult") %>%
+  dplyr::filter(!str_detect(OrganismPart, "adipose") & !str_detect(OrganismPart, "brain"))%>%
+  dplyr::filter(!str_detect(AGE, "month") & !str_detect(AGE, "week")& !str_detect(AGE, "year")) %>%
+  dplyr::filter(!str_detect(tissue, "spermatid") & !str_detect(tissue, "spermatocyte")& !str_detect(tissue, "soermatid")  & !str_detect(source_name, "stem cells")) %>%
+  dplyr::mutate(AgeDays = as.numeric(str_extract(AGE, "\\d+"))) %>%
+  dplyr::filter(AgeDays < 28) %>%
+  dplyr::filter(str_detect(genotype, "[W|w]ild[ |-][T|t]ype") | str_detect(source_name, "[W|w]ild[ |-][T|t]ype") | str_detect(genotype, "[W|w][T|t]")) %>%
+  dplyr::mutate(Timepoint = case_when(AgeDays < 7 ~ "0-6",
+                                     AgeDays < 15 ~ "7-13",
+                                     AgeDays < 21 ~ "14-20",
+                                     AgeDays < 28 ~ "21-27",
+                                     .default = "Other"),
+                CommonName = "mouse") %>%
+  # do we need all of them? Just take the 10 smallest runs in each age group
+  dplyr::group_by(Timepoint) %>%
+  dplyr::arrange(Bases) %>%
+  dplyr::slice_head(n=10) %>%
+  merge(., get.genome.data(), by="CommonName") %>%
+  dplyr::select(Run, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  write.table(., file = "metadata/mouse.testis.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
+
+
+
 #### Make summary tables ####
 
 # Read the filtered samples, match folder names
