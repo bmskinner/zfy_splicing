@@ -160,16 +160,19 @@ read.csv("metadata/mouse.testis.csv") %>%
   dplyr::mutate(AgeDays = as.numeric(str_extract(AGE, "\\d+"))) %>%
   dplyr::filter(AgeDays < 28) %>%
   dplyr::filter(str_detect(genotype, "[W|w]ild[ |-][T|t]ype") | str_detect(source_name, "[W|w]ild[ |-][T|t]ype") | str_detect(genotype, "[W|w][T|t]")) %>%
-  dplyr::mutate(Timepoint = case_when(AgeDays < 7 ~ "0-6",
-                                     AgeDays < 15 ~ "7-13",
-                                     AgeDays < 21 ~ "14-20",
-                                     AgeDays < 28 ~ "21-27",
+  dplyr::mutate(Timepoint = case_when(AgeDays < 7 ~ "Day_00-06",
+                                     AgeDays < 15 ~ "Day_07-13",
+                                     AgeDays < 21 ~ "Day_14-20",
+                                     AgeDays < 28 ~ "Day_21-27",
                                      .default = "Other"),
                 CommonName = "mouse") %>%
   # do we need all of them? Just take the 10 smallest runs in each age group
   dplyr::group_by(Timepoint) %>%
   dplyr::arrange(Bases) %>%
   dplyr::slice_head(n=10) %>%
+  dplyr::mutate(Organism_part = "testis",
+                sex = "male",
+                DevStage = paste0("d", AgeDays)) %>% # ensure all consistent
   merge(., get.genome.data(), by="CommonName") %>%
   dplyr::select(Run, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
   write.table(., file = "metadata/mouse.testis.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
