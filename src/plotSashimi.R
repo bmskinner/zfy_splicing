@@ -717,16 +717,16 @@ make.condensed.timepoint.panels <- function(species, tissue, gene.id){
   if(length(data.files)==0) return()
   
   # Ensure files are plotted in time order
-  # ordered.files <- list()
-  # for(t in TIME.ORDER){
-  #   for(f in data.files){
-  #     if(str_detect(f, t)){
-  #       ordered.files <- c(ordered.files, f)
-  #     }
-  #   }
-  # }
+  ordered.files <- list()
+  for(t in TIME.ORDER){
+    for(f in data.files){
+      if(str_detect(f, t)){
+        ordered.files <- c(ordered.files, f)
+      }
+    }
+  }
   
-  data <- lapply(data.files, read.rds.file)
+  data <- lapply(ordered.files, read.rds.file)
   
   gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$EnsemblId==gene.id,]$Gene
   
@@ -745,6 +745,6 @@ mapply(make.condensed.species.panels, species.groups$CommonName, species.groups$
 # make.condensed.tissue.panels("forebrain", "adult")
 mapply(make.condensed.tissue.panels, tissue.groups$Organism_part, tissue.groups$Timepoint)
 
-make.condensed.timepoint.panels("mouse", "testis", "ENSMUSG00000053211")
+# make.condensed.timepoint.panels("mouse", "testis", "ENSMUSG00000053211")
 mapply(make.condensed.timepoint.panels, timepoint.groups$CommonName, timepoint.groups$Organism_part, timepoint.groups$EnsemblId)
 

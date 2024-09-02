@@ -3,7 +3,7 @@ library(xlsx)
 library(tidyverse)
 
 # Make a factor of times to allow ordering of plots
-TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult"), levels = c("birth", "mid-meiosis", "adult"))
+TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06",  "Day_07-13", "Day_14-20", "Day_21-27"), levels = c("birth", "mid-meiosis", "adult","Day_00-06",  "Day_07-13", "Day_14-20", "Day_21-27"))
 
 # Write the given data frame to an Excel file
 create.xlsx = function(data, file.name){
