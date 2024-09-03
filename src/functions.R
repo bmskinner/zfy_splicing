@@ -25,9 +25,9 @@ create.xlsx = function(data, file.name){
 get.genome.data <- function(){
   genomes <- matrix(c("chicken", "Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.112.gtf", "GRCg7b",     "Gallus gallus",
                       "opossum", "Monodelphis_domestica.ASM229v1.112.gtf",            "ASM229v1",   "Monodelphis domestica",
+                      "platypus", "Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf",   "mOrnAna1.p.v1", "Ornithorhynchus anatinus",
                       "mouse",   "Mus_musculus.GRCm39.112.gtf",                       "GRCm39",     "Mus musculus",
                       "human",   "Homo_sapiens.GRCh38.112.gtf",                       "GRCh38",     "Homo sapiens",
-                      # "rabbit", "Oryctolagus_cuniculus.OryCun2.0.112.gtf",          "OryCun2.0",  "Oryctolagus cuniculus",
                       "rat",     "Rattus_norvegicus.mRatBN7.2.112.gtf",               "mRatBN7.2",  "Rattus norvegicus",
                       "macaque", "Macaca_mulatta.Mmul_10.112.gtf",                    "Mmul_10",    "Macaca mulatta"),
                     byrow = TRUE, ncol = 4 )
@@ -40,15 +40,16 @@ get.gene.locations <- function(){
   # Manual locations from Ensembl
   zfx.y.locations <- matrix(c("chicken", "ZFX",  "ENSGALG00010003052", "ENSGALT00010007119",
                               "opossum", "ZFX",  "ENSMODG00000007512", "ENSMODT00000009508",
+                              "platypus", "ZFX", "ENSOANG00000046710", "ENSOANT00000073933.1",
                               "mouse",   "Zfx",  "ENSMUSG00000079509", "ENSMUST00000088102",
                               "mouse",   "Zfy1", "ENSMUSG00000053211", "ENSMUST00000189888",
                               "mouse",   "Zfy2", "ENSMUSG00000000103", "ENSMUST00000187148",
-                              # "mouse",   "Zfa", "ENSMUSG00000121690",  "ENSMUST00000180673",
+
                               "human",   "ZFX",  "ENSG00000005889",    "ENST00000304543",
                               "human",   "ZFY",  "ENSG00000067646",    "ENST00000155093",
                               "macaque", "ZFX",  "ENSMMUG00000009801", "ENSMMUT00000013690",
                               "macaque", "ZFY",  "ENSMMUG00000046378", "ENSMMUT00000057467",
-                              # "rabbit",  "ZFX",  "ENSOCUG00000003815", "ENSOCUT00000003815",
+
                               "rat",     "Zfx",  "ENSRNOG00000005624", "ENSRNOT00000076613",
                               "rat",     "Zfy2", "ENSRNOG00000053042", "ENSRNOT00000077708"), 
                             byrow = TRUE, ncol = 4)
@@ -158,7 +159,16 @@ get.annotated.exons <- function(){
                        "ENSMMUE00000095156", "4", "",
                        "ENSMMUE00000355682", "5", "",
                        "ENSMMUE00000095161", "6", "",
-                       "ENSMMUE00000407322", "7", "DBD"
+                       "ENSMMUE00000407322", "7", "DBD",
+                       
+                       # Platypus ZFX
+                       "ENSOANE00000261828", "1", "",
+                       "ENSOANE00000124688", "2", "SP",
+                       "ENSOANE00000124690", "3", "",
+                       "ENSOANE00000124691", "4", "",
+                       "ENSOANE00000124692", "5", "",
+                       "ENSOANE00000124693", "6", "",
+                       "ENSOANE00000249399", "7", "DBD",
                        
                        ),
                      

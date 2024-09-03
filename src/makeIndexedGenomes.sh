@@ -128,3 +128,22 @@ if [ ! -e Mmul_10.1.ht2 ]; then
 	hisat2-build --ss Macaca_mulatta.Mmul_10.112.ss --exon Macaca_mulatta.Mmul_10.112.exons Macaca_mulatta.Mmul_10.dna.toplevel.fa Mmul_10
 	gzip Macaca_mulatta.Mmul_10.dna.toplevel.fa
 fi
+
+# Playtpus mOrnAna1.p.v1
+if [ ! -e mOrnAna1.p.v1.1.ht2 ]; then
+	# Get the annotations and sequence
+	wget https://ftp.ensembl.org/pub/release-112/fasta/ornithorhynchus_anatinus/dna/Ornithorhynchus_anatinus.mOrnAna1.p.v1.dna.toplevel.fa.gz
+	wget https://ftp.ensembl.org/pub/release-112/gtf/ornithorhynchus_anatinus/Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf.gz
+	gunzip Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf.gz
+	gunzip Ornithorhynchus_anatinus.mOrnAna1.p.v1.dna.toplevel.fa.gz
+
+	# Extract splice and exon coordinates from annotations
+	hisat2_extract_splice_sites.py Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf > Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.ss
+	hisat2_extract_exons.py Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf > Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.exons
+
+	# Make the genome
+	hisat2-build --ss Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.ss --exon Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.exons Ornithorhynchus_anatinus.mOrnAna1.p.v1.dna.toplevel.fa mOrnAna1.p.v1
+	gzip Ornithorhynchus_anatinus.mOrnAna1.p.v1.dna.toplevel.fa
+fi
+
+

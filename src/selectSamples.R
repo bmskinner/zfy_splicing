@@ -177,6 +177,26 @@ read.csv("metadata/mouse.testis.csv") %>%
   dplyr::select(Run, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
   write.table(., file = "metadata/mouse.testis.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
 
+#### Samples from generic search for platypus RNAseq ####
+
+platypus <- read.csv("metadata/platypus.csv") %>%
+  dplyr::rename(OrganismPart = Experimental_Factor._organism_part..exp.,
+                Species = Experimental_Factor._organism..exp.) %>%
+  dplyr::filter(Assay.Type == "RNA-Seq") %>%
+  dplyr::mutate(Organism_part = str_to_lower( case_when(tissue != "" ~ tissue,
+                                   OrganismPart != "" ~ OrganismPart,
+                                   source_name != "" ~ source_name,
+                                   .default = NA)),
+                DevStage = str_to_lower( case_when(AGE != "" ~ AGE,
+                                              Stage != "" ~ Stage,
+                                              .default = NA)),
+                Timepoint = DevStage,
+                CommonName = "platypus") %>%
+  dplyr::filter(DevStage!="") %>%
+  dplyr::filter(Organism_part!="fibroblast") %>%
+  merge(., get.genome.data(), by="CommonName") %>%
+  dplyr::select(Run, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  write.table(., file = "metadata/platypus.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
 
 
 #### Make summary tables ####
