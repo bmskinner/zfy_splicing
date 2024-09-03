@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Assemble transcripts on the sex chromosomes using StringTie
+# Assemble transcripts using StringTie
 # StringTie expected on the PATH
 
 # - x ignore these chromosomes
@@ -19,6 +19,12 @@
 
 mkdir -p data/stringtie
 
-samtools view -o data/stringtie/chicken.testis.zfx.reads.bam data/merged/chicken.testis.adult.bam "1:118296000-118319000"
+for f in data/merged/chicken.*.bam; do
+  OUTNAME=$(basename ${f})
+  samtools view -o data/stringtie/${OUTNAME}.Zfx.bam ${f} "1:118296000-118319000"
+  ~/bin/stringtie-2.2.3.Linux_x86_64/stringtie -o data/stringtie/${OUTNAME}.zfx.gtf -p 1 -l chicken -f 0.01 data/stringtie/${OUTNAME}.Zfx.bam
+done
 
-~/bin/stringtie-2.2.3.Linux_x86_64/stringtie -o data/stringtie/chicken.testis.zfx.gtf -p 1 -l chicken -f 0.01 data/stringtie/chicken.testis.zfx.reads.bam
+# samtools view -o data/stringtie/chicken.testis.zfx.reads.bam data/merged/chicken.testis.adult.bam "1:118296000-118319000"
+
+# ~/bin/stringtie-2.2.3.Linux_x86_64/stringtie -o data/stringtie/chicken.testis.zfx.gtf -p 1 -l chicken -f 0.01 data/stringtie/chicken.testis.zfx.reads.bam
