@@ -6,6 +6,7 @@ library(rtracklayer)
 library(Biostrings)
 library(GenomicFeatures)
 library(BSgenome)
+library(patchwork)
 
 cat("Reading genome FASTA\n")
 chicken.genome <- Biostrings::readDNAStringSet("genomes/Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.dna.toplevel.fa.gz")
@@ -76,3 +77,17 @@ combined.plot <- patchwork::wrap_plots(plots, ncol = 3)+ patchwork::plot_layout(
 ggsave("data/stringtie/chicken.transcripts.all.png", combined.plot, units = "mm", height = 230, width = 170, dpi = 300)
 # BLAST of the sequence hits https://www.ncbi.nlm.nih.gov/gene/121109097
 # It's not in the Ensembl genebuild because it's a predicted transcript only, so the reads were aggregated into Zfx during feature mapping
+
+
+# Check stranded junctions
+chicken.plus <- read.rds.file("data/merged/chicken.testis.adult.ENSGALG00010003052.sense.Rds_+")
+chicken.minus <- read.rds.file("data/merged/chicken.testis.adult.ENSGALG00010003052.sense.Rds_-")
+
+patchwork::wrap_plots(list(make.sashimi.panel(chicken.plus, label="Sense")$plot, 
+                make.gene.track.sashimi.panel(chicken.plus, label="Sense",show.x.axis=FALSE, is.collapse.introns=TRUE)$plot, 
+                make.sashimi.panel(chicken.minus, label="Antisense")$plot, 
+                make.gene.track.sashimi.panel(chicken.minus, label="Antisense",show.x.axis=FALSE, is.collapse.introns=TRUE)$plot), ncol = 2)+
+  plot_annotation(title = "Chicken adult testis")+
+  plot_layout(guides = "collect", axes = "collect", axis_titles = "collect")
+
+ggsave("data/stringtie/chicken.transcripts.stranded.png", last_plot(), units = "mm", height = 170, width = 170, dpi = 300)
