@@ -51,6 +51,11 @@ map_se_sample () {
 			samtools sort -T data/${SPECIES}/${ERR} -@ 8 -o data/${SPECIES}/${ERR}.bam data/${SPECIES}/${ERR}.sam
 			samtools index -c -@ 7 data/${SPECIES}/${ERR}.bam # index with csi due to long chromosomes in opossum
 			rm data/${SPECIES}/${ERR}.sam
+			
+			# Remove original FASTQ, we have the trimmed reads still
+			if [ -e data/${SPECIES}/${ERR}.fastq.gz ]; then
+			  rm data/${SPECIES}/${ERR}.fastq.gz
+			fi
 
 			# Remove lock file
 			rm data/${SPECIES}/${ERR}.lck
@@ -103,6 +108,11 @@ map_pe_sample () {
 			samtools sort -T data/${SPECIES}/${ERR} -@ 8 -o data/${SPECIES}/${ERR}.bam data/${SPECIES}/${ERR}.sam
 			samtools index -c -@ 7 data/${SPECIES}/${ERR}.bam # index with csi due to long chromosomes in opossum
 			rm data/${SPECIES}/${ERR}.sam
+			
+			# Remove original FASTQ, we have the trimmed reads still
+			if [ -e data/${SPECIES}/${ERR}_2.fastq.gz ]; then
+			  rm data/${SPECIES}/${ERR}_*.fastq.gz
+			fi
 
 			# Remove lock file
 			rm data/${SPECIES}/${ERR}.lck
