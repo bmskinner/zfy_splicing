@@ -168,7 +168,7 @@ get.annotated.exons <- function(){
                        "ENSOANE00000124691", "4", "",
                        "ENSOANE00000124692", "5", "",
                        "ENSOANE00000124693", "6", "",
-                       "ENSOANE00000249399", "7", "DBD",
+                       "ENSOANE00000249399", "7", "DBD"
                        
                        ),
                      
