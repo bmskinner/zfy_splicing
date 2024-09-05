@@ -70,7 +70,8 @@ create.xlsx(groups, "report/grouped.bams.xlsx")
 to.sashimi <-  groups %>% # don't repeat merging
   dplyr::mutate(merged.bam.exists = file.exists(merged.bam)) %>%
   dplyr::filter(merged.bam.exists) %>% # ensure we only try to sashimi when all bams of a group are available
-  dplyr::mutate(junctions.file = paste0("data/merged/", CommonName, ".", Organism_part, ".", Timepoint, ".", EnsemblId, ".sense.Rds"))
+  dplyr::mutate(junctions.file.stranded = paste0("data/merged/", CommonName, ".", Organism_part, ".", Timepoint, ".", EnsemblId, ".sense.Rds"),
+                junctions.file.nonstranded = paste0("data/merged/", CommonName, ".", Organism_part, ".", Timepoint, ".", EnsemblId, ".Rds"))
 
 if(nrow(to.sashimi)==0){
   stop("No valid samples to extract")
@@ -80,12 +81,23 @@ if(nrow(to.sashimi)==0){
 cat("Extracting splice sites from", nrow(to.sashimi), "samples\n")
 for(i in 1:nrow(to.sashimi)){
   data <- to.sashimi[i,]
-  if(!file.exists(data$junctions.file)){
+  if(!file.exists(data$junctions.file.stranded)){
+    
+    # Extract stranded junctions (only meaningful if this was a stranded library)
     cmd <-  paste0("activate ggsashimi && python src/ggsashimi.py --bam ", data$merged.bam, 
                    " --coordinates ", data$FlankedLocations, 
                    " --gtf genomes/", data$GTF, 
-                   " --out-prefix ", data$junctions.file, 
+                   " --out-prefix ",  data$junctions.file.stranded, 
                    " --strand SENSE  --out-format png")
+    cat("source", cmd, "\n")
+    system2("source",cmd)
+    
+    # Extract junctions irrespective of strand
+    cmd <-  paste0("activate ggsashimi && python src/ggsashimi.py --bam ", data$merged.bam, 
+                   " --coordinates ", data$FlankedLocations, 
+                   " --gtf genomes/", data$GTF, 
+                   " --out-prefix ",  data$junctions.file.nonstranded, 
+                   " --out-format png")
     cat("source", cmd, "\n")
     system2("source",cmd)
   }

@@ -241,6 +241,9 @@ read.rds.file <- function(rds.file){
     rds.data <- readRDS(rds.file)
     
     file.name.parts <- str_split_1(basename(rds.file), "\\.")
+
+    rds.data$junction.strand <- ifelse(str_detect(rds.file, "_+$"), "+",
+                                       ifelse(str_detect(rds.file, "_-$"), "-", "*"))
     rds.data$species <- file.name.parts[1]
     rds.data$tissue <- file.name.parts[2]
     rds.data$timepoint <- file.name.parts[3]
@@ -280,7 +283,7 @@ make.species.panel <- function(species, timepoint, gene.id){
   out.png.file <- paste0("report/species/", species, ".", timepoint, ".", gene.id, ".", gene.name, ".png")
   
   # if(!file.exists(out.png.file)){
-    plots <- lapply(data, \(x)  make.sashimi.panel(x,label=paste0(x$tissue))$plot)
+    plots <- lapply(data, \(x)  make.sashimi.panel(x,label=paste0(x$tissue, " ", x$junction.strand))$plot)
     track <- make.gene.track(data[[1]]) # only one gene, only need one track
     plots[[length(plots)+1]] <- track
     
@@ -298,7 +301,7 @@ make.tissue.panel <- function(tissue, timepoint){
   
   out.png.file <- paste0("report/tissues/", tissue, ".", timepoint, ".png")
   
-  plots <- lapply(data, \(x) make.sashimi.panel(x, label= paste0(x$species, "\n", x$gene.name))$plot)
+  plots <- lapply(data, \(x) make.sashimi.panel(x, label= paste0(x$species, "\n", x$gene.name, " ", x$junction.strand))$plot)
   tracks <- lapply(data, make.gene.track)
   plots <- c(rbind(plots, tracks))
   
@@ -327,7 +330,7 @@ make.timepoint.panel <- function(species, tissue, gene.id){
   
   out.png.file <-  paste0("report/timepoints/", species, ".", tissue, ".", gene.id, ".", gene.name, ".png")
 
-  plots <- lapply(data, \(x) make.sashimi.panel(x, label=paste0(x$species, " ", gene.name, "\n",  x$timepoint))$plot)
+  plots <- lapply(data, \(x) make.sashimi.panel(x, label=paste0(x$species, " ", gene.name, "\n",  x$timepoint, " ", x$junction.strand))$plot)
   track <- make.gene.track(data[[1]])
   plots[[length(plots)+1]] <- track
   
@@ -368,7 +371,7 @@ mapply(make.timepoint.panel, timepoint.groups$CommonName, timepoint.groups$Organ
 #### Condense introns for neater plotting #### 
 
 # Plot junctions directly on exon track
-make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=10, label="tissue", 
+make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=5, label="tissue", 
                                           show.x.axis=TRUE, is.collapse.introns=FALSE){
   
   # Annotatable exon features
@@ -687,12 +690,10 @@ make.condensed.species.panels <- function(species, timepoint, gene.id){
   out.png.file <- paste0("report/species/", species, ".", timepoint, ".", gene.id, ".", gene.name, ".condensed.png")
   cat("Making", out.png.file, "\n")
   
-  plots <- lapply(data, \(x)  make.gene.track.sashimi.panel(x,label=paste0(species, " ", gene.name, "\n", x$tissue), show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
+  plots <- lapply(data, \(x)  make.gene.track.sashimi.panel(x,label=paste0(species, " ", gene.name, "\n", x$tissue, " ", x$junction.strand), show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
   
   patchwork::wrap_plots(plots, nrow = length(plots))
   ggsave(plot = last_plot(), filename =out.png.file, dpi = 300, units = "mm", width = 170, height = 240)
-
-  data
 }
 
 # Make tissue plot using condensed panels
@@ -705,7 +706,7 @@ make.condensed.tissue.panels <- function(tissue, timepoint){
   
   out.png.file <- paste0("report/tissues/", tissue, ".", timepoint, ".condensed.png")
   
-  plots <- lapply(data, \(x) make.gene.track.sashimi.panel(x, label= paste0(x$species, "\n", x$gene.name), 
+  plots <- lapply(data, \(x) make.gene.track.sashimi.panel(x, label= paste0(x$species, "\n", x$gene.name, " ", x$junction.strand), 
                                                            show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
 
   patchwork::wrap_plots(plots, nrow = length(plots))
@@ -734,7 +735,7 @@ make.condensed.timepoint.panels <- function(species, tissue, gene.id){
   
   out.png.file <-  paste0("report/timepoints/", species, ".", tissue, ".", gene.id, ".", gene.name, "condensed.png")
   
-  plots <- lapply(data, \(x) make.gene.track.sashimi.panel(x, label=paste0(x$species, " ", gene.name, "\n",  x$timepoint),
+  plots <- lapply(data, \(x) make.gene.track.sashimi.panel(x, label=paste0(x$species, " ", gene.name, "\n",  x$timepoint, " ", x$junction.strand),
                                                            show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
 
   patchwork::wrap_plots(plots, nrow = length(plots))
@@ -747,6 +748,6 @@ mapply(make.condensed.species.panels, species.groups$CommonName, species.groups$
 # make.condensed.tissue.panels("forebrain", "adult")
 mapply(make.condensed.tissue.panels, tissue.groups$Organism_part, tissue.groups$Timepoint)
 
-# make.condensed.timepoint.panels("mouse", "testis", "ENSMUSG00000053211")
+# make.condensed.timepoint.panels("platypus", "testis", "ENSOANG00000046710")
 mapply(make.condensed.timepoint.panels, timepoint.groups$CommonName, timepoint.groups$Organism_part, timepoint.groups$EnsemblId)
 
