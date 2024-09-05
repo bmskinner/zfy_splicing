@@ -40,7 +40,7 @@ get.gene.locations <- function(){
   # Manual locations from Ensembl
   zfx.y.locations <- matrix(c("chicken", "ZFX",  "ENSGALG00010003052", "ENSGALT00010007119",
                               "opossum", "ZFX",  "ENSMODG00000007512", "ENSMODT00000009508",
-                              "platypus", "ZFX", "ENSOANG00000046710", "ENSOANT00000073933.1",
+                              "platypus", "ZFX", "ENSOANG00000046710", "ENSOANT00000073933",
                               "mouse",   "Zfx",  "ENSMUSG00000079509", "ENSMUST00000088102",
                               "mouse",   "Zfy1", "ENSMUSG00000053211", "ENSMUST00000189888",
                               "mouse",   "Zfy2", "ENSMUSG00000000103", "ENSMUST00000187148",
