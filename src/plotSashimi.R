@@ -236,7 +236,7 @@ make.sashimi.panel <- function(sashimi.data, min.spanning.reads=5, label="tissue
 
 # Read a junction file and note if each junction is in the canonical transcript
 read.rds.file <- function(rds.file){
-  
+
   tryCatch({
     rds.data <- readRDS(rds.file)
     
@@ -253,6 +253,8 @@ read.rds.file <- function(rds.file){
     
     rds.data$canonical.transcript.id <- GENE.LOCATIONS[GENE.LOCATIONS$EnsemblId==rds.data$gene.id, "CanonicalTranscript"]
     rds.data$gtf.data <- gtf.data[[rds.data$species]]
+    
+    # Is the gene on the forward or reverse strand? Note - this is the gene, not the junctions or reads
     rds.data$is.reverse.strand <- is.reverse.strand(rds.data$canonical.transcript.id, rds.data$gtf.data)
     rds.data$strand <- ifelse(rds.data$is.reverse.strand, "-", "+")
     
@@ -264,12 +266,12 @@ read.rds.file <- function(rds.file){
     
     
     return(rds.data)
-  }, error=\(e) {cat("Error making data from", rds.file,"\n"); e})
+  }, error=\(e) {cat("Error making data from", rds.file,"\n", paste(e)); e})
 }
 
 # Create a sashimi panel plot for all tissues of the given species and timepoint
 make.species.panel <- function(species, timepoint, gene.id){
-  data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", timepoint, "\\.", gene.id, "\\.Rds"), full.names = TRUE)
+  data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", timepoint, "\\.", gene.id, "\\.Rds_*"), full.names = TRUE)
   if(length(data.files)==0) return()
   data <- lapply(data.files, read.rds.file)
   
@@ -290,7 +292,7 @@ make.species.panel <- function(species, timepoint, gene.id){
 # Create a sashimi panel plot for all species of the given tissue and timepoint
 make.tissue.panel <- function(tissue, timepoint){
   cat("Making", tissue, "at", timepoint, "\n")
-  data.files <- list.files(path = "data/merged", pattern = paste0(".*\\.", tissue, "\\.", timepoint, "\\..*.Rds"), full.names = TRUE)
+  data.files <- list.files(path = "data/merged", pattern = paste0(".*\\.", tissue, "\\.", timepoint, "\\..*.Rds_*"), full.names = TRUE)
   if(length(data.files)==0) return()
   data <- lapply(data.files, read.rds.file)
   
@@ -306,7 +308,7 @@ make.tissue.panel <- function(tissue, timepoint){
 
 # Create a sashimi panel plot for all timepoint of the given tissue and species
 make.timepoint.panel <- function(species, tissue, gene.id){
-  data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", tissue, "\\..*", gene.id, ".*.Rds"), full.names = TRUE)
+  data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", tissue, "\\..*", gene.id, ".*.Rds_*"), full.names = TRUE)
   if(length(data.files)==0) return()
   
   # Ensure files are plotted in time order
@@ -676,7 +678,7 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=10, l
 
 # Make species plot using combined panels
 make.condensed.species.panels <- function(species, timepoint, gene.id){
-  data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", timepoint, "\\.", gene.id, "\\.Rds"), full.names = TRUE)
+  data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", timepoint, "\\.", gene.id, "\\sense.Rds_*"), full.names = TRUE)
   if(length(data.files)==0) return()
   data <- lapply(data.files, read.rds.file)
   
@@ -697,7 +699,7 @@ make.condensed.species.panels <- function(species, timepoint, gene.id){
 make.condensed.tissue.panels <- function(tissue, timepoint){
   
   cat("Making", tissue, "at", timepoint, "\n")
-  data.files <- list.files(path = "data/merged", pattern = paste0(".*\\.", tissue, "\\.", timepoint, "\\..*.Rds"), full.names = TRUE)
+  data.files <- list.files(path = "data/merged", pattern = paste0(".*\\.", tissue, "\\.", timepoint, "\\..*.Rds_*"), full.names = TRUE)
   if(length(data.files)==0) return()
   data <- lapply(data.files, read.rds.file)
   
@@ -713,7 +715,7 @@ make.condensed.tissue.panels <- function(tissue, timepoint){
 # Make species plot using combined panels
 make.condensed.timepoint.panels <- function(species, tissue, gene.id){
   cat("Making", species, tissue, "for", gene.id, "\n")
-  data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", tissue, "\\..*", gene.id, ".*.Rds"), full.names = TRUE)
+  data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", tissue, "\\..*", gene.id, ".*.Rds_*"), full.names = TRUE)
   if(length(data.files)==0) return()
   
   # Ensure files are plotted in time order
