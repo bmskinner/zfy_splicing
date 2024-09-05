@@ -93,6 +93,6 @@ for(i in 1:nrow(to.sashimi)){
 
 # Zip the results
 fs::file_delete("values.tar.gz")
-system2("tar", "-czf values.tar.gz data/merged/*.Rds")
+system2("tar", "-czf values.tar.gz data/merged/*.Rds*")
 cat("Done!\n")
 
