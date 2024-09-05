@@ -1,5 +1,8 @@
 #!/bin/bash
 
+
+mkdir -p report/FASTQC
+
 # Remap samples and generate bam files for splice junction detection
 # Select the Run, Library type, species and genome columns
 SE_SAMPLES=$(cat metadata/*.filt.csv | cut -f 1,2,3,4 -d , | grep -e '[S|E]RR' | grep -e 'SINGLE')
@@ -38,7 +41,7 @@ map_se_sample () {
 			# Trim
 			if [ ! -e data/${SPECIES}/${ERR}_trimmed.fq.gz ]; then
 				echo "${ERR}: trimming"
-				trim_galore -o data/${SPECIES} --suppress_warn --fastqc --fastqc_args "-t 8 --outdir report --nogroup --extract" data/${SPECIES}/${ERR}.fastq.gz
+				trim_galore -o data/${SPECIES} --suppress_warn --fastqc --fastqc_args "-t 8 --outdir report/FASTQC --nogroup --extract" data/${SPECIES}/${ERR}.fastq.gz
 			fi
 
 			# map
@@ -98,7 +101,7 @@ map_pe_sample () {
 			# Trim
 			if [ ! -e data/${SPECIES}/${ERR}_1_val_1.fq.gz ]; then
 				echo "${ERR}: trimming"
-				trim_galore -o data/${SPECIES} --paired --suppress_warn --fastqc --fastqc_args "-t 8 --outdir report --nogroup --extract" data/${SPECIES}/${ERR}_1.fastq.gz data/${SPECIES}/${ERR}_2.fastq.gz
+				trim_galore -o data/${SPECIES} --paired --suppress_warn --fastqc --fastqc_args "-t 8 --outdir report/FASTQC --nogroup --extract" data/${SPECIES}/${ERR}_1.fastq.gz data/${SPECIES}/${ERR}_2.fastq.gz
 			fi
 
 			# map

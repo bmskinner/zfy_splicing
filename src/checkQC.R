@@ -42,7 +42,7 @@ create.xlsx(trimming.summary, file.name = "report/_qc/trimming_report.xlsx")
 
 #### FASTQC report ####
 cat("Checking FastQC\n")
-fastqc.summary.files <- list.files(path = "report", pattern = "summary.txt$", full.names = T, recursive = T)
+fastqc.summary.files <- list.files(path = "report/FASTQC", pattern = "summary.txt$", full.names = T, recursive = T)
 fastqc.data <- do.call(rbind, lapply(fastqc.summary.files, read.table, sep="\t"))
 colnames(fastqc.data) <- c("Outcome", "Measure", "Sample")
 fastqc.check <- fastqc.data %>%
@@ -67,7 +67,7 @@ extract.val <- function(x){
 
 # Extract the mapping summary from stdout files
 # cat bash.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' > report/mapping.txt
-system2("cat", "bash.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' > report/_qc/mapping.txt")
+system2("cat", "logs/bash.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' > report/_qc/mapping.txt")
 
 # Spread to separate columns
 map.data <- read.table("report/_qc/mapping.txt", sep="$") %>% #  sep char does not exist, force single column
