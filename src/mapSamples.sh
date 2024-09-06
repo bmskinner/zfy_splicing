@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 mkdir -p report/FASTQC
 
 # Remap samples and generate bam files for splice junction detection

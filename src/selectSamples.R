@@ -21,7 +21,7 @@ read.csv("metadata/chicken.csv") %>%
   CommonName = "chicken",
   Genome = "GRCg7b") %>%
   dplyr::filter(Timepoint != "other" & Timepoint != "embryo")  %>%
-  dplyr::select(Run, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
   write.csv(., file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE)
 
 
@@ -39,7 +39,7 @@ read.csv("metadata/opossum.csv") %>%
   CommonName = "opossum",
   Genome = "ASM229v1") %>%
   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") %>%
-  dplyr::select(Run, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
   write.table(., file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append=TRUE, sep=",", col.names = FALSE)
 
 # Mouse E-MTAB-6798
@@ -55,7 +55,7 @@ read.csv("metadata/mouse.csv") %>%
   CommonName = "mouse",
   Genome = "GRCm39") %>%
   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") %>%
-  dplyr::select(Run, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
   write.table(., file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append=TRUE, sep=",", col.names = FALSE)
 
 # Human E-MTAB-6814
@@ -72,7 +72,7 @@ read.csv("metadata/human.csv") %>%
   CommonName = "human",
   Genome = "GRCh38") %>%
   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") %>%
-  dplyr::select(Run, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
   write.table(., file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append=TRUE, sep=",", col.names = FALSE)
 
 # Rabbit E-MTAB-6782 - no need to include, there is no Y assembly yet
@@ -106,7 +106,7 @@ read.csv("metadata/rat.csv") %>%
   CommonName = "rat",
   Genome = "mRatBN7.2") %>%
   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") %>%
-  dplyr::select(Run, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
   write.table(., file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append=TRUE, sep=",", col.names = FALSE)
 
 # Rhesus macacque E-MTAB-6813
@@ -125,7 +125,7 @@ read.csv("metadata/macaque.csv") %>%
   CommonName = "macaque",
   Genome = "Mmul_10") %>%
   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") %>%
-  dplyr::select(Run, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
   write.table(., file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append=TRUE, sep=",", col.names = FALSE)
 
 
@@ -142,7 +142,7 @@ read.csv("metadata/PRJEB33381.csv") %>%
                                        Organism=="Macaca mulatta"~"macaque",
                                        Organism=="Rattus norvegicus"~"rat")) %>%
   merge(., get.genome.data(), by="CommonName") %>%
-  dplyr::select(Run, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
   write.table(., file = "metadata/PRJEB33381.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
 
 #### Samples from generic search mouse testis ####
@@ -174,7 +174,7 @@ read.csv("metadata/mouse.testis.csv") %>%
                 sex = "male",
                 DevStage = paste0("d", AgeDays)) %>% # ensure all consistent
   merge(., get.genome.data(), by="CommonName") %>%
-  dplyr::select(Run, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
   write.table(., file = "metadata/mouse.testis.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
 
 #### Samples from generic search for platypus RNAseq ####
@@ -195,9 +195,21 @@ platypus <- read.csv("metadata/platypus.csv") %>%
   dplyr::filter(DevStage!="") %>%
   dplyr::filter(Organism_part!="fibroblast") %>%
   merge(., get.genome.data(), by="CommonName") %>%
-  dplyr::select(Run, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
   write.table(., file = "metadata/platypus.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
 
+
+#### Samples from generic search for zebrafinch RNAseq ####
+
+zebrafinch <- read.csv("metadata/zebrafinch.csv") %>%
+  dplyr::filter(Assay.Type == "RNA-Seq", tissue=="Testis") %>%
+  dplyr::mutate(Organism_part = tissue,
+                DevStage = "adult",
+                Timepoint = "adult",
+                CommonName = "zebrafinch") %>%
+  merge(., get.genome.data(), by="CommonName") %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  write.table(., file = "metadata/zebrafinch.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
 
 #### Make summary tables ####
 

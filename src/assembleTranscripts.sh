@@ -18,11 +18,12 @@
 # 1:118200000-118400000
 
 mkdir -p data/stringtie
+rm  data/stringtie/ratios.txt
 
 for f in data/merged/chicken.*.bam; do
   OUTNAME=$(basename ${f})
   samtools view -o data/stringtie/${OUTNAME}.Zfx.bam ${f} "1:118296000-118319000"
-  ~/bin/stringtie-2.2.3.Linux_x86_64/stringtie -o data/stringtie/${OUTNAME}.zfx.gtf -p 1 -l chicken -f 0.01 data/stringtie/${OUTNAME}.Zfx.bam
+  ~/bin/stringtie-2.2.3.Linux_x86_64/stringtie -o data/stringtie/${OUTNAME}.zfx.gtf -p 1 -l chicken -G genomes/Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.112.gtf -f 0.01 data/stringtie/${OUTNAME}.Zfx.bam
   
   # Check the probable strandedness of the file by ratio of forward and reverse strand reads
   FORWARD=$(samtools view --count --tag XS:+ data/stringtie/${OUTNAME}.Zfx.bam)

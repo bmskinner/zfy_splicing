@@ -8,6 +8,43 @@
 mkdir -p genomes
 cd genomes
 
+# Create a genome index
+# 1 - the name of the genome e.g. GRCg7b
+# 2 - the URL of the FASTA sequences
+# 3 - the URL of the GTF annotation
+build_genome_index () {
+	GENOME=$(echo $1 | tr -d '"')
+	FASTAURL=$(echo $2 | tr -d '"')
+	GTFURL=$(echo $3 | tr -d '"')
+
+	if [ ! -e ${GENOME}.1.ht2 ]; then
+	
+  	FASTAGZFILE=$(basename ${FASTAURL})
+  	GTFGZFILE=$(basename ${GTFURL})
+  	
+  	GTFFILE=$(echo $GTFGZFILE | sed -e 's/.gz//')
+  	SSFILE=$(echo $GTFFILE | sed -e 's/gtf/ss/')
+  	EXONFILE=$(echo $GTFFILE | sed -e 's/gtf/exons/')
+  	FASTAFILE=$(echo $FASTAGZFILE | sed -e 's/.gz//')
+  	
+		# Get the annotations and sequence
+	  wget ${FASTAURL}
+	  wget ${GTFURL}
+	  
+	  gunzip $FASTAGZFILE
+	  gunzip $GTFGZFILE
+	  
+	  # Extract splice and exon coordinates from annotations
+	  hisat2_extract_splice_sites.py $GTFFILE >  $SSFILE
+	  hisat2_extract_exons.py $GTFFILE > $EXONFILE
+	  
+	  # Make the genome - note we can't use fa.gz file in hisat2-build
+	  hisat2-build --ss ${SSFILE} --exon ${EXONFILE} ${FASTAFILE} ${GENOME}
+    gzip $FASTAFILE
+	fi
+	
+}	
+
 # Chicken GRCg7b
 if [ ! -e GRCg7b.1.ht2 ]; then
 	# Get the annotations and sequence
@@ -130,20 +167,7 @@ if [ ! -e Mmul_10.1.ht2 ]; then
 fi
 
 # Playtpus mOrnAna1.p.v1
-if [ ! -e mOrnAna1.p.v1.1.ht2 ]; then
-	# Get the annotations and sequence
-	wget https://ftp.ensembl.org/pub/release-112/fasta/ornithorhynchus_anatinus/dna/Ornithorhynchus_anatinus.mOrnAna1.p.v1.dna.toplevel.fa.gz
-	wget https://ftp.ensembl.org/pub/release-112/gtf/ornithorhynchus_anatinus/Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf.gz
-	gunzip Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf.gz
-	gunzip Ornithorhynchus_anatinus.mOrnAna1.p.v1.dna.toplevel.fa.gz
+build_genome_index mOrnAna1.p.v1 https://ftp.ensembl.org/pub/release-112/fasta/ornithorhynchus_anatinus/dna/Ornithorhynchus_anatinus.mOrnAna1.p.v1.dna.toplevel.fa.gz  https://ftp.ensembl.org/pub/release-112/gtf/ornithorhynchus_anatinus/Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf.gz
 
-	# Extract splice and exon coordinates from annotations
-	hisat2_extract_splice_sites.py Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf > Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.ss
-	hisat2_extract_exons.py Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf > Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.exons
-
-	# Make the genome
-	hisat2-build --ss Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.ss --exon Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.exons Ornithorhynchus_anatinus.mOrnAna1.p.v1.dna.toplevel.fa mOrnAna1.p.v1
-	gzip Ornithorhynchus_anatinus.mOrnAna1.p.v1.dna.toplevel.fa
-fi
-
-
+# Zebra finch bTaeGut1_v1.p
+build_genome_index bTaeGut1_v1.p https://ftp.ensembl.org/pub/release-112/fasta/taeniopygia_guttata/dna/Taeniopygia_guttata.bTaeGut1_v1.p.dna.toplevel.fa.gz  https://ftp.ensembl.org/pub/release-112/gtf/taeniopygia_guttata/Taeniopygia_guttata.bTaeGut1_v1.p.112.gtf.gz

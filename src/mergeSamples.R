@@ -7,11 +7,10 @@ library(GenomicRanges)
 library(parallel)
 library(fs)
 source("src/functions.R")
-# Read the filtered samples, match folder names
-filtered.samples <- read.filtered.samples()
+
 
 # Create command to merge bams in groups
-groups <- filtered.samples %>% 
+groups <- FILTERED.SAMPLES %>% 
   dplyr::group_by(Organism, Organism_part, Timepoint, CommonName) %>% # not by sex - no difference seen in first pass
   dplyr::mutate(bam.file = paste0("data/", CommonName, "/", Run, ".bam"),
                 lock.file = paste0("data/", CommonName, "/", Run, ".lck")) %>%
@@ -44,22 +43,6 @@ to.index <-  groups %>% # only index if the bam is present and there is no index
 if(nrow(to.index)>0){
   mapply(system2, command="samtools", args=paste("index -@ 7 -c ", to.index$merged.bam))
 }
-
-# Read GTF files from ./genomes
-gtf.data <- read.gtf.data()
-
-# Identify regions to select
-select.range <- function(common.name, gene.id, size=1000){
-  gtf <- gtf.data[[common.name]]
-
-  data <- gtf[gtf$gene_id==gene.id]
-  # Expand by size on each flank
-  if(size>0) data <- GenomicRanges::resize(data, size*2, fix = "center")
-  paste0(unique(GenomicRanges::seqnames(data)), ":", min(GenomicRanges::start(data)), "-", max(GenomicRanges::end(data)))
-}
-
-# Select gene locations from the GTF files
-GENE.LOCATIONS$FlankedLocations <- mapply(select.range, common.name=GENE.LOCATIONS$CommonName, gene.id=GENE.LOCATIONS$EnsemblId, size=0, SIMPLIFY = TRUE)
 
 # Combine the gene locations with bams
 groups <- merge(groups, GENE.LOCATIONS, by="CommonName")

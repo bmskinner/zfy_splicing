@@ -2,8 +2,7 @@ library(parallel)
 library(xlsx)
 library(tidyverse)
 
-# Make a factor of times to allow ordering of plots
-TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06",  "Day_07-13", "Day_14-20", "Day_21-27"), levels = c("birth", "mid-meiosis", "adult","Day_00-06",  "Day_07-13", "Day_14-20", "Day_21-27"))
+#### Common functions ####
 
 # Write the given data frame to an Excel file
 create.xlsx = function(data, file.name){
@@ -24,6 +23,7 @@ create.xlsx = function(data, file.name){
 # Get the names of GTF files for a genome
 get.genome.data <- function(){
   genomes <- matrix(c("chicken", "Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.112.gtf", "GRCg7b",     "Gallus gallus",
+                      "zebrafinch", "Taeniopygia_guttata.bTaeGut1_v1.p.112.gtf",  "bTaeGut1_v1.p", "Taeniopygia guttata",
                       "opossum", "Monodelphis_domestica.ASM229v1.112.gtf",            "ASM229v1",   "Monodelphis domestica",
                       "platypus", "Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf",   "mOrnAna1.p.v1", "Ornithorhynchus anatinus",
                       "mouse",   "Mus_musculus.GRCm39.112.gtf",                       "GRCm39",     "Mus musculus",
@@ -37,8 +37,10 @@ get.genome.data <- function(){
 
 # Get the identifiers for genes of interest
 get.gene.locations <- function(){
-  # Manual locations from Ensembl
+  cat("Finding gene ids\n")
+  # Key gene ids from Ensembl
   zfx.y.locations <- matrix(c("chicken", "ZFX",  "ENSGALG00010003052", "ENSGALT00010007119",
+                              "zebrafinch", "ZFX", "ENSTGUG00000007219" ,"ENSTGUT00000021043",
                               "opossum", "ZFX",  "ENSMODG00000007512", "ENSMODT00000009508",
                               "platypus", "ZFX", "ENSOANG00000046710", "ENSOANT00000073933",
                               "mouse",   "Zfx",  "ENSMUSG00000079509", "ENSMUST00000088102",
@@ -54,7 +56,28 @@ get.gene.locations <- function(){
                               "rat",     "Zfy2", "ENSRNOG00000053042", "ENSRNOT00000077708"), 
                             byrow = TRUE, ncol = 4)
   colnames(zfx.y.locations) <- c("CommonName", "Gene","EnsemblId", "CanonicalTranscript")
+  
+  zfx.y.locations <- as.data.frame(zfx.y.locations)
+  
+  # Add gene locations from the GTF files
+  zfx.y.locations$FlankedLocations <- mapply(get.gene.coordinates, 
+                                             common.name=zfx.y.locations$CommonName, 
+                                             gene.id=zfx.y.locations$EnsemblId, 
+                                             size=0, SIMPLIFY = TRUE)
+  
+  
   zfx.y.locations
+}
+
+
+# Identify the coordinates of a given gene id from GTF. Expand by size on each flank if desired
+get.gene.coordinates <- function(common.name, gene.id, size=1000){
+  cat("Finding gene coordinates for", common.name, gene.id, "\n")
+  gtf <- GTF.DATA[[common.name]]
+  data <- gtf[gtf$gene_id==gene.id]
+  # Expand by size on each flank
+  if(size>0) data <- GenomicRanges::resize(data, size*2, fix = "center")
+  paste0(unique(GenomicRanges::seqnames(data)), ":", min(GenomicRanges::start(data)), "-", max(GenomicRanges::end(data)))
 }
 
 # Annotate which exons contain interesting features for labelling plots
@@ -168,7 +191,16 @@ get.annotated.exons <- function(){
                        "ENSOANE00000124691", "4", "",
                        "ENSOANE00000124692", "5", "",
                        "ENSOANE00000124693", "6", "",
-                       "ENSOANE00000249399", "7", "DBD"
+                       "ENSOANE00000249399", "7", "DBD",
+                       
+                       # Zebra finch ZFX
+                       "ENSTGUE00000074604", "1", "",
+                       "ENSTGUE00000074612", "2", "SP",
+                       "ENSTGUE00000074659", "3", "",
+                       "ENSTGUEE00000216832", "4", "",
+                       "ENSTGUE00000074731", "5", "",
+                       "ENSTGUE00000074763", "6", "",
+                       "ENSTGUEE00000199619", "7", "DBD"
                        
                        ),
                      
@@ -177,10 +209,8 @@ get.annotated.exons <- function(){
   features
 }
 
-# Global data frame with gene ids for all species
-GENE.LOCATIONS <- merge(get.gene.locations(), get.genome.data(), by="CommonName")
-
-# Read all GTF files. Parallel on Unix.
+# Read GTF files. Parallel on Unix.
+# Reads all GTF files from ./genomes
 read.gtf.data <- function(){
   genome.data <- get.genome.data()
   cat("Reading GTF files\n")
@@ -193,7 +223,10 @@ read.gtf.data <- function(){
   gtf.data
 }
 
+# Read all filtered samples from ./metadata 
+# i.e. all files with .filt. in the name
 read.filtered.samples <- function(){
+  cat("Reading samples\n")
   do.call(rbind, lapply(list.files(path="metadata", pattern = "*.filt.csv", full.names = TRUE), 
                         \(f) read.csv(f) %>% dplyr::mutate(Project = str_replace(str_replace(f, "metadata/", ""), ".filt.csv", ""))))
   
@@ -203,10 +236,8 @@ read.filtered.samples <- function(){
 # Read the metadata to find samples. Aggregate to groups based on tissue type
 # and note which samples still need processing
 make.sample.groups <- function(){
-  filtered.samples <- read.filtered.samples()
-  
   # Create command to merge bams in groups
-  filtered.samples %>% 
+  FILTERED.SAMPLES %>% 
     dplyr::group_by(Organism, Organism_part, Timepoint, CommonName) %>% # not by sex - no difference seen in first pass
     dplyr::mutate(bam.file = paste0("data/", CommonName, "/", Run, ".bam")) %>%
     dplyr::summarise(bams = paste(bam.file, collapse = " "),
@@ -217,3 +248,18 @@ make.sample.groups <- function(){
     dplyr::mutate(merged.bam.exists = file.exists(merged.bam),
                   index.exists = file.exists(paste0(merged.bam, ".csi"))) 
 }
+
+#### Global variables ####
+
+# Make a factor of times to allow ordering of plots
+TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06",  "Day_07-13", "Day_14-20", "Day_21-27"), levels = c("birth", "mid-meiosis", "adult","Day_00-06",  "Day_07-13", "Day_14-20", "Day_21-27"))
+
+# Read all GTF files
+GTF.DATA <- read.gtf.data()
+
+# Global data frame with gene ids for all species
+GENE.LOCATIONS <- merge(get.gene.locations(), get.genome.data(), by="CommonName")
+
+# Read the filtered samples, match folder names
+FILTERED.SAMPLES <- read.filtered.samples()
+
