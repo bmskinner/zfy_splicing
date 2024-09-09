@@ -1,6 +1,7 @@
 library(parallel)
 library(xlsx)
 library(tidyverse)
+library(GenomicRanges)
 
 #### Common functions ####
 
@@ -22,21 +23,34 @@ create.xlsx = function(data, file.name){
 
 # Get the names of GTF files for a genome
 get.genome.data <- function(){
-  genomes <- matrix(c("chicken", "Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.112.gtf", "GRCg7b",     "Gallus gallus",
-                      "zebrafinch", "Taeniopygia_guttata.bTaeGut1_v1.p.112.gtf",  "bTaeGut1_v1.p", "Taeniopygia guttata",
-                      "opossum", "Monodelphis_domestica.ASM229v1.112.gtf",            "ASM229v1",   "Monodelphis domestica",
-                      "platypus", "Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf",   "mOrnAna1.p.v1", "Ornithorhynchus anatinus",
-                      "mouse",   "Mus_musculus.GRCm39.112.gtf",                       "GRCm39",     "Mus musculus",
-                      "human",   "Homo_sapiens.GRCh38.112.gtf",                       "GRCh38",     "Homo sapiens",
-                      "rat",     "Rattus_norvegicus.mRatBN7.2.112.gtf",               "mRatBN7.2",  "Rattus norvegicus",
-                      "macaque", "Macaca_mulatta.Mmul_10.112.gtf",                    "Mmul_10",    "Macaca mulatta"),
+  genomes <- matrix(c(
+    "human",   "Homo_sapiens.GRCh38.112.gtf",                       "GRCh38",     "Homo sapiens",
+    "mouse",   "Mus_musculus.GRCm39.112.gtf",                       "GRCm39",     "Mus musculus",
+    "chicken", "Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.112.gtf", "GRCg7b",     "Gallus gallus",
+    "rat",     "Rattus_norvegicus.mRatBN7.2.112.gtf",               "mRatBN7.2",  "Rattus norvegicus",
+    "zebrafinch", "Taeniopygia_guttata.bTaeGut1_v1.p.112.gtf",  "bTaeGut1_v1.p", "Taeniopygia guttata",
+    "opossum", "Monodelphis_domestica.ASM229v1.112.gtf",            "ASM229v1",   "Monodelphis domestica",
+    "platypus", "Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf",   "mOrnAna1.p.v1", "Ornithorhynchus anatinus",
+    "macaque", "Macaca_mulatta.Mmul_10.112.gtf",                    "Mmul_10",    "Macaca mulatta"),
                     byrow = TRUE, ncol = 4 )
   colnames(genomes) <- c("CommonName", "GTF", "Genome", "Species")
   genomes
 }
 
+# Identify the coordinates of a given gene id from GTF. Expand by size on each flank if desired
+get.gene.coordinates <- function(common.name, gene.id, gtf.data, size=1000){
+  cat("Finding gene coordinates for", common.name, gene.id, "\n")
+  # print(str(gtf.data))
+  gtf <- gtf.data[[common.name]]
+  # cat("Getting gtf coordinates for", gene.id, "\n")
+  data <- gtf[gtf$gene_id==gene.id]
+  # Expand by size on each flank
+  if(size>0) data <- GenomicRanges::resize(data, size*2, fix = "center")
+  paste0(unique(GenomicRanges::seqnames(data)), ":", min(GenomicRanges::start(data)), "-", max(GenomicRanges::end(data)))
+}
+
 # Get the identifiers for genes of interest
-get.gene.locations <- function(){
+get.gene.locations <- function(gtf.data){
   cat("Finding gene ids\n")
   # Key gene ids from Ensembl
   zfx.y.locations <- matrix(c("chicken", "ZFX",  "ENSGALG00010003052", "ENSGALT00010007119",
@@ -59,26 +73,19 @@ get.gene.locations <- function(){
   
   zfx.y.locations <- as.data.frame(zfx.y.locations)
   
+  cat("Merging gene coordinates\n")
   # Add gene locations from the GTF files
   zfx.y.locations$FlankedLocations <- mapply(get.gene.coordinates, 
-                                             common.name=zfx.y.locations$CommonName, 
-                                             gene.id=zfx.y.locations$EnsemblId, 
-                                             size=0, SIMPLIFY = TRUE)
+                                             common.name = zfx.y.locations$CommonName, 
+                                             gene.id     = zfx.y.locations$EnsemblId, 
+                                             MoreArgs    = list(gtf.data=gtf.data,
+                                                                size=0),
+                                             SIMPLIFY = TRUE)
   
   
   zfx.y.locations
 }
 
-
-# Identify the coordinates of a given gene id from GTF. Expand by size on each flank if desired
-get.gene.coordinates <- function(common.name, gene.id, size=1000){
-  cat("Finding gene coordinates for", common.name, gene.id, "\n")
-  gtf <- GTF.DATA[[common.name]]
-  data <- gtf[gtf$gene_id==gene.id]
-  # Expand by size on each flank
-  if(size>0) data <- GenomicRanges::resize(data, size*2, fix = "center")
-  paste0(unique(GenomicRanges::seqnames(data)), ":", min(GenomicRanges::start(data)), "-", max(GenomicRanges::end(data)))
-}
 
 # Annotate which exons contain interesting features for labelling plots
 get.annotated.exons <- function(){
@@ -217,7 +224,7 @@ read.gtf.data <- function(){
   gtf.data <- mclapply(genome.data[,2], \(f){ 
     cat("Reading GTF file", f, "\n")
     rtracklayer::import( paste0("genomes/", f))
-  }, mc.cores = ifelse(installr::is.windows(), 1, 4))
+  }, mc.cores = ifelse(installr::is.windows(), 1, 5))
   names(gtf.data) <- genome.data[,1]
   cat("Read GTF files\n")
   gtf.data
@@ -251,6 +258,7 @@ make.sample.groups <- function(){
 
 #### Global variables ####
 
+cat("Making global variables\n")
 # Make a factor of times to allow ordering of plots
 TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06",  "Day_07-13", "Day_14-20", "Day_21-27"), levels = c("birth", "mid-meiosis", "adult","Day_00-06",  "Day_07-13", "Day_14-20", "Day_21-27"))
 
@@ -258,8 +266,9 @@ TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06",  "Day_07-13
 GTF.DATA <- read.gtf.data()
 
 # Global data frame with gene ids for all species
-GENE.LOCATIONS <- merge(get.gene.locations(), get.genome.data(), by="CommonName")
+GENE.LOCATIONS <- merge(get.gene.locations(GTF.DATA), get.genome.data(), by="CommonName")
 
 # Read the filtered samples, match folder names
 FILTERED.SAMPLES <- read.filtered.samples()
 
+cat("Common functions and global variables loaded\n")

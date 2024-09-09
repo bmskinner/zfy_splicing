@@ -213,10 +213,12 @@ zebrafinch <- read.csv("metadata/zebrafinch.csv") %>%
 
 #### Make summary tables ####
 
-# Read the filtered samples, match folder names
-filtered.samples <- read.filtered.samples()
+cat("Making sample summary tables\n")
 
-sample.classifications <- filtered.samples %>% 
+# Read the filtered samples, match folder names
+FILTERED.SAMPLES <- read.filtered.samples()
+
+sample.classifications <- FILTERED.SAMPLES %>% 
   dplyr::group_by(Organism, CommonName, DevStage, Timepoint) %>%
   dplyr::rename(OriginalTimepoint = DevStage,
                 MappedTimepoint = Timepoint) %>%
@@ -225,5 +227,5 @@ sample.classifications <- filtered.samples %>%
 
 # Export summary tables
 fs::dir_create("report")
-create.xlsx(filtered.samples, "report/analysed.samples.xlsx")
+create.xlsx(FILTERED.SAMPLES, "report/analysed.samples.xlsx")
 create.xlsx(sample.classifications, "report/sample.classifictions.xlsx")
