@@ -24,14 +24,17 @@ create.xlsx = function(data, file.name){
 # Get the names of GTF files for a genome
 get.genome.data <- function(){
   genomes <- matrix(c(
-    "human",   "Homo_sapiens.GRCh38.112.gtf",                       "GRCh38",     "Homo sapiens",
-    "mouse",   "Mus_musculus.GRCm39.112.gtf",                       "GRCm39",     "Mus musculus",
-    "chicken", "Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.112.gtf", "GRCg7b",     "Gallus gallus",
-    "rat",     "Rattus_norvegicus.mRatBN7.2.112.gtf",               "mRatBN7.2",  "Rattus norvegicus",
-    "zebrafinch", "Taeniopygia_guttata.bTaeGut1_v1.p.112.gtf",  "bTaeGut1_v1.p", "Taeniopygia guttata",
-    "opossum", "Monodelphis_domestica.ASM229v1.112.gtf",            "ASM229v1",   "Monodelphis domestica",
-    "platypus", "Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf",   "mOrnAna1.p.v1", "Ornithorhynchus anatinus",
-    "macaque", "Macaca_mulatta.Mmul_10.112.gtf",                    "Mmul_10",    "Macaca mulatta"),
+    "human",      "Homo_sapiens.GRCh38.112.gtf",                       "GRCh38",        "Homo sapiens",
+    "mouse",      "Mus_musculus.GRCm39.112.gtf",                       "GRCm39",        "Mus musculus",
+    "chicken",    "Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.112.gtf", "GRCg7b",        "Gallus gallus",
+    "rat",        "Rattus_norvegicus.mRatBN7.2.112.gtf",               "mRatBN7.2",     "Rattus norvegicus",
+    "zebrafinch", "Taeniopygia_guttata.bTaeGut1_v1.p.112.gtf",         "bTaeGut1_v1.p", "Taeniopygia guttata",
+    "xenopus",    "Xenopus_tropicalis.UCB_Xtro_10.0.112.gtf",          "UCB_Xtro_10.0", "Xenopus tropicalis",
+    "anole",      "Anolis_carolinensis.AnoCar2.0v2.112.gtf",           "AnoCar2.0v2",   "Anolis carolinensis",
+    "zebrafish",  "Danio_rerio.GRCz11.112.gtf",                        "GRCz11",        "Danio rerio",
+    "opossum",    "Monodelphis_domestica.ASM229v1.112.gtf",            "ASM229v1",      "Monodelphis domestica",
+    "platypus",   "Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf",    "mOrnAna1.p.v1", "Ornithorhynchus anatinus",
+    "macaque",    "Macaca_mulatta.Mmul_10.112.gtf",                    "Mmul_10",       "Macaca mulatta"),
                     byrow = TRUE, ncol = 4 )
   colnames(genomes) <- c("CommonName", "GTF", "Genome", "Species")
   genomes
@@ -56,6 +59,9 @@ get.gene.locations <- function(gtf.data){
   zfx.y.locations <- matrix(c("chicken", "ZFX",  "ENSGALG00010003052", "ENSGALT00010007119",
                               "zebrafinch", "ZFX", "ENSTGUG00000007219" ,"ENSTGUT00000021043",
                               "opossum", "ZFX",  "ENSMODG00000007512", "ENSMODT00000009508",
+                              "xenopus", "ZFX",  "ENSXETG00000007785", "ENSXETT00000017004",
+                              "anole",   "ZFX",  "ENSACAG00000007227", "ENSACAT00000007264",
+                              "zebrafish", "ZFX", "ENSDARG00000074453", "ENSDART00000110652",
                               "platypus", "ZFX", "ENSOANG00000046710", "ENSOANT00000073933",
                               "mouse",   "Zfx",  "ENSMUSG00000079509", "ENSMUST00000088102",
                               "mouse",   "Zfy1", "ENSMUSG00000053211", "ENSMUST00000189888",
@@ -207,7 +213,34 @@ get.annotated.exons <- function(){
                        "ENSTGUEE00000216832", "4", "",
                        "ENSTGUE00000074731", "5", "",
                        "ENSTGUE00000074763", "6", "",
-                       "ENSTGUEE00000199619", "7", "DBD"
+                       "ENSTGUEE00000199619", "7", "DBD",
+                       
+                       # Xenopus ZFX
+                       "ENSXETE00000095711", "1", "",
+                       "ENSXETE00000095712", "2", "SP",
+                       "ENSXETE00000095713", "3", "",
+                       "ENSXETE00000095714", "4", "",
+                       "ENSXETE00000095715", "5", "",
+                       "ENSXETE00000095716", "6", "",
+                       "ENSXETE00000570894", "7", "DBD",
+                       
+                       # Anole ZFX
+                       "ENSACAE00000067344", "1", "",
+                       "ENSACAE00000067407", "2", "SP",
+                       "ENSACAE00000067465", "3", "",
+                       "ENSACAE00000067528", "4", "",
+                       "ENSACAE00000067604", "5", "",
+                       "ENSACAE00000067676", "6", "",
+                       "ENSACAE00000067773", "7", "DBD",
+                       
+                       # Zebrafish ZFX
+                       "ENSDARE00001112692", "1", "",
+                       "ENSDARE00000798648", "2", "SP",
+                       "ENSDARE00000808537", "3", "",
+                       "ENSDARE00000846717", "4", "",
+                       "ENSDARE00000822128", "5", "",
+                       "ENSDARE00000794351", "6", "",
+                       "ENSDARE00001272363", "7", "DBD"
                        
                        ),
                      

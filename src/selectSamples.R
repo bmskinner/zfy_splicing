@@ -211,6 +211,44 @@ zebrafinch <- read.csv("metadata/zebrafinch.csv") %>%
   dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
   write.table(., file = "metadata/zebrafinch.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
 
+#### Samples from generic search Xenopus tropicalis testis ####
+
+xenopus <-  read.csv("metadata/xenopus.csv") %>%
+  dplyr::filter(Assay.Type == "RNA-Seq", tissue=="testis") %>%
+  dplyr::mutate(Organism_part = tissue,
+                DevStage = "adult",
+                Timepoint = "adult",
+                CommonName = "xenopus") %>%
+  merge(., get.genome.data(), by="CommonName") %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  write.table(., file = "metadata/xenopus.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
+
+#### Samples from generic search Zebrafish testis ####
+
+# Mature at ~3 months
+zebrafish <-  read.csv("metadata/zebrafish.csv") %>%
+  dplyr::filter(Assay.Type == "RNA-Seq", tissue=="testis", genotype=="wild type") %>%
+  dplyr::mutate(Organism_part = tissue,
+                DevStage = "adult",
+                Timepoint = "adult",
+                CommonName = "zebrafish") %>%
+  merge(., get.genome.data(), by="CommonName") %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  write.table(., file = "metadata/zebrafish.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
+
+#### Samples from generic search Anole testis ####
+
+anole <-  read.csv("metadata/anole.csv") %>%
+  dplyr::filter(Assay.Type == "RNA-Seq", str_detect(tissue, "[T|t]estis"),
+                str_detect(Stage, "[A|a]dult") | str_detect(dev_stage, "[A|a]dult") ) %>%
+  dplyr::mutate(Organism_part = "testis",
+                DevStage = "adult",
+                Timepoint = "adult",
+                CommonName = "zebrafish") %>%
+  merge(., get.genome.data(), by="CommonName") %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism) %>%
+  write.table(., file = "metadata/anole.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
+
 #### Make summary tables ####
 
 cat("Making sample summary tables\n")
