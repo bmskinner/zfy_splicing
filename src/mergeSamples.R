@@ -10,7 +10,7 @@ source("src/functions.R")
 
 
 # Create command to merge bams in groups
-groups <- FILTERED.SAMPLES %>% 
+groups <- SELECTED.SAMPLES %>% 
   dplyr::group_by(Organism, Organism_part, Timepoint, CommonName) %>% # not by sex - no difference seen in first pass
   dplyr::mutate(bam.file = paste0("data/", CommonName, "/", Run, ".bam"),
                 lock.file = paste0("data/", CommonName, "/", Run, ".lck")) %>%
@@ -64,7 +64,7 @@ if(nrow(to.sashimi)==0){
 cat("Extracting splice sites from", nrow(to.sashimi), "samples\n")
 for(i in 1:nrow(to.sashimi)){
   data <- to.sashimi[i,]
-  if(!file.exists(data$junctions.file.stranded)){
+  if(!file.exists( paste0(data$junctions.file.stranded, "_+"))){ # _+ and _- should exist together
     
     # Extract stranded junctions (only meaningful if this was a stranded library)
     cmd <-  paste0("activate ggsashimi && python src/ggsashimi.py --bam ", data$merged.bam, 

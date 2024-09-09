@@ -17,7 +17,7 @@ build_genome_index () {
 	FASTAURL=$(echo $2 | tr -d '"')
 	GTFURL=$(echo $3 | tr -d '"')
 
-	if [ ! -e ${GENOME}.1.ht2 ]; then
+	if [ ! -e ${GENOME}.1.ht2 ] && [ ! -e ${GENOME}.1.ht2l ]; then # could be .ht2 or .ht2l for large genomes
 	
   	FASTAGZFILE=$(basename ${FASTAURL})
   	GTFGZFILE=$(basename ${GTFURL})

@@ -5,6 +5,10 @@ library(GenomicRanges)
 
 #### Common functions ####
 
+save.double.width <- function(filename, plot, width=170, height=170){
+  ggsave(filename, plot, units = "mm", height = height, width = width, dpi = 300)
+}
+
 # Write the given data frame to an Excel file
 create.xlsx = function(data, file.name){
   
@@ -263,12 +267,11 @@ read.gtf.data <- function(){
   gtf.data
 }
 
-# Read all filtered samples from ./metadata 
+# Read all selected samples from ./metadata 
 # i.e. all files with .filt. in the name
-read.filtered.samples <- function(){
-  cat("Reading samples\n")
-  do.call(rbind, lapply(list.files(path="metadata", pattern = "*.filt.csv", full.names = TRUE), 
-                        \(f) read.csv(f) %>% dplyr::mutate(Project = str_replace(str_replace(f, "metadata/", ""), ".filt.csv", ""))))
+read.selected.samples <- function(){
+  cat("Reading selected samples\n")
+  do.call(rbind, lapply(list.files(path="metadata", pattern = "*.filt.csv", full.names = TRUE), read.csv))
   
 }
 
@@ -277,7 +280,7 @@ read.filtered.samples <- function(){
 # and note which samples still need processing
 make.sample.groups <- function(){
   # Create command to merge bams in groups
-  FILTERED.SAMPLES %>% 
+  SELECTED.SAMPLES %>% 
     dplyr::group_by(Organism, Organism_part, Timepoint, CommonName) %>% # not by sex - no difference seen in first pass
     dplyr::mutate(bam.file = paste0("data/", CommonName, "/", Run, ".bam")) %>%
     dplyr::summarise(bams = paste(bam.file, collapse = " "),
@@ -302,6 +305,6 @@ GTF.DATA <- read.gtf.data()
 GENE.LOCATIONS <- merge(get.gene.locations(GTF.DATA), get.genome.data(), by="CommonName")
 
 # Read the filtered samples, match folder names
-FILTERED.SAMPLES <- read.filtered.samples()
+SELECTED.SAMPLES <- read.selected.samples()
 
 cat("Common functions and global variables loaded\n")

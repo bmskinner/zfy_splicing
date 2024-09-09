@@ -77,7 +77,7 @@ map.data <- read.table("report/_qc/mapping.txt", sep="$") %>% #  sep char does n
   dplyr::slice_tail(n=1) %>% # if a sample has been mapped more than once, take only the most recent
   tidyr::pivot_wider(id_cols = Run, names_from = Measure, values_from = c(Reads, Pct)) %>% # make new columns
   dplyr::mutate(Reads_Overall_alignment_rate = rowSums(across(dplyr::starts_with("Reads_")), na.rm=TRUE)) %>%
-  merge(., FILTERED.SAMPLES, by="Run")   # Merge in the sample info
+  merge(., SELECTED.SAMPLES, by="Run")   # Merge in the sample info
 
 # Plot the mapping efficiencies
 

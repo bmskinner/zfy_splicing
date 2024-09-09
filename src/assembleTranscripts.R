@@ -1,5 +1,6 @@
 # Assemble transcripts usign StringTie
 library(fs)
+library(ggplot2)
 source("src/functions.R")
 
 
@@ -9,23 +10,27 @@ fs::file_delete("data/stringtie/ratios.txt")
 # Get the distinct groups
 sample.groups <- merge(make.sample.groups(), GENE.LOCATIONS, by="CommonName") 
 
-assemble.transcript <- function(common.name, tissue, gene.id, coordinates, merged.bam.file, gtf.file){
+#### Assemble transcripts ####
+
+assemble.transcript <- function(common.name, tissue, timepoint, gene.id, coordinates, full.bam.file, full.gtf.file){
   
-  cat("Assembling transcripts from", common.name, tissue, gene.id, "\n")
+  cat("Assembling transcripts from", common.name, tissue, timepoint, gene.id, "\n")
   
-  bam.file <- paste0("data/stringtie/", common.name, ".", tissue, ".", gene.id, ".gtf")
-  out.file <- paste0("data/stringtie/", common.name, ".", tissue, ".", gene.id, ".gtf")
+  gene.bam.file <- paste0("data/stringtie/", common.name, ".", tissue, ".", timepoint, ".", gene.id, ".bam")
+  gtf.out.file  <- paste0("data/stringtie/", common.name, ".", tissue, ".", timepoint, ".", gene.id, ".gtf")
   
-  system2("samtools", paste0("view -o ", bam.file, " ", merged.bam.file, " '", coordinates, "'"))
+  # Write the reads covering the gene
+  system2("samtools", paste0("view -o ", gene.bam.file, " ", full.bam.file, " '", coordinates, "'"))
   
-  system2("~/bin/stringtie-2.2.3.Linux_x86_64/stringtie", paste("-o ", out.file, 
-                                                                "-p 1 -l", common.name, 
-                                                                "-G", gtf.file,
-                                                                "-f 0.01",
-                                                                bam.file))
+  # Run stringtie usin the reference genome to guide assembly
+  system2("~/bin/stringtie-2.2.3.Linux_x86_64/stringtie", paste("-o ", gtf.out.file, # output file name
+                                                                "-p 1 -l", common.name, # label for novel transcripts
+                                                                "-G", paste0("genomes/", full.gtf.file), # genome annotation
+                                                                "-f 0.01", # min fraction of reads supporting splices
+                                                                gene.bam.file)) # input file to analyse
   
   # Count the reads on sense and antisense strands
-  system2("bash", paste("src/countStrandRatio.sh", bam.file))
+  system2("bash", paste("src/countStrandRatio.sh", gene.bam.file))
 
 }
 
@@ -33,3 +38,20 @@ mapply(assemble.transcript, sample.groups$CommonName, sample.groups$Organism_par
        sample.groups$EnsemblId, sample.groups$FlankedLocations, 
        sample.groups$merged.bam, sample.groups$GTF)
 
+#### Assess strandedness of reads ####
+
+read.ratios <- read.delim("data/stringtie/ratios.txt", sep = " ", header = FALSE)
+colnames(read.ratios) <- c("sample", "forward", "reverse", "total", "ratio")
+read.ratios <- tidyr::separate_wider_delim(read.ratios, sample, delim = ".", names = c("species", "tissue", "timepoint", "gene.id"))
+
+
+ggplot(read.ratios)+
+  annotate("rect",xmax = Inf, xmin = -Inf, ymax=0.1, ymin=-Inf, fill = "lightgreen")+
+  annotate("rect",xmax = Inf, xmin = -Inf, ymax=Inf, ymin=0.9, fill = "lightgreen")+
+  geom_point(aes(x=species, y = ratio))+
+  coord_cartesian(ylim=c(0,1))+
+  labs(y = "Strand ratio")+
+  facet_grid(tissue~timepoint)+
+  theme_bw()
+
+save.double.width("report/strandedness.png", last_plot())

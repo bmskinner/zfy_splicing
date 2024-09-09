@@ -16,21 +16,13 @@ Splice junctions for Zfx and Zfy are extracted from the merged bam files.
 ## How to run
 
 ```{bash}
-# Assign timepoints and select samples for analysis
-Rscript ./src/selectSamples.R
-
-# Build genome indexes
-./src/makeIndexedGenomes.sh
+# Get genome and sample info
+./src/preMapping.sh
 
 # Map to the latest genome assemblies
 ./src/mapSamples.sh
 
-# check the trimming, fastqc and mapping
-Rscript ./src/checkQC.R
+# Perform QC, merge bams, extract ZFX splicing and plot
+./src/postMapping.sh
 
-# Combine bam files and extract splice sites
-Rscript ./src/mergeSamples.R
-
-# Plot splicing patterns
-Rscript ./src/plotSashimi.R
 ```
