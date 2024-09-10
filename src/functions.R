@@ -3,6 +3,9 @@ library(xlsx)
 library(tidyverse)
 library(GenomicRanges)
 
+TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06",  "Day_07-13", "Day_14-20", "Day_21-27"), 
+                     levels = c("birth", "mid-meiosis", "adult","Day_00-06",  "Day_07-13", "Day_14-20", "Day_21-27"))
+
 #### Common functions ####
 
 save.double.width <- function(filename, plot, width=170, height=170){
@@ -271,7 +274,9 @@ read.gtf.data <- function(){
 # i.e. all files with .filt. in the name
 read.selected.samples <- function(){
   cat("Reading selected samples\n")
-  do.call(rbind, lapply(list.files(path="metadata", pattern = "*.filt.csv", full.names = TRUE), read.csv))
+  # Make a factor of times to allow ordering of plots
+  do.call(rbind, lapply(list.files(path="metadata", pattern = "*.filt.csv", full.names = TRUE), read.csv)) %>%
+    dplyr::mutate(Timepoint = factor(Timepoint, levels = TIME.ORDER))
   
 }
 
@@ -295,8 +300,6 @@ make.sample.groups <- function(){
 #### Global variables ####
 
 cat("Making global variables\n")
-# Make a factor of times to allow ordering of plots
-TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06",  "Day_07-13", "Day_14-20", "Day_21-27"), levels = c("birth", "mid-meiosis", "adult","Day_00-06",  "Day_07-13", "Day_14-20", "Day_21-27"))
 
 # Read all GTF files
 GTF.DATA <- read.gtf.data()
