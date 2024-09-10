@@ -176,9 +176,9 @@ read.csv("metadata/mouse.testis.csv") %>%
   dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
   write.table(., file = "metadata/mouse.testis.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
 
-#### Samples from generic search for platypus RNA-seq ####
+#### Samples from generic search for platypus RNA-seq and specific testis search ####
 
-platypus <- read.csv("metadata/platypus.csv") %>%
+platypus.1 <- read.csv("metadata/platypus.csv") %>%
   dplyr::rename(OrganismPart = Experimental_Factor._organism_part..exp.,
                 Species = Experimental_Factor._organism..exp.) %>%
   dplyr::filter(Assay.Type == "RNA-Seq") %>%
@@ -194,9 +194,21 @@ platypus <- read.csv("metadata/platypus.csv") %>%
   dplyr::filter(DevStage!="") %>%
   dplyr::filter(Organism_part!="fibroblast") %>%
   merge(., get.genome.data(), by="CommonName") %>%
-  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
-  write.table(., file = "metadata/platypus.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases)
 
+platypus.2 <- read.csv("metadata/platypus_testis.csv")  %>%
+  dplyr::filter(Assay.Type == "RNA-Seq", Organism_part %in% c("testis", ""),
+                Experimental_Factor._protocol..exp. != "Ribo-seq") %>%
+  dplyr::mutate(Organism_part = "testis",
+                DevStage = "adult",
+                Timepoint = "adult",
+                CommonName = "platypus") %>%
+  merge(., get.genome.data(), by="CommonName") %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases)
+
+rbind(platypus.1, platypus.2 ) %>%
+  dplyr::distinct() %>%
+  write.table(., file = "metadata/platypus.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
 
 #### Samples from generic search for zebrafinch testis RNAseq ####
 
