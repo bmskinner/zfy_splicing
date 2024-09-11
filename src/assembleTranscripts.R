@@ -1,13 +1,16 @@
 # Assemble transcripts usign StringTie
+# This expects StringTie binary in ./bin
+
 library(fs)
 library(ggplot2)
 source("src/functions.R")
 
 
 fs::dir_create("data/stringtie")
-file.remove("data/stringtie/ratios.txt")
+if(file.exists("data/stringtie/ratios.txt")) file.remove("data/stringtie/ratios.txt")
 
 # Get the distinct groups
+cat("Reading sample groups\n")
 sample.groups <- merge(make.sample.groups(), GENE.LOCATIONS, by="CommonName") 
 
 #### Assemble transcripts ####
@@ -23,7 +26,7 @@ assemble.transcript <- function(common.name, tissue, timepoint, gene.id, coordin
   system2("samtools", paste0("view -o ", gene.bam.file, " ", full.bam.file, " '", coordinates, "'"))
   
   # Run stringtie usin the reference genome to guide assembly
-  system2("~/bin/stringtie-2.2.3.Linux_x86_64/stringtie", paste("-o ", gtf.out.file, # output file name
+  system2("bin/stringtie", paste("-o ", gtf.out.file, # output file name
                                                                 "-p 1 -l", common.name, # label for novel transcripts
                                                                 "-G", paste0("genomes/", full.gtf.file), # genome annotation
                                                                 "-f 0.01", # min fraction of reads supporting splices
@@ -33,16 +36,24 @@ assemble.transcript <- function(common.name, tissue, timepoint, gene.id, coordin
   system2("bash", paste("src/countStrandRatio.sh", gene.bam.file))
 
 }
-
-mapply(assemble.transcript, sample.groups$CommonName, sample.groups$Organism_part, 
-       sample.groups$EnsemblId, sample.groups$FlankedLocations, 
-       sample.groups$merged.bam, sample.groups$GTF)
+cat("Assembling transcripts from", nrow(sample.groups), "sample groups\n")
+mapply(assemble.transcript, 
+       sample.groups$CommonName, 
+       sample.groups$Organism_part, 
+       sample.groups$Timepoint,
+       sample.groups$EnsemblId, 
+       sample.groups$FlankedLocations, 
+       sample.groups$merged.bam, 
+       sample.groups$GTF)
 
 #### Assess strandedness of reads ####
+cat("Reading strand ratios\n")
 
 read.ratios <- read.delim("data/stringtie/ratios.txt", sep = " ", header = FALSE)
 colnames(read.ratios) <- c("sample", "forward", "reverse", "total", "ratio")
-read.ratios <- tidyr::separate_wider_delim(read.ratios, sample, delim = ".", names = c("species", "tissue", "timepoint", "gene.id"))
+read.ratios <- tidyr::separate_wider_delim(read.ratios, sample, delim = ".", 
+                                           names = c("species", "tissue", "timepoint", "gene.id"),
+                                           too_many = "debug")
 
 
 ggplot(read.ratios)+
