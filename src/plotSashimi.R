@@ -284,15 +284,13 @@ make.species.panel <- function(species, timepoint, gene.id){
   gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$EnsemblId==gene.id,]$Gene
   
   out.png.file <- paste0("report/species/", species, ".", timepoint, ".", gene.id, ".", gene.name, ".png")
-  
-  # if(!file.exists(out.png.file)){
+
     plots <- lapply(data, \(x)  make.sashimi.panel(x,label=paste0(x$tissue, " ", x$junction.strand))$plot)
     track <- make.gene.track(data[[1]]) # only one gene, only need one track
     plots[[length(plots)+1]] <- track
     
     patchwork::wrap_plots(plots, nrow = length(plots))
-    ggsave(plot = last_plot(), filename =out.png.file, dpi = 300, units = "mm", width = 170, height = 240)
-  # }
+    save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
 }
 
 # Create a sashimi panel plot for all species of the given tissue and timepoint
@@ -309,7 +307,7 @@ make.tissue.panel <- function(tissue, timepoint){
   plots <- c(rbind(plots, tracks))
   
   patchwork::wrap_plots(plots, nrow = length(plots))
-  ggsave(plot = last_plot(), filename = out.png.file, dpi = 300, units = "mm", width = 170, height = 240)
+  save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
 }
 
 # Create a sashimi panel plot for all timepoint of the given tissue and species
@@ -338,7 +336,7 @@ make.timepoint.panel <- function(species, tissue, gene.id){
   plots[[length(plots)+1]] <- track
   
   patchwork::wrap_plots(plots, nrow = length(plots))
-  ggsave(plot = last_plot(), filename =out.png.file, dpi = 300, units = "mm", width = 170, height = 240)
+  save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
 }
 
 #### Select groups for plotting ####
@@ -359,19 +357,7 @@ timepoint.groups <- all.samples %>%
   dplyr::group_by(CommonName, Organism_part, EnsemblId) %>%
   dplyr::summarise(SampleCount = n())
 
-#### Generate results figures ####
-
-# Make species plots showing variation over tissues as a specific timepoint
-mapply(make.species.panel, species.groups$CommonName, species.groups$Timepoint,species.groups$EnsemblId)
-
-# Make tissue plots showing variation over species as a specific timepoint
-mapply(make.tissue.panel, tissue.groups$Organism_part, tissue.groups$Timepoint)
-
-# Make timepoint plots showing variation over times in a specific tissue
-mapply(make.timepoint.panel, timepoint.groups$CommonName, timepoint.groups$Organism_part, timepoint.groups$EnsemblId)
-# make.timepoint.panel("chicken", "testis", "ENSGALG00010003052")
-
-#### Condense introns for neater plotting #### 
+#### Functions to condense introns for neater plotting #### 
 
 # Plot junctions directly on exon track
 make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=5, label="tissue", 
@@ -696,7 +682,8 @@ make.condensed.species.panels <- function(species, timepoint, gene.id){
   plots <- lapply(data, \(x)  make.gene.track.sashimi.panel(x,label=paste0(species, " ", gene.name, "\n", x$tissue, " ", x$junction.strand), show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
   
   patchwork::wrap_plots(plots, nrow = length(plots))
-  ggsave(plot = last_plot(), filename =out.png.file, dpi = 300, units = "mm", width = 170, height = 240)
+  
+  save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
 }
 
 # Make tissue plot using condensed panels
@@ -713,7 +700,7 @@ make.condensed.tissue.panels <- function(tissue, timepoint){
                                                            show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
 
   patchwork::wrap_plots(plots, nrow = length(plots))
-  ggsave(plot = last_plot(), filename = out.png.file, dpi = 300, units = "mm", width = 170, height = 240)
+  save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
 }
 
 # Make species plot using combined panels
@@ -736,21 +723,34 @@ make.condensed.timepoint.panels <- function(species, tissue, gene.id){
   
   gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$EnsemblId==gene.id,]$Gene
   
-  out.png.file <-  paste0("report/timepoints/", species, ".", tissue, ".", gene.id, ".", gene.name, "condensed.png")
+  out.png.file <-  paste0("report/timepoints/", species, ".", tissue, ".", gene.id, ".", gene.name, ".condensed.png")
   
   plots <- lapply(data, \(x) make.gene.track.sashimi.panel(x, label=paste0(x$species, " ", gene.name, "\n",  x$timepoint, " ", x$junction.strand),
                                                            show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
 
   patchwork::wrap_plots(plots, nrow = length(plots))
-  ggsave(plot = last_plot(), filename =out.png.file, dpi = 300, units = "mm", width = 170, height = 240)
+  save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
 }
 
-# test.data <- make.combined.panels("macaque", "adult", "ENSMMUG00000046378")
+#### Make condensed figures #### 
+
 mapply(make.condensed.species.panels, species.groups$CommonName, species.groups$Timepoint,species.groups$EnsemblId)
 
-# make.condensed.tissue.panels("forebrain", "adult")
+# e.g. make.condensed.tissue.panels("forebrain", "adult")
 mapply(make.condensed.tissue.panels, tissue.groups$Organism_part, tissue.groups$Timepoint)
 
-# make.condensed.timepoint.panels("platypus", "testis", "ENSOANG00000046710")
+# e.g. make.condensed.timepoint.panels("platypus", "testis", "ENSOANG00000046710")
 mapply(make.condensed.timepoint.panels, timepoint.groups$CommonName, timepoint.groups$Organism_part, timepoint.groups$EnsemblId)
 
+
+#### Make non-condensed figures ####
+
+# Make species plots showing variation over tissues as a specific timepoint
+mapply(make.species.panel, species.groups$CommonName, species.groups$Timepoint,species.groups$EnsemblId)
+
+# Make tissue plots showing variation over species as a specific timepoint
+mapply(make.tissue.panel, tissue.groups$Organism_part, tissue.groups$Timepoint)
+
+# Make timepoint plots showing variation over times in a specific tissue
+# e.g. make.timepoint.panel("chicken", "testis", "ENSGALG00010003052")
+mapply(make.timepoint.panel, timepoint.groups$CommonName, timepoint.groups$Organism_part, timepoint.groups$EnsemblId)
