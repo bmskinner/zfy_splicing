@@ -277,6 +277,7 @@ sample.groups <- SELECTED.SAMPLES %>%
                 MappedTimepoint = Timepoint) %>%
   dplyr::group_by(Organism, CommonName, MappedTimepoint, Organism_part) %>%
   dplyr::summarise(count = n(), TotalBases = sum(Bases)) %>%
+  dplyr::arrange(CommonName) %>%
   dplyr::ungroup()
 
 # Export summary tables

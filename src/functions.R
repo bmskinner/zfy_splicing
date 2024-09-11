@@ -276,7 +276,8 @@ read.selected.samples <- function(){
   cat("Reading selected samples\n")
   # Make a factor of times to allow ordering of plots
   do.call(rbind, lapply(list.files(path="metadata", pattern = "*.filt.csv", full.names = TRUE), read.csv)) %>%
-    dplyr::mutate(Timepoint = factor(Timepoint, levels = TIME.ORDER))
+    dplyr::mutate(Timepoint = factor(Timepoint, levels = TIME.ORDER)) %>%
+    dplyr::arrange(CommonName, Run)
   
 }
 

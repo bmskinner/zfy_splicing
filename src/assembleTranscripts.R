@@ -5,7 +5,7 @@ source("src/functions.R")
 
 
 fs::dir_create("data/stringtie")
-fs::file_delete("data/stringtie/ratios.txt")
+file.remove("data/stringtie/ratios.txt")
 
 # Get the distinct groups
 sample.groups <- merge(make.sample.groups(), GENE.LOCATIONS, by="CommonName") 
