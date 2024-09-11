@@ -3,10 +3,11 @@
 
 BAMFILE=$1
 
+# Get the read counts from the file with strand info
 FORWARD=$(samtools view --count --tag XS:+ $BAMFILE)
 REVERSE=$(samtools view --count --tag XS:- $BAMFILE)
 
-TOTAL=$(echo " ${FORWARD} + ${REVERSE} " | bc)
-FRACTION=$(echo "scale=2; ${FORWARD} / ${TOTAL}" | bc)
+# Count all reads, whether they have strand tags or not
+TOTAL=$(samtools view --count $BAMFILE)
 
-echo "${BAMFILE} ${FORWARD} ${REVERSE} ${TOTAL} ${FRACTION}" >> data/stringtie/ratios.txt
+echo "${BAMFILE} ${FORWARD} ${REVERSE} ${TOTAL}" >> data/stringtie/ratios.txt

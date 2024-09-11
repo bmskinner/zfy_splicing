@@ -47,9 +47,10 @@ map_se_sample () {
 			echo "${ERR}: mapping"
 			# -k controls number of multimapping locations (default 5 for linear index)
 			# --downstream-transcriptome-assembly forces longer anchors at novel splice sites (more rigorous)
+			# --dta-cfflinks does this and also looks for novel splice sites, stored in tag XS:A:[+-]
 			# Analysis run with and without --dta to compare effects; we don't need to assemble transcripts, just see if there is greater splicing in testis
 			# hisat2 -x genomes/${GENOME} -p 8 -U data/${SPECIES}/${ERR}_trimmed.fq.gz --new-summary --downstream-transcriptome-assembly -S data/${SPECIES}/${ERR}.sam
-			hisat2 -x genomes/${GENOME} -p 8 -U data/${SPECIES}/${ERR}_trimmed.fq.gz --new-summary -S data/${SPECIES}/${ERR}.sam
+			hisat2 -x genomes/${GENOME} -p 8 -U data/${SPECIES}/${ERR}_trimmed.fq.gz --new-summary --dta-cufflinks -S data/${SPECIES}/${ERR}.sam
 			samtools sort -T data/${SPECIES}/${ERR} -@ 8 -o data/${SPECIES}/${ERR}.bam data/${SPECIES}/${ERR}.sam
 			samtools index -c -@ 7 data/${SPECIES}/${ERR}.bam # index with csi due to long chromosomes in opossum
 			rm data/${SPECIES}/${ERR}.sam

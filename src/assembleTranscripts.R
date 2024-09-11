@@ -50,19 +50,24 @@ mapply(assemble.transcript,
 cat("Reading strand ratios\n")
 
 read.ratios <- read.delim("data/stringtie/ratios.txt", sep = " ", header = FALSE)
-colnames(read.ratios) <- c("sample", "forward", "reverse", "total", "ratio")
+colnames(read.ratios) <- c("sample", "forward", "reverse", "total")
 read.ratios <- tidyr::separate_wider_delim(read.ratios, sample, delim = ".", 
                                            names = c("species", "tissue", "timepoint", "gene.id"),
-                                           too_many = "debug")
+                                           too_many = "debug") %>%
+  dplyr::mutate(total.stranded = forward+reverse,
+                f.stranded = total.stranded/total,
+                f.forward = foward / total.stranded)
+  dplyr::filter(timepoint %in% c("adult", "mid-meiosis", "birth")) 
 
 
 ggplot(read.ratios)+
   annotate("rect",xmax = Inf, xmin = -Inf, ymax=0.1, ymin=-Inf, fill = "lightgreen")+
   annotate("rect",xmax = Inf, xmin = -Inf, ymax=Inf, ymin=0.9, fill = "lightgreen")+
-  geom_point(aes(x=species, y = ratio))+
+  geom_point(aes(x=species, y = f.forward))+
   coord_cartesian(ylim=c(0,1))+
   labs(y = "Strand ratio")+
   facet_grid(tissue~timepoint)+
-  theme_bw()
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
 save.double.width("report/strandedness.png", last_plot())
