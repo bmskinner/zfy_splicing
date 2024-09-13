@@ -35,6 +35,7 @@ get.genome.data <- function(){
     "mouse",      "Mus_musculus.GRCm39.112.gtf",                       "GRCm39",        "Mus musculus",
     "chicken",    "Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.112.gtf", "GRCg7b",        "Gallus gallus",
     "rat",        "Rattus_norvegicus.mRatBN7.2.112.gtf",               "mRatBN7.2",     "Rattus norvegicus",
+    "pig",        "Sus_scrofa.Sscrofa11.1.112.gtf",                    "Sscrofa11.1",   "Sus scrofa",
     "zebrafinch", "Taeniopygia_guttata.bTaeGut1_v1.p.112.gtf",         "bTaeGut1_v1.p", "Taeniopygia guttata",
     "xenopus",    "Xenopus_tropicalis.UCB_Xtro_10.0.112.gtf",          "UCB_Xtro_10.0", "Xenopus tropicalis",
     "anole",      "Anolis_carolinensis.AnoCar2.0v2.112.gtf",           "AnoCar2.0v2",   "Anolis carolinensis",
@@ -70,12 +71,17 @@ get.gene.locations <- function(gtf.data){
                               "anole",   "ZFX",  "ENSACAG00000007227", "ENSACAT00000007264",
                               "zebrafish", "ZFX", "ENSDARG00000074453", "ENSDART00000110652",
                               "platypus", "ZFX", "ENSOANG00000046710", "ENSOANT00000073933",
+                              
                               "mouse",   "Zfx",  "ENSMUSG00000079509", "ENSMUST00000088102",
                               "mouse",   "Zfy1", "ENSMUSG00000053211", "ENSMUST00000189888",
                               "mouse",   "Zfy2", "ENSMUSG00000000103", "ENSMUST00000187148",
+                              
+                              "pig",     "ZFX",  "ENSSSCG00000021322", "ENSSSCT00000027404",
+                              "pig",     "ZFY",  "ENSSSCG00000012179", "ENSSSCT00000013323",
 
                               "human",   "ZFX",  "ENSG00000005889",    "ENST00000304543",
                               "human",   "ZFY",  "ENSG00000067646",    "ENST00000155093",
+                              
                               "macaque", "ZFX",  "ENSMMUG00000009801", "ENSMMUT00000013690",
                               "macaque", "ZFY",  "ENSMMUG00000046378", "ENSMMUT00000057467",
 
@@ -247,7 +253,25 @@ get.annotated.exons <- function(){
                        "ENSDARE00000846717", "4", "",
                        "ENSDARE00000822128", "5", "",
                        "ENSDARE00000794351", "6", "",
-                       "ENSDARE00001272363", "7", "DBD"
+                       "ENSDARE00001272363", "7", "DBD",
+                       
+                       # Pig ZFX
+                       "ENSSSCE00000299720", "1", "",
+                       "ENSSSCE00000376078", "2", "SP",
+                       "ENSSSCE00000107581", "3", "",
+                       "ENSSSCE00000107582", "4", "",
+                       "ENSSSCE00000107583", "5", "",
+                       "ENSSSCE00000107584", "6", "",
+                       "ENSSSCE00000191439", "7", "DBD",
+                       
+                       # Pig ZFY
+                       "ENSSSCE00000420613", "1", "",
+                       "ENSSSCE00000205394", "2", "SP",
+                       "ENSSSCE00000163503", "3", "",
+                       "ENSSSCE00000229962", "4", "",
+                       "ENSSSCE00000245134", "5", "",
+                       "ENSSSCE00000170234", "6", "",
+                       "ENSSSCE00000306673", "7", "DBD"
                        
                        ),
                      

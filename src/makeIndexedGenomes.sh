@@ -72,8 +72,11 @@ build_genome_index bTaeGut1_v1.p https://ftp.ensembl.org/pub/release-112/fasta/t
 # Xenopus bTaeGut1_v1.p
 build_genome_index UCB_Xtro_10.0 https://ftp.ensembl.org/pub/release-112/fasta/xenopus_tropicalis/dna/Xenopus_tropicalis.UCB_Xtro_10.0.dna.toplevel.fa.gz  https://ftp.ensembl.org/pub/release-112/gtf/xenopus_tropicalis/Xenopus_tropicalis.UCB_Xtro_10.0.112.gtf.gz
 
-# Green Anole
+# Green Anole AnoCar2.0v2
 build_genome_index AnoCar2.0v2 https://ftp.ensembl.org/pub/release-112/fasta/anolis_carolinensis/dna/Anolis_carolinensis.AnoCar2.0v2.dna.toplevel.fa.gz https://ftp.ensembl.org/pub/release-112/gtf/anolis_carolinensis/Anolis_carolinensis.AnoCar2.0v2.112.gtf.gz
 
-# Zebra fish
+# Zebra fish GRCz11
 build_genome_index GRCz11 https://ftp.ensembl.org/pub/release-112/fasta/danio_rerio/dna/Danio_rerio.GRCz11.dna.toplevel.fa.gz https://ftp.ensembl.org/pub/release-112/gtf/danio_rerio/Danio_rerio.GRCz11.112.gtf.gz
+
+# Pig Sscrofa11.1
+build_genome_index Sscrofa11.1 https://ftp.ensembl.org/pub/release-112/fasta/sus_scrofa/dna/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz https://ftp.ensembl.org/pub/release-112/gtf/sus_scrofa/Sus_scrofa.Sscrofa11.1.112.gtf.gz

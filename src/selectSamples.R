@@ -134,12 +134,14 @@ read.csv("metadata/PRJEB33381.csv") %>%
   dplyr::rename(OrganismPart = Experimental_Factor._organism_part..exp.,
                 Species = Experimental_Factor._organism..exp.,
                 DevStage = Developmental_stage) %>%
-  dplyr::filter(Species %in% c("Mus musculus", "Monodelphis domestica", "Macaca mulatta", "Rattus norvegicus")) %>%
+  dplyr::filter(Species %in% c("Mus musculus", "Monodelphis domestica", "Macaca mulatta", "Rattus norvegicus", "Sus scrofa")) %>%
   dplyr::mutate(Timepoint = DevStage,
                 CommonName = case_when(Organism=="Mus musculus"~"mouse",
                                        Organism=="Monodelphis domestica"~"opossum",
                                        Organism=="Macaca mulatta"~"macaque",
-                                       Organism=="Rattus norvegicus"~"rat")) %>%
+                                       Organism=="Rattus norvegicus"~"rat",
+                                       Organism=="Sus scrofa"~"pig"
+                                       )) %>%
   merge(., get.genome.data(), by="CommonName") %>%
   dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
   write.table(., file = "metadata/PRJEB33381.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
@@ -181,7 +183,8 @@ read.csv("metadata/mouse.testis.csv") %>%
 platypus.1 <- read.csv("metadata/platypus.csv") %>%
   dplyr::rename(OrganismPart = Experimental_Factor._organism_part..exp.,
                 Species = Experimental_Factor._organism..exp.) %>%
-  dplyr::filter(Assay.Type == "RNA-Seq") %>%
+  dplyr::filter(Assay.Type == "RNA-Seq",
+                LibrarySelection != "size fractionation") %>%
   dplyr::mutate(Organism_part = str_to_lower( case_when(tissue != "" ~ tissue,
                                    OrganismPart != "" ~ OrganismPart,
                                    source_name != "" ~ source_name,
@@ -198,7 +201,8 @@ platypus.1 <- read.csv("metadata/platypus.csv") %>%
 
 platypus.2 <- read.csv("metadata/platypus_testis.csv")  %>%
   dplyr::filter(Assay.Type == "RNA-Seq", Organism_part %in% c("testis", ""),
-                Experimental_Factor._protocol..exp. != "Ribo-seq") %>%
+                Experimental_Factor._protocol..exp. != "Ribo-seq",
+                LibrarySelection != "size fractionation" ) %>%
   dplyr::mutate(Organism_part = "testis",
                 DevStage = "adult",
                 Timepoint = "adult",
@@ -262,6 +266,31 @@ anole <-  read.csv("metadata/anole.csv") %>%
   merge(., get.genome.data(), by="CommonName") %>%
   dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
   write.table(., file = "metadata/anole.filt.csv", row.names = FALSE, quote = TRUE, append=FALSE, sep=",", col.names = TRUE)
+
+
+#### Samples from generic search ("birds"[Organism]) AND testis[Text Word]  ####
+
+# bird.testis <-  read.csv("metadata/bird.testis.csv") %>%
+#   dplyr::filter(Assay.Type == "RNA-Seq",
+#                 
+#                 # Ignore chicken and zebra finch, and anything without a genome assembly or too vague
+#                 !( Organism %in% c("Aves", "Gallus gallus", "Taeniopygia castanotis", "Passer", "Anser",
+#                                    "Myiopsitta monachus", "Ficedula albicollis x Ficedula hypoleuca",
+#                                    "Ficedula hypoleuca", "Passer domesticus", "Passer hispaniolensis", "Passer italiae")),
+#                 str_detect(tissue, "[T|t]estis"),
+#                 !str_detect(tissue, "spleen|liver|hypothalamus"),
+#                 sex=="male",
+#                 Bases > 5e9,
+#                 AGE!="6 week") %>%
+#   dplyr::group_by(Organism) %>%
+#   dplyr::filter(sum(Bases)>2e10) %>%
+#   dplyr::arrange(Organism) #%>%
+  # dplyr::mutate(Organism_part = "testis",
+  #               DevStage = "adult",
+  #               Timepoint = "adult",
+  #               CommonName = "anole") %>%
+  # merge(., get.genome.data(), by="CommonName") %>%
+  # dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases)
 
 
 #### Make summary tables ####

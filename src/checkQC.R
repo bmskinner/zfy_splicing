@@ -79,6 +79,8 @@ map.data <- read.table("report/_qc/mapping.txt", sep="$") %>% #  sep char does n
   dplyr::mutate(Reads_Overall_alignment_rate = rowSums(across(dplyr::starts_with("Reads_")), na.rm=TRUE)) %>%
   merge(., SELECTED.SAMPLES, by="Run")   # Merge in the sample info
 
+create.xlsx(map.data, "report/_qc/mapping.xlsx")
+
 # Plot the mapping efficiencies
 
 plot.single.end.mapping <- function(map.data){
