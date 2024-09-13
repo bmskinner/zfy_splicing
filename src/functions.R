@@ -92,7 +92,7 @@ get.gene.locations <- function(gtf.data){
                                              common.name = zfx.y.locations$CommonName, 
                                              gene.id     = zfx.y.locations$EnsemblId, 
                                              MoreArgs    = list(gtf.data=gtf.data,
-                                                                size=0),
+                                                                size=1000), # ensure flanking lncRNAs will be detected
                                              SIMPLIFY = TRUE)
   
   
