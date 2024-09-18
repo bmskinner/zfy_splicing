@@ -31,21 +31,21 @@ create.xlsx = function(data, file.name){
 # Get the names of GTF files for a genome
 get.genome.data <- function(){
   genomes <- matrix(c(
-    "human",      "Homo_sapiens.GRCh38.112.gtf",                       "GRCh38",        "Homo sapiens",
-    "mouse",      "Mus_musculus.GRCm39.112.gtf",                       "GRCm39",        "Mus musculus",
-    "chicken",    "Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.112.gtf", "GRCg7b",        "Gallus gallus",
-    "rat",        "Rattus_norvegicus.mRatBN7.2.112.gtf",               "mRatBN7.2",     "Rattus norvegicus",
-    "pig",        "Sus_scrofa.Sscrofa11.1.112.gtf",                    "Sscrofa11.1",   "Sus scrofa",
-    "zebrafinch", "Taeniopygia_guttata.bTaeGut1_v1.p.112.gtf",         "bTaeGut1_v1.p", "Taeniopygia guttata",
-    "xenopus",    "Xenopus_tropicalis.UCB_Xtro_10.0.112.gtf",          "UCB_Xtro_10.0", "Xenopus tropicalis",
-    "anole",      "Anolis_carolinensis.AnoCar2.0v2.112.gtf",           "AnoCar2.0v2",   "Anolis carolinensis",
-    "zebrafish",  "Danio_rerio.GRCz11.112.gtf",                        "GRCz11",        "Danio rerio",
-    "opossum",    "Monodelphis_domestica.ASM229v1.112.gtf",            "ASM229v1",      "Monodelphis domestica",
-    "platypus",   "Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf",    "mOrnAna1.p.v1", "Ornithorhynchus anatinus",
-    "macaque",    "Macaca_mulatta.Mmul_10.112.gtf",                    "Mmul_10",       "Macaca mulatta"),
-                    byrow = TRUE, ncol = 4 )
-  colnames(genomes) <- c("CommonName", "GTF", "Genome", "Species")
-  genomes
+    "human",      "Homo_sapiens.GRCh38.112.gtf",                       "GRCh38",        "Homo sapiens",               "Homo_sapiens.GRCh38.dna.toplevel.fa.gz",
+    "mouse",      "Mus_musculus.GRCm39.112.gtf",                       "GRCm39",        "Mus musculus",               "Mus_musculus.GRCm39.dna.toplevel.fa.gz",
+    "chicken",    "Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.112.gtf", "GRCg7b",        "Gallus gallus",              "Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.dna.toplevel.fa.gz",
+    "rat",        "Rattus_norvegicus.mRatBN7.2.112.gtf",               "mRatBN7.2",     "Rattus norvegicus",          "Rattus_norvegicus.mRatBN7.2.dna.toplevel.fa.gz",
+    "pig",        "Sus_scrofa.Sscrofa11.1.112.gtf",                    "Sscrofa11.1",   "Sus scrofa",                 "Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz",
+    "zebrafinch", "Taeniopygia_guttata.bTaeGut1_v1.p.112.gtf",         "bTaeGut1_v1.p", "Taeniopygia guttata",        "Taeniopygia_guttata.bTaeGut1_v1.p.dna.toplevel.fa.gz",
+    "xenopus",    "Xenopus_tropicalis.UCB_Xtro_10.0.112.gtf",          "UCB_Xtro_10.0", "Xenopus tropicalis",         "Xenopus_tropicalis.UCB_Xtro_10.0.dna.toplevel.fa.gz",
+    "anole",      "Anolis_carolinensis.AnoCar2.0v2.112.gtf",           "AnoCar2.0v2",   "Anolis carolinensis",        "Anolis_carolinensis.AnoCar2.0v2.dna.toplevel.fa.gz",
+    "zebrafish",  "Danio_rerio.GRCz11.112.gtf",                        "GRCz11",        "Danio rerio",                "Danio_rerio.GRCz11.dna.toplevel.fa.gz",
+    "opossum",    "Monodelphis_domestica.ASM229v1.112.gtf",            "ASM229v1",      "Monodelphis domestica",      "Monodelphis_domestica.ASM229v1.dna.toplevel.fa.gz",
+    "platypus",   "Ornithorhynchus_anatinus.mOrnAna1.p.v1.112.gtf",    "mOrnAna1.p.v1", "Ornithorhynchus anatinus",   "Ornithorhynchus_anatinus.mOrnAna1.p.v1.dna.toplevel.fa.gz",
+    "macaque",    "Macaca_mulatta.Mmul_10.112.gtf",                    "Mmul_10",       "Macaca mulatta",             "Macaca_mulatta.Mmul_10.dna.toplevel.fa.gz"),
+                    byrow = TRUE, ncol = 5 )
+  colnames(genomes) <- c("CommonName", "GTF", "Genome", "Species", "FASTA")
+  as.data.frame(genomes)
 }
 
 # Identify the coordinates of a given gene id from GTF. Expand by size on each flank if desired
@@ -329,8 +329,10 @@ cat("Making global variables\n")
 # Read all GTF files
 GTF.DATA <- read.gtf.data()
 
+GENOME_DATA <- get.genome.data()
+
 # Global data frame with gene ids for all species
-GENE.LOCATIONS <- merge(get.gene.locations(GTF.DATA), get.genome.data(), by="CommonName")
+GENE.LOCATIONS <- merge(get.gene.locations(GTF.DATA), GENOME_DATA, by="CommonName")
 
 # Read the filtered samples, match folder names
 SELECTED.SAMPLES <- read.selected.samples()

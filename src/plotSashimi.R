@@ -389,8 +389,6 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=5, la
       introns <- sashimi.data$ann_list$introns %>%
         dplyr::filter(strand==sashimi.data$strand& tx %in% transcript.ids$transcript_id)
       
-      # print(introns)
-      
       exon.ranges <- GenomicRanges::GRanges(seqnames=rep("test", nrow(exons)), 
                                             ranges = IRanges::IRanges(start=exons$start, 
                                                                       end = exons$end),
@@ -421,8 +419,6 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=5, la
                                              start = range.start)#,
                                              # end = max(end(exon.ranges)))
       
-      
-      # print(missing.introns)
       intron.ranges <- c(intron.ranges, missing.introns)
       
       intron.ranges <- intron.ranges %>%
@@ -444,7 +440,6 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=5, la
         dplyr::arrange(start, end) %>%
         dplyr::distinct() %>%
         dplyr::mutate(length = abs(start-end),
-                      # offset = ifelse(length>500 & Type=="intron", 500, 0),
                       new.length = ifelse(length>500 & Type=="intron", 500, length),
                       new.end = min(start)+cumsum(new.length),
                       new.start = new.end - new.length) # how much offset to apply
@@ -457,19 +452,37 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=5, la
 
     # Convert a coordinate to collapsed space using the conversion table
     convert.coordinates <- function(coordinate){
+      
+      # If a coordinate is out of bounds, don't adjust it
+      if(coordinate < min(coord.conversion.table$start)){
+        return(coordinate)
+      }
+      
+      if(coordinate > max(coord.conversion.table$end)){
+        old.dist <- max(coord.conversion.table$end) - coordinate
+        return(max(coord.conversion.table$new.end)+old.dist)
+      }
 
       # Take the first matching row
       feature <- coord.conversion.table %>% 
         dplyr::filter(start<=coordinate & end>=coordinate) %>%
         dplyr::slice_head(n=1)
       
+      # If we find nothing, do not adjust
+      if(nrow(feature)==0) return(coordinate)
+      
       # How far along the feature are we?
       f.feature <- (coordinate-feature$start)/feature$length
       
       # Nearest integer to the same fraction of the new coordinate space
+      result <- unique(round(f.feature*feature$new.length + feature$new.start))
       
-      result <- round(f.feature*feature$new.length + feature$new.start)
-      unique(result)
+      # If this was NA becuase we are outside the bounds of the main transcript,
+      # return the original coordinate
+      if(is.na(result)){
+        return(coordinate)
+      }
+      return(result)
     }
     
     # Copy the existing coordinates
@@ -489,9 +502,7 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=5, la
     anns$introns$old.end <- anns$introns$end
     anns$introns$start <- sapply(anns$introns$old.start, convert.coordinates)
     anns$introns$end <- sapply(anns$introns$old.end, convert.coordinates)
-    
-    # print(anns$introns)
-    
+
     sashimi.data$ann_list <<- anns
     
     junctions$old.x <- junctions$x
@@ -511,10 +522,17 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=5, la
 
   junctions <- sashimi.data$junction_list
   anns <- sashimi.data$ann_list
+  
+  if(any(!is.numeric(anns$exons$end)) | any(!is.numeric(anns$exons$start))) {
+    cat("Error in annotations: at least one start or end is NA\n")
+    print(anns$exons)
+    str(anns$exons)
+    # stop("Error in annotations: at least one start or end is NA")
+  }
 
   # Set coordinates for the x axis, reversing if on reverse strand
-  xmin <- ifelse(sashimi.data$is.reverse.strand, max(anns$exons$end)+500, min(anns$exons$start)-500)
-  xmax <- ifelse(sashimi.data$is.reverse.strand, min(anns$exons$start)-500, max(anns$exons$end)+500)
+  xmin <- ifelse(sashimi.data$is.reverse.strand, max(anns$exons$end, na.rm = T)+500, min(anns$exons$start, na.rm = T)-500)
+  xmax <- ifelse(sashimi.data$is.reverse.strand, min(anns$exons$start, na.rm = T)-500, max(anns$exons$end, na.rm = T)+500)
   
   # Canonical exons
   canonical.exons <- sashimi.data$ann_list$exons %>% dplyr::filter(tx==sashimi.data$canonical.transcript.id)
@@ -533,7 +551,7 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=5, la
     
     scale_y_discrete(expand=c(0.5,0.5))+
     coord_cartesian(xlim = c(xmin,xmax))+
-    scale_x_continuous(expand=c(0,0.25), labels=comma)+
+    scale_x_continuous(expand=c(0,0.25))+
     theme_minimal()+
     labs(y = label)+
     theme(axis.line.y = element_blank(),
@@ -642,13 +660,22 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads=5, la
   
   # Check junctions meet plot criteria
   if(nrow(junctions)>0){
+    junctions$x <- as.vector(as.numeric(junctions$x))
     
-    # print(junctions)
-    # str(junctions)
-    junctions <- junctions %>% 
-      dplyr::arrange(x, xend) %>%
-      dplyr::mutate(length = abs(xend-x))%>%
-      dplyr::filter(count>=min.spanning.reads) 
+    junctions <- junctions %>%
+      dplyr::filter(count>=min.spanning.reads) %>% 
+      na.omit %>%
+      dplyr::arrange(x, xend)
+    
+    
+    if(any(!is.numeric(junctions$xend)) | any(!is.numeric(junctions$x))) {
+      print(junctions)
+      str(junctions)
+      stop("Error in junctions: at least one x or xend is NA")
+    }
+
+    junctions <- junctions %>%
+      dplyr::mutate(length = abs(xend-x)) 
   }
   
   # Add the junctions, adjusting for plus vs minus strand
@@ -740,6 +767,7 @@ mapply(make.condensed.species.panels, species.groups$CommonName, species.groups$
 mapply(make.condensed.tissue.panels, tissue.groups$Organism_part, tissue.groups$Timepoint)
 
 # e.g. make.condensed.timepoint.panels("platypus", "testis", "ENSOANG00000046710")
+make.condensed.timepoint.panels("anole", "testis", "ENSACAG00000007227")
 mapply(make.condensed.timepoint.panels, timepoint.groups$CommonName, timepoint.groups$Organism_part, timepoint.groups$EnsemblId)
 
 

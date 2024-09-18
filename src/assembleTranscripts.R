@@ -15,12 +15,12 @@ sample.groups <- merge(make.sample.groups(), GENE.LOCATIONS, by="CommonName")
 
 #### Assemble transcripts ####
 
-assemble.transcript <- function(common.name, tissue, timepoint, gene.id, coordinates, full.bam.file, full.gtf.file){
+assemble.transcript <- function(common.name, tissue, timepoint, gene.id, gene, coordinates, full.bam.file, full.gtf.file){
   
   cat("Assembling transcripts from", common.name, tissue, timepoint, gene.id, "\n")
   
-  gene.bam.file <- paste0("data/stringtie/", common.name, ".", tissue, ".", timepoint, ".", gene.id, ".bam")
-  gtf.out.file  <- paste0("data/stringtie/", common.name, ".", tissue, ".", timepoint, ".", gene.id, ".gtf")
+  gene.bam.file <- paste0("data/stringtie/", common.name, ".", tissue, ".", timepoint, ".", gene.id, ".", gene, ".bam")
+  gtf.out.file  <- paste0("data/stringtie/", common.name, ".", tissue, ".", timepoint, ".", gene.id, ".", gene, ".gtf")
   
   # Write the reads covering the gene
   system2("samtools", paste0("view -o ", gene.bam.file, " ", full.bam.file, " '", coordinates, "'"))
@@ -42,6 +42,7 @@ mapply(assemble.transcript,
        sample.groups$Organism_part, 
        sample.groups$Timepoint,
        sample.groups$EnsemblId, 
+       sample.groups$Gene,
        sample.groups$FlankedLocations, 
        sample.groups$merged.bam, 
        sample.groups$GTF)
@@ -52,11 +53,11 @@ cat("Reading strand ratios\n")
 read.ratios <- read.delim("data/stringtie/ratios.txt", sep = " ", header = FALSE)
 colnames(read.ratios) <- c("sample", "forward", "reverse", "total")
 read.ratios <- tidyr::separate_wider_delim(read.ratios, sample, delim = ".", 
-                                           names = c("species", "tissue", "timepoint", "gene.id"),
+                                           names = c("species", "tissue", "timepoint", "gene.id", "gene"),
                                            too_many = "debug") %>%
   dplyr::mutate(total.stranded = forward+reverse,
                 f.stranded = total.stranded/total,
-                f.forward = foward / total.stranded)
+                f.forward = forward / total.stranded) %>%
   dplyr::filter(timepoint %in% c("adult", "mid-meiosis", "birth")) 
 
 
@@ -71,3 +72,12 @@ ggplot(read.ratios)+
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
 save.double.width("report/strandedness.png", last_plot())
+
+ggplot(read.ratios)+
+  geom_point(aes(x=species, y = f.stranded))+
+  labs(y = "Stranded read fraction of total reads")+
+  facet_grid(tissue~timepoint)+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+save.double.width("report/stranded_fraction.png", last_plot())
