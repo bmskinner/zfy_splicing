@@ -13,3 +13,6 @@ Rscript src/assembleTranscripts.R >> logs/assembleTranscripts.log 2>&1
 
 # Plot splice variation
 Rscript src/plotSashimi.R >> logs/plotSashimi.log 2>&1
+
+# Tar the figures
+tar czf report.tar.gz report/*

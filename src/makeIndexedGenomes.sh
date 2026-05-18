@@ -80,3 +80,6 @@ build_genome_index GRCz11 https://ftp.ensembl.org/pub/release-112/fasta/danio_re
 
 # Pig Sscrofa11.1
 build_genome_index Sscrofa11.1 https://ftp.ensembl.org/pub/release-112/fasta/sus_scrofa/dna/Sus_scrofa.Sscrofa11.1.dna.toplevel.fa.gz https://ftp.ensembl.org/pub/release-112/gtf/sus_scrofa/Sus_scrofa.Sscrofa11.1.112.gtf.gz
+
+# Koala phaCin_unsw_v4.1
+build_genome_index phaCin_unsw_v4.1 https://ftp.ensembl.org/pub/release-115/fasta/phascolarctos_cinereus/dna/Phascolarctos_cinereus.phaCin_unsw_v4.1.dna.toplevel.fa.gz https://ftp.ensembl.org/pub/release-115/gtf/phascolarctos_cinereus/Phascolarctos_cinereus.phaCin_unsw_v4.1.115.gtf.gz
