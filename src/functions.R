@@ -46,7 +46,6 @@ get.genome.data <- function() {
     "macaque", "Macaca_mulatta.Mmul_10.112.gtf", "Mmul_10", "Macaca mulatta", "Macaca_mulatta.Mmul_10.dna.toplevel.fa.gz",
     "koala", "Phascolarctos_cinereus.phaCin_unsw_v4.1.115.gtf.gz", "phaCin_unsw_v4.1", "Phascolarctos cinereus", "Phascolarctos_cinereus.phaCin_unsw_v4.1.dna.toplevel.fa.gz"
   )
-  # as.data.frame(genomes)
 }
 
 # Identify the coordinates of a given gene id from GTF. Expand by size on each flank if desired
@@ -87,8 +86,6 @@ get.gene.locations <- function(gtf.data) {
     "rat", "Zfy2", "ENSRNOG00000053042", "ENSRNOT00000077708",
     "koala", "ZFX", "ENSPCIG00000024018", "ENSPCIT00000039787",
   )
-
-  zfx.y.locations <- as.data.frame(zfx.y.locations)
 
   cat("Merging gene coordinates\n")
   # Add gene locations from the GTF files
@@ -295,7 +292,7 @@ get.annotated.exons <- function() {
 read.gtf.data <- function() {
   genome.data <- get.genome.data()
   cat("Reading GTF files\n")
-  gtf.data <- mclapply(genome.data[, 2], \(f){
+  gtf.data <- mclapply(genome.data$GTF, \(f){
     cat("Reading GTF file", f, "\n")
     rtracklayer::import(paste0("genomes/", f))
   }, mc.cores = ifelse(installr::is.windows(), 1, 5))

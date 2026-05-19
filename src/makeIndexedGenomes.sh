@@ -83,3 +83,6 @@ build_genome_index Sscrofa11.1 https://ftp.ensembl.org/pub/release-112/fasta/sus
 
 # Koala phaCin_unsw_v4.1
 build_genome_index phaCin_unsw_v4.1 https://ftp.ensembl.org/pub/release-115/fasta/phascolarctos_cinereus/dna/Phascolarctos_cinereus.phaCin_unsw_v4.1.dna.toplevel.fa.gz https://ftp.ensembl.org/pub/release-115/gtf/phascolarctos_cinereus/Phascolarctos_cinereus.phaCin_unsw_v4.1.115.gtf.gz
+
+# Echidna mTacAcu1
+build_genome_index mTacAcu1 https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/015/852/505/GCF_015852505.1_mTacAcu1.pri/GCF_015852505.1_mTacAcu1.pri_genomic.fna.gz https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/015/852/505/GCF_015852505.1_mTacAcu1.pri/GCF_015852505.1_mTacAcu1.pri_genomic.gtf.gz
