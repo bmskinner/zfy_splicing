@@ -166,11 +166,11 @@ make.sample.groups <- function() {
 
 cat("Making global variables\n")
 
-GENOME_DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE) |>
+GENOME.DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE) |>
   dplyr::mutate(GTF_FILE = paste0("./genomes/", stringr::str_remove(basename(GTF_URL), ".gz")))
 
 # Global data frame with gene ids for all species
-GENE.LOCATIONS <- get.gene.locations(GENOME_DATA)
+GENE.LOCATIONS <- get.gene.locations(GENOME.DATA)
 
 # Read the filtered samples, match folder names
 SELECTED.SAMPLES <- read.selected.samples()

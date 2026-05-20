@@ -4,6 +4,8 @@ library(xlsx)
 library(fs)
 source("src/functions.R")
 # Filter metadata from SRA searches to get samples of interest
+
+cat("Reading and filtering sample data\n")
 #### Samples from PRJEB26695 ####
 
 # Chicken E-MTAB-6769
@@ -171,7 +173,7 @@ read.csv("metadata/PRJEB33381.csv") %>%
       Organism == "Sus scrofa" ~ "pig"
     )
   ) %>%
-  merge(., get.genome.data(), by = "CommonName") %>%
+  merge(., GENOME.DATA, by = "CommonName") %>%
   dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
   write.table(., file = "metadata/PRJEB33381.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
@@ -210,7 +212,7 @@ read.csv("metadata/mouse.testis.csv") %>%
     sex = "male",
     DevStage = paste0("d", AgeDays)
   ) %>% # ensure all consistent
-  merge(., get.genome.data(), by = "CommonName") %>%
+  merge(., GENOME.DATA, by = "CommonName") %>%
   dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
   write.table(., file = "metadata/mouse.testis.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
@@ -240,7 +242,7 @@ platypus.1 <- read.csv("metadata/platypus.csv") %>%
   ) %>%
   dplyr::filter(DevStage != "") %>%
   dplyr::filter(Organism_part != "fibroblast") %>%
-  merge(., get.genome.data(), by = "CommonName") %>%
+  merge(., GENOME.DATA, by = "CommonName") %>%
   dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases)
 
 platypus.2 <- read.csv("metadata/platypus_testis.csv") %>%
@@ -255,7 +257,7 @@ platypus.2 <- read.csv("metadata/platypus_testis.csv") %>%
     Timepoint = "adult",
     CommonName = "platypus"
   ) %>%
-  merge(., get.genome.data(), by = "CommonName") %>%
+  merge(., GENOME.DATA, by = "CommonName") %>%
   dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases)
 
 rbind(platypus.1, platypus.2) %>%
@@ -277,7 +279,7 @@ zebrafinch <- read.csv("metadata/zebrafinch.csv") %>%
   ) %>%
   dplyr::arrange(desc(Bases)) %>%
   dplyr::slice_head(n = 5) %>%
-  merge(., get.genome.data(), by = "CommonName") %>%
+  merge(., GENOME.DATA, by = "CommonName") %>%
   dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
   write.table(., file = "metadata/zebrafinch.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
@@ -291,7 +293,7 @@ xenopus <- read.csv("metadata/xenopus.csv") %>%
     Timepoint = "adult",
     CommonName = "xenopus"
   ) %>%
-  merge(., get.genome.data(), by = "CommonName") %>%
+  merge(., GENOME.DATA, by = "CommonName") %>%
   dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
   write.table(., file = "metadata/xenopus.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
@@ -306,7 +308,7 @@ zebrafish <- read.csv("metadata/zebrafish.csv") %>%
     Timepoint = "adult",
     CommonName = "zebrafish"
   ) %>%
-  merge(., get.genome.data(), by = "CommonName") %>%
+  merge(., GENOME.DATA, by = "CommonName") %>%
   dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
   write.table(., file = "metadata/zebrafish.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
@@ -323,7 +325,7 @@ anole <- read.csv("metadata/anole.csv") %>%
     Timepoint = "adult",
     CommonName = "anole"
   ) %>%
-  merge(., get.genome.data(), by = "CommonName") %>%
+  merge(., GENOME.DATA, by = "CommonName") %>%
   dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
   write.table(., file = "metadata/anole.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
@@ -344,7 +346,7 @@ koala <- read.csv("metadata/koala.csv") %>%
     sex = "male",
     CommonName = "koala"
   ) %>%
-  merge(., get.genome.data(), by = "CommonName") %>%
+  merge(., GENOME.DATA, by = "CommonName") %>%
   dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
   write.table(., file = "metadata/koala.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 

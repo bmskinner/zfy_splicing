@@ -123,7 +123,7 @@ map_pe_sample () {
 	fi
 }
 
-echo "Processing single end sample"
+echo "Processing single end samples"
 for LINE in ${SE_SAMPLES}; do
 
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
@@ -132,7 +132,7 @@ for LINE in ${SE_SAMPLES}; do
 	map_se_sample ${SPECIES} ${ERR} ${GENOME}
 done
 
-echo "Processing paired end sample"
+echo "Processing paired end samples"
 for LINE in ${PE_SAMPLES}; do
 
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
