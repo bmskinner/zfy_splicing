@@ -351,6 +351,31 @@ koala <- read.csv("metadata/koala.csv") %>%
   write.table(., file = "metadata/koala.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
 
+#### Samples from Echidna testis ####
+
+echidna <- read.csv("metadata/echidna.csv") %>%
+  dplyr::filter(
+    Organism == "Tachyglossus aculeatus",
+    Assay.Type == "RNA-Seq", str_detect(tissue, "[T|t]estis"),
+    str_detect(dev_stage, "[A|a]dult")
+  ) %>%
+  dplyr::mutate(
+    Organism_part = "testis",
+    DevStage = "adult",
+    Timepoint = "adult",
+    sex = "male",
+    CommonName = "echidna"
+  ) %>%
+  merge(., GENOME.DATA, by = "CommonName") %>%
+  dplyr::select(
+    Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex,
+    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) %>%
+  write.table(., file = "metadata/echidna.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+
+
+
+
 #### Make summary tables ####
 
 cat("Making sample summary tables\n")
