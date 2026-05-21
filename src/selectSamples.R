@@ -375,6 +375,31 @@ echidna <- read.csv("metadata/echidna.csv") %>%
 
 
 
+#### Samples from cattle testis ####
+
+cattle <- read.csv("metadata/cattle.csv") %>%
+  dplyr::filter(
+    Organism == "Bos taurus",
+    Assay.Type == "RNA-Seq", str_detect(tissue, "[T|t]estis"),
+    str_detect(dev_stage, "[A|a]dult"),
+    !str_detect(Sample.Name, "pachytene"),
+    !str_detect(Sample.Name, "roundspermatid"),
+  ) %>%
+  dplyr::mutate(
+    Organism_part = "testis",
+    DevStage = "adult",
+    Timepoint = "adult",
+    sex = "male",
+    CommonName = "cattle"
+  ) %>%
+  merge(., GENOME.DATA, by = "CommonName") %>%
+  dplyr::select(
+    Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex,
+    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) %>%
+  write.table(., file = "metadata/cattle.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+
+
 
 #### Make summary tables ####
 
