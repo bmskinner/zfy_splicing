@@ -123,6 +123,34 @@ map_pe_sample () {
 	fi
 }
 
+
+# Ensure samples selected and genome indexes available.
+# We may have parallel scripts running, so ensure only one runs this step
+if [ ! -e data/preMapping.lck ]; then
+	touch data/preMapping.lck
+	echo "Running genome indexing and sample selection"
+	# Ensure all genome and annotations are present
+	bash src/makeIndexedGenomes.sh > logs/makeIndexedGenomes.log 2>&1
+	if [ $? -ne 0 ]; then
+		echo "Error making genome indexes, exiting"
+		rm data/preMapping.lck
+		exit 1
+	fi
+	# Select samples to map from metadata
+	Rscript src/selectSamples.R > logs/selectSamples.log 2>&1
+	if [ $? -ne 0 ]; then
+		echo "Error running sample selection, exiting"
+		rm data/preMapping.lck
+		exit 1
+	fi
+	rm data/preMapping.lck
+else
+	# Other instances of this script wait for lock to release
+	while [ -e data/preMapping.lck ]; do
+		sleep 30
+	done
+fi
+
 echo "Processing single end samples"
 for LINE in ${SE_SAMPLES}; do
 

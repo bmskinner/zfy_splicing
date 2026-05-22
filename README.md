@@ -17,8 +17,6 @@ Splice junctions for Zfx and Zfy are extracted from the merged bam files.
 
 ```{bash}
 # Get genome and sample info
-./src/preMapping.sh
-
 # Map to the latest genome assemblies
 ./src/mapSamples.sh
 

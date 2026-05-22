@@ -5,9 +5,6 @@
 
 # Genome indexes created for hisat2. Note we can't use gz fa file in hisat2-build
 
-mkdir -p genomes
-cd genomes
-
 # Create a genome index
 # 1 - the name of the genome e.g. GRCg7b
 # 2 - the URL of the FASTA sequences
@@ -44,7 +41,18 @@ build_genome_index () {
 		gzip $FASTAFILE
 	fi
 	
-}	
+}
+
+# Switch working directory for downloads
+mkdir -p genomes
+cd genomes
+	
+ # Check metadata exists
+if [ ! -e "../metadata/genomes.csv" ]; then
+	echo "Could not find relative file ../metadata/genomes.csv"
+	echo "Running from: `pwd`"
+	exit 1
+fi
 
 # Read the genomes metadata file and create indexes if missing
 # Expecting csv
@@ -53,4 +61,4 @@ while read LINE; do
 	FASTA_URL=$(echo ${LINE} | cut -f 4 -d , )
 	GTF_URL=$(echo ${LINE} | cut -f 5 -d , )
 	build_genome_index "${GENOME}" "${FASTA_URL}" "${GTF_URL}"
-done < "./metadata/genomes.csv"
+done < "../metadata/genomes.csv"
