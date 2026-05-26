@@ -157,6 +157,7 @@ for LINE in ${SE_SAMPLES}; do
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
 	SPECIES=$(echo ${LINE} | cut -f 3 -d , )
 	GENOME=$(echo ${LINE} | cut -f 4 -d , )
+	echo "${ERR}: beginning mapping to ${SPECIES}"
 	map_se_sample ${SPECIES} ${ERR} ${GENOME}
 done
 
@@ -166,5 +167,6 @@ for LINE in ${PE_SAMPLES}; do
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
 	SPECIES=$(echo ${LINE} | cut -f 3 -d , )
 	GENOME=$(echo ${LINE} | cut -f 4 -d , )
+	echo "${ERR}: beginning mapping to ${SPECIES}"
 	map_pe_sample ${SPECIES} ${ERR} ${GENOME}
 done

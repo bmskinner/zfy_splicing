@@ -15,6 +15,9 @@ build_genome_index () {
 	GTFURL=$(echo $3 | tr -d '"')
 
 	if [ ! -e ${GENOME}.1.ht2 ] && [ ! -e ${GENOME}.1.ht2l ]; then # could be .ht2 or .ht2l for large genomes
+		echo "${GENOME}: Creating genome index"
+		echo "${GENOME}: Download FASTA from ${FASTAURL}"
+		echo "${GENOME}: Download GTF from ${GTFURL}"
 	
 		FASTAGZFILE=$(basename ${FASTAURL})
 		GTFGZFILE=$(basename ${GTFURL})
@@ -60,5 +63,8 @@ while read LINE; do
 	GENOME=$(echo ${LINE} | cut -f 1 -d , )
 	FASTA_URL=$(echo ${LINE} | cut -f 4 -d , )
 	GTF_URL=$(echo ${LINE} | cut -f 5 -d , )
+	if [ ${GENOME} == "Genome" ]; then
+		continue # skip header line
+	fi
 	build_genome_index "${GENOME}" "${FASTA_URL}" "${GTF_URL}"
 done < "../metadata/genomes.csv"
