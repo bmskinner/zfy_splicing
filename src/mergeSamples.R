@@ -79,8 +79,8 @@ for (i in 1:nrow(to.sashimi)) {
     # Extract stranded junctions (only meaningful if this was a stranded library)
     cmd <- paste0(
       "activate ggsashimi && python src/ggsashimi.py --bam ", data$merged.bam,
-      " --coordinates ", data$FlankedLocations,
-      " --gtf genomes/", data$GTF,
+      " --coordinates ", data$Location,
+      " --gtf ", data$GTF,
       " --out-prefix ", data$junctions.file.stranded,
       " --strand SENSE  --out-format png"
     )
@@ -90,8 +90,8 @@ for (i in 1:nrow(to.sashimi)) {
     # Extract junctions irrespective of strand
     cmd <- paste0(
       "activate ggsashimi && python src/ggsashimi.py --bam ", data$merged.bam,
-      " --coordinates ", data$FlankedLocations,
-      " --gtf genomes/", data$GTF,
+      " --coordinates ", data$Location,
+      " --gtf ", data$GTF,
       " --out-prefix ", data$junctions.file.nonstranded,
       " --out-format png"
     )

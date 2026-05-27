@@ -67,8 +67,22 @@ extract.val <- function(x) {
 # Extract the mapping summary from stdout files
 # May be in ./logs or in the project base dir
 # cat bash.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' > report/mapping.txt
-system2("cat", "logs/bash.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' > report/_qc/mapping.txt")
-system2("cat", "mapSamples.sh.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' >> report/_qc/mapping.txt")
+if (length(list.files(path = "logs", pattern = "bash.o.*")) > 0) {
+  tryCatch(
+    {
+      system2("cat", "logs/bash.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' > report/_qc/mapping.txt")
+    },
+    error = function(e) warning(e)
+  )
+}
+if (length(list.files(path = ".", pattern = "mapSamples.sh.o.*")) > 0) {
+  tryCatch(
+    {
+      system2("cat", "mapSamples.sh.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' >> report/_qc/mapping.txt")
+    },
+    error = function(e) warning(e)
+  )
+}
 
 # Spread to separate columns
 map.data <- read.table("report/_qc/mapping.txt", sep = "$") %>% #  sep char does not exist, force single column

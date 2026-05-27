@@ -28,7 +28,7 @@ assemble.transcript <- function(common.name, tissue, timepoint, gene.id, gene, c
   system2("bin/stringtie", paste(
     "-o ", gtf.out.file, # output file name
     "-p 1 -l", common.name, # label for novel transcripts
-    "-G", paste0("genomes/", full.gtf.file), # genome annotation
+    "-G", full.gtf.file, # genome annotation
     "-f 0.01", # min fraction of reads supporting splices
     gene.bam.file
   )) # input file to analyse
@@ -36,7 +36,7 @@ assemble.transcript <- function(common.name, tissue, timepoint, gene.id, gene, c
   # Count the reads on sense and antisense strands
   system2("bash", paste("src/countStrandRatio.sh", gene.bam.file))
 }
-cat("Assembling transcripts from", nrow(sample.groups), "sample groups\n")
+cat("Assembling transcripts with Stringtie from", nrow(sample.groups), "sample groups\n")
 mapply(
   assemble.transcript,
   sample.groups$CommonName,
@@ -44,13 +44,17 @@ mapply(
   sample.groups$Timepoint,
   sample.groups$GeneId,
   sample.groups$Gene,
-  sample.groups$FlankedLocations,
+  sample.groups$Location,
   sample.groups$merged.bam,
-  sample.groups$GTF
+  sample.groups$GTF_FILE
 )
 
 #### Assess strandedness of reads ####
 cat("Reading strand ratios\n")
+
+if (!file.exists("data/stringtie/ratios.txt")) {
+  stop("Strand ratio file from Stringtie does not exist: data/stringtie/ratios.txt")
+}
 
 read.ratios <- read.delim("data/stringtie/ratios.txt", sep = " ", header = FALSE)
 colnames(read.ratios) <- c("sample", "forward", "reverse", "total")
