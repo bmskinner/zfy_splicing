@@ -1,8 +1,5 @@
 # Assemble transcripts usign StringTie
 # This expects StringTie binary in ./bin
-
-library(fs)
-library(ggplot2)
 source("src/functions.R")
 
 
@@ -37,7 +34,7 @@ assemble.transcript <- function(common.name, tissue, timepoint, gene.id, gene, c
   system2("bash", paste("src/countStrandRatio.sh", gene.bam.file))
 }
 cat("Assembling transcripts with Stringtie from", nrow(sample.groups), "sample groups\n")
-mapply(
+invisible(mapply(
   assemble.transcript,
   sample.groups$CommonName,
   sample.groups$Organism_part,
@@ -47,7 +44,7 @@ mapply(
   sample.groups$Location,
   sample.groups$merged.bam,
   sample.groups$GTF_FILE
-)
+))
 
 #### Assess strandedness of reads ####
 cat("Reading strand ratios\n")
@@ -58,6 +55,8 @@ if (!file.exists("data/stringtie/ratios.txt")) {
 
 read.ratios <- read.delim("data/stringtie/ratios.txt", sep = " ", header = FALSE)
 colnames(read.ratios) <- c("sample", "forward", "reverse", "total")
+
+cat("Parsing strand ratios\n")
 read.ratios <- tidyr::separate_wider_delim(read.ratios, sample,
   delim = ".",
   names = c("species", "tissue", "timepoint", "gene.id", "gene"),
@@ -70,18 +69,21 @@ read.ratios <- tidyr::separate_wider_delim(read.ratios, sample,
   ) %>%
   dplyr::filter(timepoint %in% c("adult", "mid-meiosis", "birth"))
 
+create.xlsx(read.ratios, "report/strand_ratios.xlsx")
+
 
 ggplot(read.ratios) +
-  annotate("rect", xmax = Inf, xmin = -Inf, ymax = 0.1, ymin = -Inf, fill = "lightgreen") +
-  annotate("rect", xmax = Inf, xmin = -Inf, ymax = Inf, ymin = 0.9, fill = "lightgreen") +
-  geom_point(aes(x = species, y = f.forward)) +
-  coord_cartesian(ylim = c(0, 1)) +
-  labs(y = "Strand ratio") +
-  facet_grid(tissue ~ timepoint) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+  ggplot2::annotate("rect", xmax = Inf, xmin = -Inf, ymax = 0.1, ymin = -Inf, fill = "lightgreen") +
+  ggplot2::annotate("rect", xmax = Inf, xmin = -Inf, ymax = Inf, ymin = 0.9, fill = "lightgreen") +
+  ggplot2::geom_point(aes(x = species, y = f.forward, col = f.forward <= 0.1 | f.forward >= 0.9)) +
+  ggplot2::coord_cartesian(ylim = c(0, 1)) +
+  ggplot2::scale_color_manual(values = c(`TRUE` = "blue", `FALSE` = "lightgrey")) +
+  ggplot2::labs(y = "Strand ratio") +
+  ggplot2::facet_grid(tissue ~ timepoint) +
+  ggplot2::theme_bw() +
+  ggplot2::theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
-save.double.width("report/strandedness.png", last_plot())
+save.double.width("report/strandedness.png", last_plot(), height = 230)
 
 ggplot(read.ratios) +
   geom_point(aes(x = species, y = f.stranded)) +
@@ -90,4 +92,5 @@ ggplot(read.ratios) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
-save.double.width("report/stranded_fraction.png", last_plot())
+save.double.width("report/stranded_fraction.png", last_plot(), height = 230)
+cat("Finished plotting strandedness\n")

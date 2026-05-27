@@ -1,7 +1,13 @@
-library(parallel)
-library(xlsx)
-library(tidyverse)
-library(GenomicRanges)
+suppressPackageStartupMessages(library(parallel))
+suppressPackageStartupMessages(library(xlsx))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(GenomicRanges))
+suppressPackageStartupMessages(library(fs))
+suppressPackageStartupMessages(library(data.table))
+suppressPackageStartupMessages(library(patchwork))
+suppressPackageStartupMessages(library(grid))
+suppressPackageStartupMessages(library(scales))
+suppressPackageStartupMessages(library(ggbeeswarm))
 
 TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27"),
   levels = c("birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
@@ -150,7 +156,8 @@ make.sample.groups <- function() {
     dplyr::summarise(
       bams = paste(bam.file, collapse = " "),
       all.bams.present = all(file.exists(bam.file)),
-      count = n()
+      count = n(),
+      .groups = "drop_last"
     ) %>%
     dplyr::mutate(
       merged.bam = paste0("data/merged/", CommonName, ".", Organism_part, ".", Timepoint, ".bam"),

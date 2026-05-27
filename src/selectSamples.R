@@ -1,7 +1,4 @@
 #!/bin/Rscript
-library(tidyverse)
-library(xlsx)
-library(fs)
 source("src/functions.R")
 # Filter metadata from SRA searches to get samples of interest
 

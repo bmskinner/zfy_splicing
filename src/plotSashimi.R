@@ -2,13 +2,10 @@
 # ggsashimi.py modified to write data objects to Rds when run
 # This custom sashimi plot ensures the transcripts are always left to right
 # irrespective of strand
-library(tidyverse)
-library(data.table)
-library(patchwork)
-library(grid)
-library(scales)
-library(fs)
+
 source("src/functions.R")
+
+cat("Running shashimi plotting\n")
 
 # Ensure output dirs exist
 fs::dir_create(c("report/species", "report/timepoints", "report/tissues"))
@@ -372,7 +369,9 @@ make.timepoint.panel <- function(species, tissue, gene.id) {
 #### Select groups for plotting ####
 
 # find all species combinations for plotting
+
 all.samples <- merge(make.sample.groups(), GENE.LOCATIONS, by = "CommonName")
+cat("Selected samples\n")
 
 species.groups <- all.samples %>%
   dplyr::group_by(CommonName, Timepoint, GeneId) %>%
@@ -381,7 +380,6 @@ species.groups <- all.samples %>%
 tissue.groups <- all.samples %>%
   dplyr::group_by(Organism_part, Timepoint) %>%
   dplyr::summarise(SampleCount = n())
-
 
 timepoint.groups <- all.samples %>%
   dplyr::group_by(CommonName, Organism_part, GeneId) %>%
@@ -821,7 +819,7 @@ make.condensed.timepoint.panels <- function(species, tissue, gene.id) {
 }
 
 #### Make condensed figures ####
-
+cat("Making figures\n")
 mapply(make.condensed.species.panels, species.groups$CommonName, species.groups$Timepoint, species.groups$GeneId)
 
 # e.g. make.condensed.tissue.panels("forebrain", "adult")

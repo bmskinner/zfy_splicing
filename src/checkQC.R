@@ -1,9 +1,4 @@
 # Check sample QC
-
-library(tidyverse)
-library(ggbeeswarm)
-library(patchwork)
-library(fs)
 source("src/functions.R")
 
 fs::dir_create("report/_qc")
