@@ -5,7 +5,7 @@ fs::dir_create("report/_qc")
 
 #### Trimming report ####
 
-cat("Checking trimming\n")
+cat("QC check: Checking trimming\n")
 
 trimming.summary.files <- list.files(path = "data", pattern = "fastq.gz_trimming_report.txt$", full.names = T, recursive = T)
 
@@ -35,7 +35,7 @@ create.xlsx(trimming.summary, file.name = "report/_qc/trimming_report.xlsx")
 
 
 #### FASTQC report ####
-cat("Checking FastQC\n")
+cat("QC check: Checking FastQC\n")
 fastqc.summary.files <- list.files(path = "report/FASTQC", pattern = "summary.txt$", full.names = T, recursive = T)
 fastqc.data <- do.call(rbind, lapply(fastqc.summary.files, read.table, sep = "\t"))
 colnames(fastqc.data) <- c("Outcome", "Measure", "Sample")
@@ -47,7 +47,7 @@ create.xlsx(fastqc.check, file.name = "report/_qc/FASTQC_report.xlsx")
 
 
 #### Mapping efficiencies ####
-cat("Checking mapping\n")
+cat("QC check: Checking mapping reports\n")
 extract.pct <- function(x) {
   x <- stringr::str_extract(x, "\\(.*\\)")
   x <- stringr::str_replace(x, "\\(", "")
@@ -59,9 +59,7 @@ extract.val <- function(x) {
   as.numeric(stringr::str_replace(x, " \\(.*\\)", ""))
 }
 
-# Extract the mapping summary from stdout files
-# May be in ./logs or in the project base dir
-# cat bash.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' > report/mapping.txt
+# Extract the mapping summary from stdout files directed to logs
 if (length(list.files(path = "logs", pattern = "bash.o.*")) > 0) {
   tryCatch(
     {
@@ -70,10 +68,18 @@ if (length(list.files(path = "logs", pattern = "bash.o.*")) > 0) {
     error = function(e) warning(e)
   )
 }
-if (length(list.files(path = ".", pattern = "mapSamples.sh.o.*")) > 0) {
+if (length(list.files(path = "logs", pattern = "mapSamples.sh.o.*")) > 0) {
   tryCatch(
     {
-      system2("cat", "mapSamples.sh.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' >> report/_qc/mapping.txt")
+      system2("cat", "logs/mapSamples.sh.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' >> report/_qc/mapping.txt")
+    },
+    error = function(e) warning(e)
+  )
+}
+if (length(list.files(path = "logs", pattern = ".*.mapping.log")) > 0) {
+  tryCatch(
+    {
+      system2("cat", "logs/*.mapping.log | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' >> report/_qc/mapping.txt")
     },
     error = function(e) warning(e)
   )
@@ -239,7 +245,23 @@ plot.paired.end.mapping <- function(map.data) {
     width = 200, height = 170
   )
 }
+tryCatch(
+  {
+    cat("QC check: Making single end mapping plots\n")
+    se.data <- map.data[map.data$LibraryLayout == "SINGLE", ]
+    plot.single.end.mapping(se.data)
+  },
+  error = \(e) warning(e)
+)
 
-plot.single.end.mapping(map.data[map.data$LibraryLayout == "SINGLE", ])
-plot.paired.end.mapping(map.data[map.data$LibraryLayout == "PAIRED", ])
+tryCatch(
+  {
+    cat("QC check: Making paired end mapping plots\n")
+    pe.data <- map.data[map.data$LibraryLayout == "PAIRED", ]
+    plot.paired.end.mapping(pe.data)
+  },
+  error = \(e) warning(e)
+)
+
 #### ####
+cat("QC check: Done!\n")

@@ -1,13 +1,9 @@
 #!/bin/Rscript
 # Merge bam files for splice junction counting
 # Invoke from the base directory
-library(tidyverse)
-library(rtracklayer)
-library(GenomicRanges)
-library(parallel)
-library(fs)
 source("src/functions.R")
 
+cat("Merge samples: selecting bams for merging\n")
 
 # Create command to merge bams in groups
 groups <- SELECTED.SAMPLES %>%
@@ -20,7 +16,8 @@ groups <- SELECTED.SAMPLES %>%
     bams = paste(bam.file, collapse = " "),
     all.bams.present = all(file.exists(bam.file)),
     lock.files.exist = any(file.exists(lock.file)), # bam may be in process of being written
-    count = n()
+    count = n(),
+    .groups = "drop_last"
   ) %>%
   dplyr::mutate(
     merged.bam = paste0("data/merged/", CommonName, ".", Organism_part, ".", Timepoint, ".bam"),
@@ -32,17 +29,20 @@ groups <- SELECTED.SAMPLES %>%
   )
 
 # Merge the bams
-cat("Merging bams\n")
+
 
 fs::dir_create("data/merged")
 to.merge <- groups %>% # don't repeat merging
   dplyr::filter(all.bams.present & !merged.bam.exists & !lock.files.exist) # ensure we only try to merge when all bams of a group are available and complete
 if (nrow(to.merge) > 0) {
+  cat("Merge samples: Merging bams\n")
   mapply(system2, command = "samtools", args = to.merge$samtools.merge.arguments)
+} else {
+  cat("Merge samples: No unmerged bams\n")
 }
 
 # Index the bams
-cat("Indexing bams\n")
+cat("Merge samples: Indexing bams\n")
 to.index <- groups %>% # only index if the bam is present and there is no index
   dplyr::mutate(merged.bam.exists = file.exists(merged.bam)) %>% # update if merged bam exists
   dplyr::filter(merged.bam.exists & !index.exists)
@@ -50,41 +50,47 @@ to.index <- groups %>% # only index if the bam is present and there is no index
 # Index with CSI since opossum chromosomes are longer than the max for bai
 if (nrow(to.index) > 0) {
   mapply(system2, command = "samtools", args = paste("index -@ 7 -c ", to.index$merged.bam))
+} else {
+  cat("Merge samples: No unindexed bams\n")
 }
 
 # Combine the gene locations with bams
 groups <- merge(groups, GENE.LOCATIONS, by = "CommonName")
 
 create.xlsx(groups, "report/grouped.bams.xlsx")
+cat("Merge samples: Exported grouped bam table to report/grouped.bams.xlsx\n")
 
 # Extract splice junctions for each combination
-to.sashimi <- groups %>% # don't repeat merging
-  dplyr::mutate(merged.bam.exists = file.exists(merged.bam)) %>%
-  dplyr::filter(merged.bam.exists) %>% # ensure we only try to sashimi when all bams of a group are available
+to.sashimi <- groups |>
+  dplyr::mutate(merged.bam.exists = file.exists(merged.bam)) |>
+  dplyr::filter(merged.bam.exists) |> # ensure we only try to sashimi when all bams of a group are available
   dplyr::mutate(
     junctions.file.stranded = paste0("data/merged/", CommonName, ".", Organism_part, ".", Timepoint, ".", GeneId, ".sense.Rds"),
     junctions.file.nonstranded = paste0("data/merged/", CommonName, ".", Organism_part, ".", Timepoint, ".", GeneId, ".Rds")
   )
 
 if (nrow(to.sashimi) == 0) {
-  stop("No valid samples to extract")
+  stop("Merge samples: No merged bam files available for ggsashimi")
 }
 
 # ggsashimi requires a conda environment with pysam installed
-cat("Extracting splice sites from", nrow(to.sashimi), "samples\n")
+cat("Merge samples: Extracting splice sites from", nrow(to.sashimi), "samples\n")
 for (i in 1:nrow(to.sashimi)) {
   data <- to.sashimi[i, ]
+
   if (!file.exists(paste0(data$junctions.file.stranded, "_+"))) { # _+ and _- should exist together
+
+    cat("Merge samples: No junction file for", data$merged.bam, ", running ggsashimi\n")
 
     # Extract stranded junctions (only meaningful if this was a stranded library)
     cmd <- paste0(
       "activate ggsashimi && python src/ggsashimi.py --bam ", data$merged.bam,
       " --coordinates ", data$Location,
-      " --gtf ", data$GTF,
+      " --gtf ", data$GTF_FILE,
       " --out-prefix ", data$junctions.file.stranded,
       " --strand SENSE  --out-format png"
     )
-    cat("source", cmd, "\n")
+    cat("Merge samples: source", cmd, "\n")
     system2("source", cmd)
 
     # Extract junctions irrespective of strand
@@ -95,12 +101,14 @@ for (i in 1:nrow(to.sashimi)) {
       " --out-prefix ", data$junctions.file.nonstranded,
       " --out-format png"
     )
-    cat("source", cmd, "\n")
+    cat("Merge samples: source", cmd, "\n")
     system2("source", cmd)
+  } else {
+    cat("Merge samples: Junctions file already exists for", data$merged.bam, "\n")
   }
 }
 
 # Zip the results
 fs::file_delete("values.tar.gz")
 system2("tar", "-czf values.tar.gz data/merged/*.Rds*")
-cat("Done!\n")
+cat("Merge samples: Done!\n")

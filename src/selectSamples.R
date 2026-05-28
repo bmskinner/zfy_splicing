@@ -2,7 +2,7 @@
 source("src/functions.R")
 # Filter metadata from SRA searches to get samples of interest
 
-cat("Reading and filtering sample data\n")
+cat("Sample selection: Reading and filtering sample data\n")
 #### Samples from PRJEB26695 ####
 
 # Chicken E-MTAB-6769
@@ -439,3 +439,4 @@ ggplot(
   )
 
 save.double.width("report/read.depths.png", last_plot())
+cat("Sample selection: Done!\n")

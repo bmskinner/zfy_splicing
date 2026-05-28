@@ -1,4 +1,4 @@
-# Assemble transcripts usign StringTie
+# "Assemble transcripts usign StringTie
 # This expects StringTie binary in ./bin
 source("src/functions.R")
 
@@ -7,13 +7,13 @@ fs::dir_create("data/stringtie")
 if (file.exists("data/stringtie/ratios.txt")) file.remove("data/stringtie/ratios.txt")
 
 # Get the distinct groups
-cat("Reading sample groups\n")
+cat("Assemble transcripts: Reading sample groups\n")
 sample.groups <- merge(make.sample.groups(), GENE.LOCATIONS, by = "CommonName")
 
-#### Assemble transcripts ####
+#### "Assemble transcripts ####
 
 assemble.transcript <- function(common.name, tissue, timepoint, gene.id, gene, coordinates, full.bam.file, full.gtf.file) {
-  cat("Assembling transcripts from", common.name, tissue, timepoint, gene.id, "\n")
+  cat("Assemble transcripts: Assembling transcripts from", common.name, tissue, timepoint, gene.id, "\n")
 
   gene.bam.file <- paste0("data/stringtie/", common.name, ".", tissue, ".", timepoint, ".", gene.id, ".", gene, ".bam")
   gtf.out.file <- paste0("data/stringtie/", common.name, ".", tissue, ".", timepoint, ".", gene.id, ".", gene, ".gtf")
@@ -33,7 +33,7 @@ assemble.transcript <- function(common.name, tissue, timepoint, gene.id, gene, c
   # Count the reads on sense and antisense strands
   system2("bash", paste("src/countStrandRatio.sh", gene.bam.file))
 }
-cat("Assembling transcripts with Stringtie from", nrow(sample.groups), "sample groups\n")
+cat("Assemble transcripts: Assembling transcripts with Stringtie from", nrow(sample.groups), "sample groups\n")
 invisible(mapply(
   assemble.transcript,
   sample.groups$CommonName,
@@ -47,16 +47,16 @@ invisible(mapply(
 ))
 
 #### Assess strandedness of reads ####
-cat("Reading strand ratios\n")
+cat("Assemble transcripts: Reading strand ratios\n")
 
 if (!file.exists("data/stringtie/ratios.txt")) {
-  stop("Strand ratio file from Stringtie does not exist: data/stringtie/ratios.txt")
+  stop("Assemble transcripts: Strand ratio file from Stringtie does not exist: data/stringtie/ratios.txt")
 }
 
 read.ratios <- read.delim("data/stringtie/ratios.txt", sep = " ", header = FALSE)
 colnames(read.ratios) <- c("sample", "forward", "reverse", "total")
 
-cat("Parsing strand ratios\n")
+cat("Assemble transcripts: Parsing strand ratios\n")
 read.ratios <- tidyr::separate_wider_delim(read.ratios, sample,
   delim = ".",
   names = c("species", "tissue", "timepoint", "gene.id", "gene"),
@@ -93,4 +93,4 @@ ggplot(read.ratios) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
 save.double.width("report/stranded_fraction.png", last_plot(), height = 230)
-cat("Finished plotting strandedness\n")
+cat("Assemble transcripts: Done!\n")

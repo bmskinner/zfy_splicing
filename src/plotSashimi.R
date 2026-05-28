@@ -5,7 +5,8 @@
 
 source("src/functions.R")
 
-cat("Running shashimi plotting\n")
+cat("Plot sashimi: running shashimi plotting\n")
+
 
 # Ensure output dirs exist
 fs::dir_create(c("report/species", "report/timepoints", "report/tissues"))
@@ -257,7 +258,7 @@ read.rds.file <- function(rds.file) {
         ifelse(str_detect(rds.file, "_-$"), "-", "*")
       )
 
-      cat(rds.file, "is for junctions on strand", rds.data$junction.strand, "\n")
+      cat("Plot sashimi: ", rds.file, "is for junctions on strand", rds.data$junction.strand, "\n")
       rds.data$species <- file.name.parts[1]
       rds.data$tissue <- file.name.parts[2]
       rds.data$timepoint <- file.name.parts[3]
@@ -288,7 +289,7 @@ read.rds.file <- function(rds.file) {
       return(rds.data)
     },
     error = \(e) {
-      cat("Error making data from", rds.file, "\n", paste(e))
+      cat("Plot sashimi: ", "Error making data from", rds.file, "\n", paste(e))
       e
     }
   )
@@ -318,7 +319,7 @@ make.species.panel <- function(species, timepoint, gene.id) {
 
 # Create a sashimi panel plot for all species of the given tissue and timepoint
 make.tissue.panel <- function(tissue, timepoint) {
-  cat("Making", tissue, "at", timepoint, "\n")
+  cat("Plot sashimi: Making", tissue, "at", timepoint, "\n")
   data.files <- list.files(path = "data/merged", pattern = paste0(".*\\.", tissue, "\\.", timepoint, "\\..*Rds_*"), full.names = TRUE)
   if (length(data.files) == 0) {
     return()
@@ -371,7 +372,7 @@ make.timepoint.panel <- function(species, tissue, gene.id) {
 # find all species combinations for plotting
 
 all.samples <- merge(make.sample.groups(), GENE.LOCATIONS, by = "CommonName")
-cat("Selected samples\n")
+cat("Plot sashimi: Selected samples for plotting\n")
 
 species.groups <- all.samples %>%
   dplyr::group_by(CommonName, Timepoint, GeneId) %>%
@@ -561,7 +562,7 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads = 5, 
   anns <- sashimi.data$ann_list
 
   if (any(!is.numeric(anns$exons$end)) | any(!is.numeric(anns$exons$start))) {
-    cat("Error in annotations: at least one start or end is NA\n")
+    cat("Plot sashimi: Error in annotations: at least one start or end is NA\n")
     print(anns$exons)
     str(anns$exons)
     # stop("Error in annotations: at least one start or end is NA")
@@ -720,7 +721,7 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads = 5, 
     if (any(!is.numeric(junctions$xend)) | any(!is.numeric(junctions$x))) {
       print(junctions)
       str(junctions)
-      stop("Error in junctions: at least one x or xend is NA")
+      stop("Plot sashimi: Error in junctions: at least one x or xend is NA")
     }
 
     junctions <- junctions %>%
@@ -756,7 +757,7 @@ make.condensed.species.panels <- function(species, timepoint, gene.id) {
   gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene.id, ]$Gene
 
   out.png.file <- paste0("report/species/", species, ".", timepoint, ".", gene.id, ".", gene.name, ".condensed.png")
-  cat("Making", out.png.file, "\n")
+  cat("Plot sashimi: Making", out.png.file, "\n")
 
   plots <- lapply(data, \(x)  make.gene.track.sashimi.panel(x, label = paste0(species, " ", gene.name, "\n", x$tissue, " ", x$junction.strand), show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
 
@@ -767,7 +768,7 @@ make.condensed.species.panels <- function(species, timepoint, gene.id) {
 
 # Make tissue plot using condensed panels
 make.condensed.tissue.panels <- function(tissue, timepoint) {
-  cat("Making", tissue, "at", timepoint, "\n")
+  cat("Plot sashimi: Making", tissue, "at", timepoint, "\n")
   data.files <- list.files(path = "data/merged", pattern = paste0(".*\\.", tissue, "\\.", timepoint, "\\..*Rds_*"), full.names = TRUE)
   if (length(data.files) == 0) {
     return()
@@ -787,7 +788,7 @@ make.condensed.tissue.panels <- function(tissue, timepoint) {
 
 # Make species plot using combined panels
 make.condensed.timepoint.panels <- function(species, tissue, gene.id) {
-  cat("Making", species, tissue, "for", gene.id, "\n")
+  cat("Plot sashimi: Making", species, tissue, "for", gene.id, "\n")
   data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", tissue, "\\..*", gene.id, "\\..*Rds_*"), full.names = TRUE)
   if (length(data.files) == 0) {
     return()
@@ -819,7 +820,7 @@ make.condensed.timepoint.panels <- function(species, tissue, gene.id) {
 }
 
 #### Make condensed figures ####
-cat("Making figures\n")
+cat("Plot sashimi: Making figures\n")
 mapply(make.condensed.species.panels, species.groups$CommonName, species.groups$Timepoint, species.groups$GeneId)
 
 # e.g. make.condensed.tissue.panels("forebrain", "adult")
@@ -841,3 +842,4 @@ mapply(make.tissue.panel, tissue.groups$Organism_part, tissue.groups$Timepoint)
 # Make timepoint plots showing variation over times in a specific tissue
 # e.g. make.timepoint.panel("chicken", "testis", "ENSGALG00010003052")
 mapply(make.timepoint.panel, timepoint.groups$CommonName, timepoint.groups$Organism_part, timepoint.groups$GeneId)
+cat("Plot sashimi: Done!\n")

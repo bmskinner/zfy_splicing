@@ -8,6 +8,7 @@ suppressPackageStartupMessages(library(patchwork))
 suppressPackageStartupMessages(library(grid))
 suppressPackageStartupMessages(library(scales))
 suppressPackageStartupMessages(library(ggbeeswarm))
+suppressPackageStartupMessages(library(rtracklayer))
 
 TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27"),
   levels = c("birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
@@ -44,7 +45,7 @@ get.gene.locations <- function(genome.data) {
   zfx.y.locations <- readr::read_csv("metadata/gene_locations.csv", show_col_types = FALSE)
 
   if (file.exists("./data/gene_coordinates.csv")) {
-    cat("An existing coordinate file was found\n")
+    cat("Setup: An existing coordinate file was found\n")
     existing.coordinates <- readr::read_csv("./data/gene_coordinates.csv", show_col_types = FALSE)
 
     has.raw.gtfs <- all(genome.data$GTF_FILE %in% existing.coordinates$GTF_FILE)
@@ -54,29 +55,29 @@ get.gene.locations <- function(genome.data) {
 
     if (!has.raw.gtfs) {
       cat(
-        "Missing coordinates from a GTF file in ./genomes : ",
+        "Setup: Missing coordinates from a GTF file in ./genomes : ",
         paste(genome.data$GTF_FILE[!genome.data$GTF_FILE %in% existing.coordinates$GTF_FILE], collapse = ", "),
         "\n"
       )
     }
     if (!has.saved.gtfs) {
       cat(
-        "Saved coordinates do not have a GTF file in ./genomes : ",
+        "Setup: Saved coordinates do not have a GTF file in ./genomes : ",
         paste(existing.coordinates$GTF_FILE[!existing.coordinates$GTF_FILE %in% genome.data$GTF_FILE], collapse = ", "),
         "\n"
       )
     }
     if (!has.raw.genes) {
       cat(
-        "Missing coordinates from a gene in metadata/gene_locations.csv : ",
+        "Setup: Missing coordinates from a gene in metadata/gene_locations.csv : ",
         paste(zfx.y.locations$GeneId[!zfx.y.locations$GeneId %in% existing.coordinates$GeneId], collapse = ", "),
         "\n"
       )
     }
     if (!has.saved.genes) {
-      cat("Saved coordinates from a gene are not found in in metadata/gene_locations.csv\n")
+      cat("Setup: Saved coordinates from a gene are not found in in metadata/gene_locations.csv\n")
       cat(
-        "Saved coordinates from a gene are not found in in metadata/gene_locations.csv : ",
+        "Setup: Saved coordinates from a gene are not found in in metadata/gene_locations.csv : ",
         paste(existing.coordinates$GeneId[!existing.coordinates$GeneId %in% zfx.y.locations$GeneId], collapse = ", "),
         "\n"
       )
@@ -87,7 +88,7 @@ get.gene.locations <- function(genome.data) {
   }
 
   # Find these ids in the relevant GTF file and extract location
-  cat("Finding gene coordinates\n")
+  cat("Setup: Finding gene coordinates\n")
   # Identify the coordinates of a given gene id from GTF. Expand by size on each flank if desired
   get.gene.coordinates <- function(common.name, gtf.file, size = 1000) {
     cat("Reading GTF file for", common.name, "\n")
@@ -108,7 +109,7 @@ get.gene.locations <- function(genome.data) {
         min(GenomicRanges::start(filt.data)), "-",
         max(GenomicRanges::end(filt.data))
       )
-      cat("Found", gene.id, "in", common.name, "at", location.string, "\n")
+      cat("Setup: Found", gene.id, "in", common.name, "at", location.string, "\n")
       location.string
     })
 
@@ -138,7 +139,7 @@ get.annotated.exons <- function() {
 # Read all selected samples from ./metadata
 # i.e. all files with .filt. in the name
 read.selected.samples <- function() {
-  cat("Reading selected samples\n")
+  cat("Setup: Reading selected samples\n")
   # Make a factor of times to allow ordering of plots
   do.call(rbind, lapply(list.files(path = "metadata", pattern = "*.filt.csv", full.names = TRUE), read.csv)) %>%
     dplyr::mutate(Timepoint = factor(Timepoint, levels = TIME.ORDER)) %>%
@@ -171,7 +172,7 @@ make.sample.groups <- function() {
 
 #### Global variables ####
 
-cat("Making global variables\n")
+cat("Setup: Making global variables\n")
 
 GENOME.DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE) |>
   dplyr::mutate(GTF_FILE = paste0("./genomes/", stringr::str_remove(basename(GTF_URL), ".gz")))
@@ -182,4 +183,4 @@ GENE.LOCATIONS <- get.gene.locations(GENOME.DATA)
 # Read the filtered samples, match folder names
 SELECTED.SAMPLES <- read.selected.samples()
 
-cat("Common functions and global variables loaded\n")
+cat("Setup: Common functions and global variables loaded\n")
