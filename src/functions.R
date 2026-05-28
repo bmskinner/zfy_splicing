@@ -1,3 +1,4 @@
+cat("Setup: Loading packages\n")
 suppressPackageStartupMessages(library(parallel))
 suppressPackageStartupMessages(library(xlsx))
 suppressPackageStartupMessages(library(tidyverse))
@@ -9,6 +10,8 @@ suppressPackageStartupMessages(library(grid))
 suppressPackageStartupMessages(library(scales))
 suppressPackageStartupMessages(library(ggbeeswarm))
 suppressPackageStartupMessages(library(rtracklayer))
+
+cat("Setup: Defining global functions\n")
 
 TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27"),
   levels = c("birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
@@ -45,7 +48,7 @@ get.gene.locations <- function(genome.data) {
   zfx.y.locations <- readr::read_csv("metadata/gene_locations.csv", show_col_types = FALSE)
 
   if (file.exists("./data/gene_coordinates.csv")) {
-    cat("Setup: An existing coordinate file was found\n")
+    cat("Setup: An existing gene coordinate file was found\n")
     existing.coordinates <- readr::read_csv("./data/gene_coordinates.csv", show_col_types = FALSE)
 
     has.raw.gtfs <- all(genome.data$GTF_FILE %in% existing.coordinates$GTF_FILE)
@@ -88,7 +91,7 @@ get.gene.locations <- function(genome.data) {
   }
 
   # Find these ids in the relevant GTF file and extract location
-  cat("Setup: Finding gene coordinates\n")
+  cat("Setup: Finding gene coordinates in GTF\n")
   # Identify the coordinates of a given gene id from GTF. Expand by size on each flank if desired
   get.gene.coordinates <- function(common.name, gtf.file, size = 1000) {
     cat("Reading GTF file for", common.name, "\n")
@@ -172,7 +175,7 @@ make.sample.groups <- function() {
 
 #### Global variables ####
 
-cat("Setup: Making global variables\n")
+cat("Setup: Defining global variables\n")
 
 GENOME.DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE) |>
   dplyr::mutate(GTF_FILE = paste0("./genomes/", stringr::str_remove(basename(GTF_URL), ".gz")))

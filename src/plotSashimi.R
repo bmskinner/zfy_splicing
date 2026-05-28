@@ -2,7 +2,7 @@
 # ggsashimi.py modified to write data objects to Rds when run
 # This custom sashimi plot ensures the transcripts are always left to right
 # irrespective of strand
-
+cat("Plot sashimi: Beginning\n")
 source("src/functions.R")
 
 cat("Plot sashimi: running shashimi plotting\n")
@@ -10,6 +10,18 @@ cat("Plot sashimi: running shashimi plotting\n")
 
 # Ensure output dirs exist
 fs::dir_create(c("report/species", "report/timepoints", "report/tissues"))
+
+# Read all the GTF files to a global variable
+read.gtf.data <- function() {
+  cat("Plot sashimi: Reading full genome GTF files\n")
+  gtf.data <- mclapply(GENOME.DATA$GTF_FILE, rtracklayer::import,
+    mc.cores = ifelse(installr::is.windows(), 1, 6)
+  )
+  names(gtf.data) <- dplyr::pull(GENOME.DATA[, "CommonName"])
+  cat("Plot sashimi: Read full genome GTF files\n")
+  gtf.data
+}
+GTF.DATA <- read.gtf.data()
 
 #### Main functions ####
 
@@ -263,13 +275,21 @@ read.rds.file <- function(rds.file) {
       rds.data$tissue <- file.name.parts[2]
       rds.data$timepoint <- file.name.parts[3]
       rds.data$gene.id <- file.name.parts[4]
-      rds.data$gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == rds.data$gene.id, "Gene"]
+      rds.data$gene.name <- GENE.LOCATIONS |>
+        dplyr::filter(GeneId == rds.data$gene.id) |>
+        dplyr::select(Gene) |>
+        dplyr::pull()
+
       rds.data$filename <- basename(rds.file)
 
       rds.data$density_list <- rds.data$density_list[[1]]
       rds.data$junction_list <- rds.data$junction_list[[1]]
 
-      rds.data$canonical.transcript.id <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == rds.data$gene.id, "CanonicalTranscriptId"]
+      rds.data$canonical.transcript.id <- GENE.LOCATIONS |>
+        dplyr::filter(GeneId == rds.data$gene.id) |>
+        dplyr::select(CanonicalTranscriptId) |>
+        dplyr::pull()
+
       rds.data$gtf.data <- GTF.DATA[[rds.data$species]]
 
       # Is the gene on the forward or reverse strand? Note - this is the gene, not the junctions or reads
@@ -289,7 +309,7 @@ read.rds.file <- function(rds.file) {
       return(rds.data)
     },
     error = \(e) {
-      cat("Plot sashimi: ", "Error making data from", rds.file, "\n", paste(e))
+      cat("Plot sashimi: ", "Error reading Rds data from", rds.file, "\n", paste(e))
       e
     }
   )
@@ -376,15 +396,15 @@ cat("Plot sashimi: Selected samples for plotting\n")
 
 species.groups <- all.samples %>%
   dplyr::group_by(CommonName, Timepoint, GeneId) %>%
-  dplyr::summarise(SampleCount = n())
+  dplyr::summarise(SampleCount = n(), .groups = "drop_last")
 
 tissue.groups <- all.samples %>%
   dplyr::group_by(Organism_part, Timepoint) %>%
-  dplyr::summarise(SampleCount = n())
+  dplyr::summarise(SampleCount = n(), .groups = "drop_last")
 
 timepoint.groups <- all.samples %>%
   dplyr::group_by(CommonName, Organism_part, GeneId) %>%
-  dplyr::summarise(SampleCount = n())
+  dplyr::summarise(SampleCount = n(), .groups = "drop_last")
 
 #### Functions to condense introns for neater plotting ####
 

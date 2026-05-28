@@ -1,6 +1,7 @@
 #!/bin/Rscript
 # Merge bam files for splice junction counting
 # Invoke from the base directory
+cat("Merge samples: Beginning\n")
 source("src/functions.R")
 
 cat("Merge samples: selecting bams for merging\n")

@@ -1,5 +1,7 @@
 # Check sample QC
+cat("QC check: Beginning\n")
 source("src/functions.R")
+
 
 fs::dir_create("report/_qc")
 
