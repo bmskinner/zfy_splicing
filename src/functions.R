@@ -136,7 +136,7 @@ get.gene.locations <- function(genome.data) {
 
 # Annotate which exons contain interesting features for labelling plots
 get.annotated.exons <- function() {
-  readr::read_csv("metadata/gene_features.csv")
+  readr::read_csv("metadata/gene_features.csv", show_col_types = FALSE)
 }
 
 # Read all selected samples from ./metadata

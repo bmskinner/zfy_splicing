@@ -7,6 +7,7 @@ source("src/functions.R")
 
 cat("Plot sashimi: running shashimi plotting\n")
 
+ANNOTATED.EXONS <- get.annotated.exons()
 
 # Ensure output dirs exist
 fs::dir_create(c("report/species", "report/timepoints", "report/tissues"))
@@ -412,11 +413,16 @@ timepoint.groups <- all.samples %>%
 make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads = 5, label = "tissue",
                                           show.x.axis = TRUE, is.collapse.introns = FALSE) {
   # Annotatable exon features
-  feature.data <- sashimi.data$gtf.data %>%
-    as.data.frame() %>%
-    dplyr::filter(gene_id == sashimi.data$gene.id & !is.na(exon_id)) %>%
-    merge(., get.annotated.exons(), by.x = "exon_id", by.y = "ExonId", all.x = TRUE) %>%
+  # Note that non-Ensembl GTFs may not have exon ids annotated
+  # if (is.null(sashimi.data$gtf.data$exon_id)) {
+  #
+  # } else {
+  feature.data <- sashimi.data$gtf.data |>
+    as.data.frame() |>
+    dplyr::filter(gene_id == sashimi.data$gene.id & !is.na(exon_id)) |>
+    # merge(ANNOTATED.EXONS, by.x = "exon_id", by.y = "ExonId", all.x = TRUE) |>
     dplyr::mutate(xmid = (start + end) / 2)
+  # }
 
   collapse.introns <- function() {
     # Calculate offsets to make all introns at most 500bp
@@ -636,12 +642,12 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads = 5, 
   add.features <- function(splot) {
     feature.label.y.offset <- 0.75
 
-    splot <- splot +
-      # Number the coding exons
-      geom_label(
-        data = feature.data, aes(x = xmid, y = 0, label = CodingExonNumber),
-        size = 2, fill = NA, label.size = NA, col = "white"
-      )
+    # splot <- splot +
+    #   # Number the coding exons
+    #   geom_label(
+    #     data = feature.data, aes(x = xmid, y = 0, label = CodingExonNumber),
+    #     size = 2, fill = NA, label.size = NA, col = "white"
+    #   )
     # geom_label(data=feature.data, aes(x = xmid, y = feature.label.y.offset, label=Feature),
     #            size=2,fill=NA, label.size=NA, col="black" )
 
