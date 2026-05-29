@@ -31,7 +31,7 @@ assemble.transcript <- function(common.name, tissue, timepoint, gene.id, gene, c
   gtf.out.file <- paste0("data/stringtie/", common.name, ".", tissue, ".", timepoint, ".", gene.id, ".", gene, ".gtf")
 
   if (!file.exists(gtf.out.file)) {
-    # Run stringtie usin the reference genome to guide assembly
+    # Run stringtie using the reference genome to guide assembly
     system2("bin/stringtie", paste(
       "-o ", gtf.out.file, # output file name
       "-p 1 -l", common.name, # label for novel transcripts
