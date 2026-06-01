@@ -4,13 +4,14 @@
 # irrespective of strand
 cat("Plot sashimi: Beginning\n")
 source("src/functions.R")
+source("src/ggsashimi.R")
 
 cat("Plot sashimi: running shashimi plotting\n")
 
-ANNOTATED.EXONS <- get.annotated.exons()
+# ANNOTATED.EXONS <- get.annotated.exons()
 
 # Ensure output dirs exist
-fs::dir_create(c("report/species", "report/timepoints", "report/tissues"))
+fs::dir_create(c("report/species", "report/timepoints", "report/tissues", "report/raw_sashimi"))
 
 # Read all the GTF files to a global variable
 read.gtf.data <- function() {
@@ -22,10 +23,11 @@ read.gtf.data <- function() {
   cat("Plot sashimi: Read full genome GTF files\n")
   gtf.data
 }
+
 GTF.DATA <- read.gtf.data()
-# GTF.DATA <- list()
-# GTF.DATA[["chicken"]]<-chicken.gtf
+
 #### Main functions ####
+
 
 #' Test if the given transcript is on the forward or reverse strand
 #'
@@ -90,6 +92,79 @@ junction.is.in.GTF <- function(transcript.id, gtf.data, junction.start, junction
 
 #' Read ggshasimi output
 #'
+#' Read junction and coverage data from ggsashimi R implementation. Build exon
+#' and intron annotations.
+#'
+#' @param coverage a ggsashimi coverage output
+#' @param junctions a ggsashimi junctions output
+#' @param gene.id the gene of interest
+#' @param gtf.data the full genome annotation
+#' @param location.string the location to restrict the search
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+read.sashimi.data <- function(bam.file, gtf.data, chr, start, end,
+                              reference.gene.id, reference.transcript.id = NA) {
+  tryCatch(
+    {
+      sashimi.data <- list()
+      sashimi.data$input.file <- bam.file
+      bam.data <- read_bam(bam.file, paste0(chr, ":", start, "-", end), "SENSE")
+
+      sashimi.data$reference.gene.id <- reference.gene.id
+      # Get the longest transcript in the gene if none specified
+      if (is.na(reference.transcript.id)) {
+        reference.transcript.id <- gtf.data |>
+          dplyr::filter(gene_id == reference.gene.id, type == "transcript") |>
+          dplyr::mutate(length = end - start + 1) |>
+          dplyr::arrange(length) |>
+          dplyr::slice_tail(n = 1) |>
+          dplyr::select(transcript_id) |>
+          dplyr::pull()
+
+        cat("No reference transcript given, selected", reference.transcript.id, "as longest\n")
+      }
+      sashimi.data$reference.transcript.id <- reference.transcript.id
+
+      # Is the gene on the forward or reverse strand? Note - this is the gene, not the junctions or reads
+      sashimi.data$reference.transcript.strand <- unique(gtf.data[gtf.data$type == "exon" &
+        gtf.data$transcript_id == reference.transcript.id, "strand"])
+
+      sashimi.data$reference.transcript.boundaries <- get_exon_boundaries(gtf.data, chr, start, end)
+
+      sashimi.data$reference.gene.name <- gtf.data |>
+        dplyr::filter(gene_id == reference.gene.id) |>
+        dplyr::select(gene_name) |>
+        dplyr::distinct() |>
+        dplyr::pull()
+
+      sashimi.data$coverage <- bam.data$coverage
+      sashimi.data$junctions <- bam.data$junctions
+      sashimi.data$junctions.reference.strand <- bam.data$reference.strand
+
+      sashimi.data$junctions$matches.known.exon <- mapply(junction.is.in.GTF,
+        junction.start = bam.data$junctions$start,
+        junction.end = bam.data$junctions$end,
+        MoreArgs = list(
+          transcript.id = reference.transcript.id,
+          gtf.data = gtf.data
+        )
+      )
+
+
+      return(sashimi.data)
+    },
+    error = \(e) {
+      cat("Plot sashimi: ", "Error reading sashimi data from", bam.file, "\n", paste(e))
+      e
+    }
+  )
+}
+
+#' Read ggshasimi output
+#'
 #' Read a junction file and note if each junction matches transcript GTF coordinates
 #'
 #' @param rds.file a ggsashimi Rds output file
@@ -98,7 +173,7 @@ junction.is.in.GTF <- function(transcript.id, gtf.data, junction.start, junction
 #' @export
 #'
 #' @examples
-read.rds.file <- function(rds.file) {
+read.ggsashimi.py.rds <- function(rds.file) {
   tryCatch(
     {
       rds.data <- readRDS(rds.file)
@@ -166,9 +241,11 @@ read.rds.file <- function(rds.file) {
 #'
 #' @examples
 create.intron.collapser <- function(exon.data, intron.data, strand, max.intron.length = 500) {
+  if (is.null(exon.data)) stop("No exon data provided")
+
   # Reduce any overlapping exons if we have multiple transcripts
   exon.data <- exon.data[exon.data$strand == strand, ]
-  intron.data <- intron.data[intron.data$strand == strand]
+  intron.data <- intron.data[intron.data$strand == strand, ]
 
   exon.ranges <- GenomicRanges::reduce(GenomicRanges::GRanges(
     seqnames = rep("test", nrow(exon.data)),
@@ -190,13 +267,13 @@ create.intron.collapser <- function(exon.data, intron.data, strand, max.intron.l
   ))
 
   # Remove introns that overlap an exon due to multiple transcripts
-  intron.ranges$overlappingExons <- GenomicRanges::countOverlaps(intron.ranges, exon.ranges, minoverlap = 10)
+  intron.ranges$overlappingExons <- GenomicRanges::countOverlaps(intron.ranges, exon.ranges, minoverlap = 1)
   intron.ranges <- intron.ranges[intron.ranges$overlappingExons == 0, ]
 
   # Some introns may be missing. Fill in gaps from min start to max end that are
   # not covered by intron or exons
   missing.introns <- GenomicRanges::gaps(GenomicRanges::reduce(c(intron.ranges, exon.ranges)),
-    start = min(exons$start)
+    start = min(exon.data$start)
   )
 
   # Convert back to data frames
@@ -219,308 +296,99 @@ create.intron.collapser <- function(exon.data, intron.data, strand, max.intron.l
     dplyr::mutate(
       original.length = end - start + 1,
       new.length = ifelse(original.length > 500 & Type == "intron", 500, original.length),
-      new.end = min(start) + cumsum(new.length),
-      new.start = new.end - new.length # how much offset to apply
-    )
+      new.end = min(start) + cumsum(new.length) - 1,
+      new.start = new.end - new.length + 1, # how much offset to apply
+      is.ordered = new.start < new.end,
+      is.contiguous = new.start == dplyr::lag(new.end) + 1,
+      is.full.coverage = start == dplyr::lag(end) + 1
+    ) |>
+    dplyr::select(everything(), new.start, new.end)
 
   # Create a function that uses the above tables to convert a coordinate to the new ranges
-  function(coordinate) {
-    # If a coordinate is out of bounds, don't adjust it
+  calculate <- function(coordinate) {
+    # If a coordinate is out of min bounds, don't adjust it
     if (coordinate < min(full.ranges$start)) {
       return(coordinate)
     }
-
+    # If a coordinate is out of max bounds, reduce as needed
     if (coordinate > max(full.ranges$end)) {
-      old.dist <- max(full.ranges$end) - coordinate
-      return(max(full.ranges$new.end) + old.dist)
+      difference.from.end <- coordinate - max(full.ranges$end)
+      return(max(full.ranges$new.end) + difference.from.end)
     }
 
-    # Take the first matching row
+    # Find the range within which to fit
     feature <- full.ranges %>%
       dplyr::filter(start <= coordinate & end >= coordinate) %>%
       dplyr::slice_head(n = 1)
 
     # If we find nothing, do not adjust
     if (nrow(feature) == 0) {
+      warning("No range table entry covering", coordinate)
       return(coordinate)
     }
 
     # How far along the feature are we?
-    f.feature <- (coordinate - feature$start) / feature$original.length
+    fractional.distance <- (coordinate - feature$start) / feature$original.length
 
     # Nearest integer to the same fraction of the new coordinate space
-    result <- unique(round(f.feature * feature$new.length + feature$new.start))
-
-    # If this was NA becuase we are outside the bounds of the main transcript,
-    # return the original coordinate
-    # if (is.na(result)) {
-    #   return(coordinate)
-    # }
+    result <- (fractional.distance * feature$new.length) + feature$new.start
     return(result)
   }
+  list(
+    calculate = calculate,
+    full.ranges = full.ranges
+  )
 }
 
 
 collapse.introns <- function(sashimi.data, exon.data, intron.data) {
   # Calculate offsets to make all introns at most 500bp
-  intron.collapser <- create.intron.collapser(exon.data, intron.data, sashimi.data$transcript.strand)
-
-  # Copy the existing coordinates
-  junctions <- sashimi.data$junction_list
-  anns <- sashimi.data$ann_list
+  intron.collapser <- create.intron.collapser(exon.data, intron.data, sashimi.data$reference.transcript.strand)
 
   # Apply offsets to coordinates
-  anns$exons <- as.data.frame(anns$exons)
-  anns$introns <- as.data.frame(anns$introns)
+  sashimi.data$reference.transcript.boundaries$exons <- sashimi.data$reference.transcript.boundaries$exons |>
+    dplyr::rowwise() |>
+    dplyr::mutate(
+      old.start = start, old.end = end,
+      start = intron.collapser$calculate(old.start),
+      end = intron.collapser$calculate(old.end)
+    )
+  sashimi.data$reference.transcript.boundaries$introns <- sashimi.data$reference.transcript.boundaries$introns |>
+    dplyr::rowwise() |>
+    dplyr::mutate(
+      old.start = start, old.end = end,
+      start = intron.collapser$calculate(old.start),
+      end = intron.collapser$calculate(old.end)
+    )
 
-  anns$exons$old.start <- anns$exons$start
-  anns$exons$old.end <- anns$exons$end
-  anns$exons$start <- mapply(intron.collapser, coordinate = anns$exons$old.start, SIMPLIFY = TRUE)
-  anns$exons$end <- mapply(intron.collapser, coordinate = anns$exons$old.end, SIMPLIFY = TRUE)
+  sashimi.data$junctions <- sashimi.data$junctions |>
+    dplyr::rowwise() |>
+    dplyr::mutate(
+      old.start = start, old.end = end,
+      start = intron.collapser$calculate(old.start),
+      end = intron.collapser$calculate(old.end)
+    )
 
-  anns$introns$old.start <- anns$introns$start
-  anns$introns$old.end <- anns$introns$end
-  anns$introns$start <- mapply(intron.collapser, coordinate = anns$introns$old.start, SIMPLIFY = TRUE)
-  anns$introns$end <- mapply(intron.collapser, coordinate = anns$introns$old.end, SIMPLIFY = TRUE)
+  # anns$exons$old.start <- anns$exons$start
+  # anns$exons$old.end <- anns$exons$end
+  # anns$exons$start <- mapply(intron.collapser, coordinate = anns$exons$old.start, SIMPLIFY = TRUE)
+  # anns$exons$end <- mapply(intron.collapser, coordinate = anns$exons$old.end, SIMPLIFY = TRUE)
 
-  junctions$old.x <- junctions$x
-  junctions$old.xend <- junctions$xend
-  junctions$x <- sapply(junctions$old.x, intron.collapser)
-  junctions$xend <- sapply(junctions$old.xend, intron.collapser)
+  # anns$introns$old.start <- anns$introns$start
+  # anns$introns$old.end <- anns$introns$end
+  # anns$introns$start <- mapply(intron.collapser, coordinate = anns$introns$old.start, SIMPLIFY = TRUE)
+  # anns$introns$end <- mapply(intron.collapser, coordinate = anns$introns$old.end, SIMPLIFY = TRUE)
 
-  list(
-    anns = anns,
-    junctions = junctions
-  )
+  # junctions$old.start <- junctions$start
+  # junctions$old.end <- junctions$end
+  # junctions$start <- sapply(junctions$old.start, intron.collapser)
+  # junctions$end <- sapply(junctions$old.end, intron.collapser)
+
+  sashimi.data
 }
 
 
 #### Functions to build chart components ####
-
-#
-#' Create a ggplot with transcripts covering the region in ggsashimi data.
-#' The reference transcript is highlighted.
-#'
-#' @param sashimi.data data from ggsashimi Rds output
-#'
-#' @returns a ggplot showing all transcripts
-#' @export
-#'
-#' @examples
-make.gene.track <- function(sashimi.data) {
-  data <- sashimi.data$density_list
-  junctions <- sashimi.data$junction_list
-  anns <- sashimi.data$ann_list
-
-  # Set coordinates for the x axis, reversing if on reverse strand
-  xmin <- ifelse(sashimi.data$transcript.is.reverse.strand, max(data$x), min(data$x))
-  xmax <- ifelse(sashimi.data$transcript.is.reverse.strand, min(data$x), max(data$x))
-
-  # Create the arrows to draw on introns
-  make.tx.arrows <- function() {
-    # Create data table for strand arrows
-    txarrows <- data.table()
-    introns <- sashimi.data$ann_list[["introns"]]
-    # Add right-pointing arrows for plus strand
-    if ("+" %in% introns$strand && nrow(introns[strand == "+" & end - start > 5, ]) > 0) {
-      txarrows <- rbind(
-        txarrows,
-        introns[strand == "+" & end - start > 5, list(
-          seq(start + 4, end, by = 453) - 1,
-          seq(start + 4, end, by = 453)
-        ), by = .(tx, start, end)]
-      )
-    }
-    # Add left-pointing arrows for minus strand
-    if ("-" %in% introns$strand && nrow(introns[strand == "-" & end - start > 5, ]) > 0) {
-      txarrows <- rbind(
-        txarrows,
-        introns[strand == "-" & end - start > 5, list(
-          seq(start, max(start + 1, end - 4), by = 453),
-          seq(start, max(start + 1, end - 4), by = 453) - 1
-        ), by = .(tx, start, end)]
-      )
-    }
-    txarrows
-  }
-
-  # Make the gene track
-  sashimi.plot <- ggplot() +
-    # Introns and arrows
-    geom_segment(data = sashimi.data$ann_list$introns, aes(x = start, xend = end, y = tx, yend = tx), linewidth = 0.3) +
-    # geom_segment(data=make.tx.arrows(), aes(x=V1,xend=V2,y=tx,yend=tx), arrow=arrow(length=unit(0.02,"npc")))+
-
-    # Exons
-    geom_segment(
-      data = sashimi.data$ann_list$exons, aes(
-        x = start, xend = end,
-        y = tx, yend = tx,
-        col = tx == sashimi.data$canonical.transcript.id
-      ),
-      linewidth = 5, alpha = 1
-    ) +
-    scale_color_manual(values = c(`TRUE` = "blue", `FALSE` = "grey")) +
-    scale_y_discrete(expand = c(0, 0.5)) +
-    coord_cartesian(xlim = c(xmin, xmax)) +
-    scale_x_continuous(expand = c(0, 0.25), labels = comma) +
-    theme_minimal() +
-    theme(
-      axis.line.y = element_blank(),
-      axis.line.x = element_line(),
-      axis.ticks.x = element_line(),
-      axis.title = element_blank(),
-      axis.text.y = element_blank(),
-      axis.ticks.y = element_blank(),
-      panel.grid = element_blank(),
-      legend.position = "none"
-    )
-
-  if (sashimi.data$transcript.is.reverse.strand) {
-    sashimi.plot <- sashimi.plot +
-      scale_x_reverse()
-  }
-  sashimi.plot
-}
-
-# Create a sashimi panel for the given ggsashimi data
-# min.spanning.reads - the minimum number of junction-spanning reads needed to display on the chart
-# y.label - the data value to be used for the y axis label
-make.sashimi.panel <- function(sashimi.data, min.spanning.reads = 5, label = "tissue") {
-  # cat("Making sashimi panel\n")
-  data <- sashimi.data$density_list
-  junctions <- sashimi.data$junction_list
-  anns <- sashimi.data$ann_list
-
-  # Set coordinates for the x axis
-  is.minus.strand <- sashimi.data$transcript.is.reverse.strand
-  xmin <- min(data$x)
-  xmax <- max(data$x)
-  ymax <- max(data$y)
-
-  # Create the coverage plot
-  splot <- ggplot() +
-    geom_bar(data = data, aes(x, y), width = 1, position = "identity", stat = "identity", alpha = 0.5) +
-    coord_cartesian(
-      ylim = c(0 - (ymax), ymax * 1.5),
-      xlim = c(xmin, xmax)
-    ) +
-    scale_x_continuous(expand = c(0, 0.25)) +
-    labs(y = label)
-
-  if (sashimi.data$transcript.is.reverse.strand) {
-    splot <- splot +
-      scale_x_reverse()
-  }
-
-
-  add.junction <- function(splot, xmin, xmax, ymin, ymax, is.even, count, matches.known.exons) {
-    # Define the spline shapes that make the junction lines
-    spline.color <- ifelse(matches.known.exons, "blue", "black")
-    spline.size <- ifelse(matches.known.exons, 1, 2)
-
-    l.spline.btm <- grid::xsplineGrob(x = c(0, 0, 1, 1), y = c(1, 0, 0, 0), shape = 1, gp = gpar(lwd = spline.size, col = spline.color))
-    l.spline.top <- grid::xsplineGrob(x = c(0, 0, 1, 1), y = c(0, 1, 1, 1), shape = 1, gp = gpar(lwd = spline.size, col = spline.color))
-    r.spline.btm <- grid::xsplineGrob(x = c(1, 1, 0, 0), y = c(1, 0, 0, 0), shape = 1, gp = gpar(lwd = spline.size, col = spline.color))
-    r.spline.top <- grid::xsplineGrob(x = c(1, 1, 0, 0), y = c(0, 1, 1, 1), shape = 1, gp = gpar(lwd = spline.size, col = spline.color))
-
-    # Determine which splines to use for minus strand versus plus strand transcripts
-    l.grob.btm <- l.spline.btm
-    if (is.minus.strand) l.grob.btm <- r.spline.btm
-
-    l.grob.top <- l.spline.top
-    if (is.minus.strand) l.grob.top <- r.spline.top
-
-    r.grob.btm <- r.spline.btm
-    if (is.minus.strand) r.grob.btm <- l.spline.btm
-
-    r.grob.top <- r.spline.top
-    if (is.minus.strand) r.grob.top <- l.spline.top
-
-    xmid <- (xmin + xmax) / 2
-    ymid <- ((ymin + ymax) / 2) * 1.25
-
-    # Left arc
-    if (is.even) { # Junctions below zero
-      splot <- splot + annotation_custom(
-        grob = l.grob.btm,
-        xmin = xmin,
-        xmax = xmid,
-        ymin = -ymid * 0.5,
-        ymax = 0
-      )
-    } else {
-      splot <- splot + annotation_custom(
-        grob = l.grob.top,
-        xmin = xmin,
-        xmax = xmid,
-        ymax = ymid,
-        ymin = 0
-      )
-    }
-
-    # Right arc
-    if (is.even) { # Junctions below zero
-      splot <- splot + annotation_custom(
-        grob = r.grob.btm,
-        xmin = xmid,
-        xmax = xmax,
-        ymin = -ymid * 0.5,
-        ymax = 0
-      )
-    } else {
-      splot <- splot + annotation_custom(
-        grob = r.grob.top,
-        xmin = xmid,
-        xmax = xmax,
-        ymax = ymid,
-        ymin = 0
-      )
-    }
-
-    splot <- splot + annotate("label",
-      x = xmid,
-      y = ifelse(is.even, -ymid * 1.1, ymid * 1.2),
-      label = as.character(count),
-      size = 2, col = spline.color, fill = NA, label.size = NA
-    )
-
-    return(splot)
-  }
-
-  if (nrow(junctions) > 0) {
-    junctions <- junctions %>%
-      dplyr::filter(count >= min.spanning.reads)
-  }
-
-  # Add the junctions, adjusting for plus vs minus strand
-  if (nrow(junctions) > 0) {
-    # Calculate charting coordinates
-    junctions$total.count <- sum(junctions$count)
-    junctions$isEven <- sapply(1:nrow(junctions), \(x) x %% 2 == 0)
-
-    for (i in 1:nrow(junctions)) {
-      splot <- add.junction(
-        splot, junctions[i, ]$x, junctions[i, ]$xend, junctions[i, ]$y,
-        junctions[i, ]$yend, junctions[i, ]$isEven, junctions[i, ]$count,
-        junctions[i, ]$matches.known.exons
-      )
-    }
-  }
-
-  # Format the final plot
-  splot <- splot +
-    theme_minimal() +
-    theme(
-      axis.line = element_blank(),
-      axis.title.x = element_blank(),
-      axis.title.y = element_text(angle = 0, hjust = 1, vjust = 0.5),
-      axis.text.x = element_blank(),
-      axis.ticks.x = element_blank()
-    )
-
-  list(plot = splot, junctions = junctions)
-}
-
 
 #' Plot splice junctions on a gene exon track
 #'
@@ -536,16 +404,17 @@ make.sashimi.panel <- function(sashimi.data, min.spanning.reads = 5, label = "ti
 #' @examples
 make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads = 5, label = "tissue",
                                           show.x.axis = TRUE, is.collapse.introns = FALSE) {
-  junctions <- sashimi.data$junction_list
-  anns <- sashimi.data$ann_list
-
   if (is.collapse.introns) {
-    collapse.data <- collapse.introns(sashimi.data, sashimi.data$ann_list$exons, sashimi.data$ann_list$introns)
-    junctions <- collapse.data$junctions
-    anns <- collapse.data$anns
+    sashimi.data <- collapse.introns(
+      sashimi.data,
+      sashimi.data$reference.transcript.boundaries$exons,
+      sashimi.data$reference.transcript.boundaries$introns
+    )
   }
 
-
+  junctions <- sashimi.data$junctions
+  anns <- sashimi.data$reference.transcript.boundaries
+  is.x.reverse <- sashimi.data$reference.transcript.strand == "-"
 
   if (any(!is.numeric(anns$exons$end)) | any(!is.numeric(anns$exons$start))) {
     cat("Plot sashimi: Error in annotations: at least one start or end is NA\n")
@@ -554,32 +423,66 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads = 5, 
     # stop("Error in annotations: at least one start or end is NA")
   }
 
-  # Set coordinate range for the x axis
-  xmin <- min(anns$exons$start, na.rm = T) - 500
-  xmax <- max(anns$exons$end, na.rm = T) + 500
-
   # Only plot exons from the reference transcript
-  canonical.exons <- anns$exons |>
+  reference.exons <- anns$exons |>
     dplyr::filter(
-      tx == sashimi.data$canonical.transcript.id,
-      strand == sashimi.data$transcript.strand
+      transcript_id == sashimi.data$reference.transcript.id
     )
 
-  canonical.introns <- anns$introns |> dplyr::filter(
-    start > min(canonical.exons$start),
-    end < max(canonical.exons$start),
-    strand == sashimi.data$transcript.strand
-  )
+  non.reference.exons <- anns$exons |>
+    dplyr::filter(
+      gene_id != sashimi.data$reference.gene.id,
+      strand != sashimi.data$reference.transcript.strand
+    )
+
+  reference.introns <- anns$introns |>
+    dplyr::filter(
+      start > min(reference.exons$start),
+      end < max(reference.exons$start),
+      strand == sashimi.data$reference.transcript.strand
+    )
+
+  non.reference.introns <- anns$introns |>
+    dplyr::filter(
+      start > min(reference.exons$start),
+      end < max(reference.exons$start),
+      strand != sashimi.data$reference.transcript.strand
+    )
+
+  # Set coordinate range for the x axis
+  xmin <- min(c(reference.exons$start, reference.exons$end), na.rm = T) - 500
+  xmax <- max(c(reference.exons$start, reference.exons$end), na.rm = T) + 500
 
   # Make the gene track
   splot <- ggplot() +
     # Introns
-    geom_segment(data = canonical.introns, aes(x = start, xend = end, y = 0, yend = 0), linewidth = 0.3) +
+    geom_segment(data = reference.introns, aes(x = start, xend = end, y = 0.5, yend = 0.5), linewidth = 0.3) +
+    geom_segment(data = non.reference.introns, aes(x = start, xend = end, y = -0.5, yend = -0.5), linewidth = 0.3) +
+    geom_hline(yintercept = 0) +
+    # annotate("text",
+    #          x = ifelse(is.x.reverse, xmax, xmin),
+    #          y = 0,
+    #          label = label,
+    #          size = 5, col = "black"
+    # ) +
+    annotate("text",
+      x = ifelse(is.x.reverse, xmax - 250, xmin + 250),
+      y = 0.5,
+      label = sashimi.data$reference.transcript.strand,
+      size = 2, col = "black"
+    ) +
+    annotate("text",
+      x = ifelse(is.x.reverse, xmax - 250, xmin + 250),
+      y = -0.5,
+      label = ifelse(sashimi.data$reference.transcript.strand == "+", "-", "+"),
+      size = 2, col = "black"
+    ) +
 
     # Reference transcript exons
-    geom_rect(data = canonical.exons, aes(xmin = start, xmax = end, ymin = -0.5, ymax = 0.5), fill = "blue", alpha = 1) +
-    scale_y_discrete(expand = c(0.5, 0.5)) +
-    coord_cartesian(xlim = c(xmin, xmax)) +
+    geom_rect(data = reference.exons, aes(xmin = start, xmax = end, ymin = 0, ymax = 1), fill = "blue", alpha = 1) +
+    geom_rect(data = non.reference.exons, aes(xmin = start, xmax = end, ymin = 0, ymax = -1), fill = "grey", alpha = 1) +
+    scale_y_discrete(expand = c(-2, 2)) +
+    coord_cartesian(xlim = c(xmin, xmax), ylim = c(-2, 2)) +
     scale_x_continuous(expand = c(0, 0.25)) +
     theme_minimal() +
     labs(y = label) +
@@ -594,7 +497,7 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads = 5, 
       legend.position = "none"
     )
 
-  if (sashimi.data$transcript.is.reverse.strand) {
+  if (is.x.reverse) {
     splot <- splot +
       scale_x_reverse(expand = c(0, 0.25))
   }
@@ -611,78 +514,81 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads = 5, 
 
   # Add the sashimi splines. Each sashimi arc is made of two splines that can be
   # above or below the transcript
-  add.junction <- function(splot, xmin, xmax, ymin, ymax, is.even, count, matches.known.exons, f.length) {
-    # Define the spline shapes that make the junction lines
+  add.junction <- function(splot, xmin, xmax, is.above, ymin, ymax, count, matches.known.exons) {
+    # Define the spline line styles that make the junction lines
     spline.color <- ifelse(matches.known.exons, "blue", "black")
-    spline.size <- ifelse(matches.known.exons, 1, 2)
-    spline.alpha <- ifelse(matches.known.exons, 0.5, 1)
+    spline.size <- ifelse(matches.known.exons, 1, 1)
+    spline.alpha <- ifelse(matches.known.exons, 1, 1)
 
+    # Define splice shapes.
     l.spline.btm <- grid::xsplineGrob(x = c(0, 0, 1, 1), y = c(1, 0, 0, 0), shape = 1, gp = gpar(lwd = spline.size, col = spline.color, alpha = spline.alpha))
     l.spline.top <- grid::xsplineGrob(x = c(0, 0, 1, 1), y = c(0, 1, 1, 1), shape = 1, gp = gpar(lwd = spline.size, col = spline.color, alpha = spline.alpha))
     r.spline.btm <- grid::xsplineGrob(x = c(1, 1, 0, 0), y = c(1, 0, 0, 0), shape = 1, gp = gpar(lwd = spline.size, col = spline.color, alpha = spline.alpha))
     r.spline.top <- grid::xsplineGrob(x = c(1, 1, 0, 0), y = c(0, 1, 1, 1), shape = 1, gp = gpar(lwd = spline.size, col = spline.color, alpha = spline.alpha))
 
-    spline.y.offset <- 0.5 # separation between exon and spline
-    label.y.offset <- 1.5 # separation between spline and label
+    # What is the separation from the zero axis to the spline? This should match
+    # the top of the exon box y position
+    spline.y.offset <- 0
+    label.y.offset <- 1.1 # multiplier for separation between spline and label
 
     # Determine which splines to use for minus strand versus plus strand transcripts
     l.grob.btm <- l.spline.btm
-    if (sashimi.data$transcript.is.reverse.strand) l.grob.btm <- r.spline.btm
+    if (is.x.reverse) l.grob.btm <- r.spline.btm
 
     l.grob.top <- l.spline.top
-    if (sashimi.data$transcript.is.reverse.strand) l.grob.top <- r.spline.top
+    if (is.x.reverse) l.grob.top <- r.spline.top
 
     r.grob.btm <- r.spline.btm
-    if (sashimi.data$transcript.is.reverse.strand) r.grob.btm <- l.spline.btm
+    if (is.x.reverse) r.grob.btm <- l.spline.btm
 
     r.grob.top <- r.spline.top
-    if (sashimi.data$transcript.is.reverse.strand) r.grob.top <- l.spline.top
+    if (is.x.reverse) r.grob.top <- l.spline.top
 
     xmid <- (xmin + xmax) / 2
 
     # Left arc
-    if (is.even) { # Junctions below zero
+    if (is.above) { # Junctions below zero
       splot <- splot + annotation_custom(
         grob = l.grob.btm,
         xmin = xmin,
         xmax = xmid,
-        ymin = -(1 + f.length),
-        ymax = -spline.y.offset
+        ymin = -ymin,
+        ymax = -ymax - spline.y.offset
       )
     } else {
       splot <- splot + annotation_custom(
         grob = l.grob.top,
         xmin = xmin,
         xmax = xmid,
-        ymax = 1 + f.length,
-        ymin = spline.y.offset
+        ymax = ymin,
+        ymin = ymax + spline.y.offset
       )
     }
 
     # Right arc
-    if (is.even) { # Junctions below zero
+    if (is.above) { # Junctions below zero
       splot <- splot + annotation_custom(
         grob = r.grob.btm,
         xmin = xmid,
         xmax = xmax,
-        ymin = -(1 + f.length),
-        ymax = -spline.y.offset
+        ymin = -ymin,
+        ymax = -ymax - spline.y.offset
       )
     } else {
       splot <- splot + annotation_custom(
         grob = r.grob.top,
         xmin = xmid,
         xmax = xmax,
-        ymax = 1 + f.length,
-        ymin = spline.y.offset
+        ymax = ymin,
+        ymin = ymax + spline.y.offset
       )
     }
 
     splot <- splot + annotate("label",
       x = xmid,
-      y = ifelse(is.even, -label.y.offset - f.length, label.y.offset + f.length),
+      y = ifelse(is.above, -ymax * label.y.offset, ymax * label.y.offset),
       label = as.character(count),
-      size = 2, col = spline.color, fill = NA, label.size = NA
+      size = 1, col = spline.color, fill = NA, label.size = NA
     )
 
     return(splot)
@@ -690,43 +596,47 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads = 5, 
 
   # Check junctions meet plot criteria
   if (nrow(junctions) > 0) {
-    junctions$x <- as.vector(as.numeric(junctions$x))
+    # junctions$x <- as.vector(as.numeric(junctions$x))
 
     junctions <- junctions %>%
       dplyr::filter(count >= min.spanning.reads) %>%
       na.omit() %>%
-      dplyr::arrange(x, xend)
+      dplyr::arrange(start, end)
 
 
-    if (any(!is.numeric(junctions$xend)) | any(!is.numeric(junctions$x))) {
+    if (any(!is.numeric(junctions$end)) | any(!is.numeric(junctions$start))) {
       print(junctions)
       str(junctions)
       stop("Plot sashimi: Error in junctions: at least one x or xend is NA")
     }
 
     junctions <- junctions %>%
-      dplyr::mutate(length = abs(xend - x))
+      dplyr::mutate(length = end - start + 1)
   }
 
   # Add the junctions, adjusting for plus vs minus strand
   if (nrow(junctions) > 0) {
     # Calculate charting coordinates
-    junctions$isEven <- sapply(1:nrow(junctions), \(x) x %% 2 == 0)
-    junctions$y.offset <- rep(seq(0, 1, 0.25), length.out = nrow(junctions)) # give each junction a separate y offset
+    # junctions$isEven <- sapply(1:nrow(junctions), \(x) x %% 2 == 0)
+    junctions$y.offset <- rep(seq(0, 2, 0.5), length.out = nrow(junctions)) # give each junction a separate y offset
+
 
     for (i in 1:nrow(junctions)) {
+      jrow <- junctions[i, ]
+
       splot <- add.junction(
-        splot, junctions[i, ]$x, junctions[i, ]$xend,
-        junctions[i, ]$y, junctions[i, ]$yend,
-        junctions[i, ]$isEven, junctions[i, ]$count,
-        junctions[i, ]$matches.known.exons, junctions[i, ]$y.offset
+        splot = splot,
+        xmin = jrow$start, xmax = jrow$end,
+        is.above = jrow$strand == sashimi.data$reference.transcript.strand,
+        ymin = 1, ymax = 1.5 + jrow$y.offset,
+        count = jrow$count,
+        matches.known.exons = jrow$matches.known.exon
       )
     }
   }
 
   list(plot = splot, junctions = junctions)
 }
-
 
 
 #### Functions to create multi-panel charts ####
@@ -737,7 +647,7 @@ make.species.panel <- function(species, timepoint, gene.id) {
   if (length(data.files) == 0) {
     return()
   }
-  data <- lapply(data.files, read.rds.file)
+  data <- lapply(data.files, read.ggsashimi.py.rds)
 
   gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene.id, ]$Gene
 
@@ -758,7 +668,7 @@ make.tissue.panel <- function(tissue, timepoint) {
   if (length(data.files) == 0) {
     return()
   }
-  data <- lapply(data.files, read.rds.file)
+  data <- lapply(data.files, read.ggsashimi.py.rds)
 
   out.png.file <- paste0("report/tissues/", tissue, ".", timepoint, ".png")
 
@@ -787,7 +697,7 @@ make.timepoint.panel <- function(species, tissue, gene.id) {
     }
   }
 
-  data <- lapply(ordered.files, read.rds.file)
+  data <- lapply(ordered.files, read.ggsashimi.py.rds)
 
   gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene.id, ]$Gene
 
@@ -805,20 +715,20 @@ make.timepoint.panel <- function(species, tissue, gene.id) {
 
 # find all species combinations for plotting
 
-all.samples <- merge(make.sample.groups(), GENE.LOCATIONS, by = "CommonName")
-cat("Plot sashimi: Selected samples for plotting\n")
-
-species.groups <- all.samples %>%
-  dplyr::group_by(CommonName, Timepoint, GeneId) %>%
-  dplyr::summarise(SampleCount = n(), .groups = "drop_last")
-
-tissue.groups <- all.samples %>%
-  dplyr::group_by(Organism_part, Timepoint) %>%
-  dplyr::summarise(SampleCount = n(), .groups = "drop_last")
-
-timepoint.groups <- all.samples %>%
-  dplyr::group_by(CommonName, Organism_part, GeneId) %>%
-  dplyr::summarise(SampleCount = n(), .groups = "drop_last")
+# all.samples <- merge(make.sample.groups(), GENE.LOCATIONS, by = "CommonName")
+# cat("Plot sashimi: Selected samples for plotting\n")
+#
+# species.groups <- all.samples %>%
+#   dplyr::group_by(CommonName, Timepoint, GeneId) %>%
+#   dplyr::summarise(SampleCount = n(), .groups = "drop_last")
+#
+# tissue.groups <- all.samples %>%
+#   dplyr::group_by(Organism_part, Timepoint) %>%
+#   dplyr::summarise(SampleCount = n(), .groups = "drop_last")
+#
+# timepoint.groups <- all.samples %>%
+#   dplyr::group_by(CommonName, Organism_part, GeneId) %>%
+#   dplyr::summarise(SampleCount = n(), .groups = "drop_last")
 
 #### Functions to condense introns for neater plotting ####
 
@@ -828,7 +738,7 @@ make.condensed.species.panels <- function(species, timepoint, gene.id) {
   if (length(data.files) == 0) {
     return()
   }
-  data <- lapply(data.files, read.rds.file)
+  data <- lapply(data.files, read.ggsashimi.py.rds)
 
   gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene.id, ]$Gene
 
@@ -849,7 +759,7 @@ make.condensed.tissue.panels <- function(tissue, timepoint) {
   if (length(data.files) == 0) {
     return()
   }
-  data <- lapply(data.files, read.rds.file)
+  data <- lapply(data.files, read.ggsashimi.py.rds)
 
   out.png.file <- paste0("report/tissues/", tissue, ".", timepoint, ".condensed.png")
 
@@ -880,7 +790,7 @@ make.condensed.timepoint.panels <- function(species, tissue, gene.id) {
     }
   }
 
-  data <- lapply(ordered.files, read.rds.file)
+  data <- lapply(ordered.files, read.ggsashimi.py.rds)
 
   gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene.id, ]$Gene
 
@@ -897,25 +807,94 @@ make.condensed.timepoint.panels <- function(species, tissue, gene.id) {
 
 #### Make condensed figures ####
 cat("Plot sashimi: Making figures\n")
-mapply(make.condensed.species.panels, species.groups$CommonName, species.groups$Timepoint, species.groups$GeneId)
 
-# e.g. make.condensed.tissue.panels("forebrain", "adult")
-mapply(make.condensed.tissue.panels, tissue.groups$Organism_part, tissue.groups$Timepoint)
+bam.files <- data.frame(path = list.files(path = "data/stringtie", pattern = ".*.bam", full.names = TRUE)) |>
+  dplyr::mutate(file = basename(path)) |>
+  tidyr::separate_wider_delim(file,
+    delim = ".", names = c("species", "tissue", "timepoint", "gene_id", "gene_name", "ext"),
+    too_few = "debug", too_many = "debug"
+  )
 
-# e.g. make.condensed.timepoint.panels("platypus", "testis", "ENSOANG00000046710")
-make.condensed.timepoint.panels("anole", "testis", "ENSACAG00000007227")
-mapply(make.condensed.timepoint.panels, timepoint.groups$CommonName, timepoint.groups$Organism_part, timepoint.groups$GeneId)
+species.aggregate <- list()
+tissue.aggregate <- list()
+timepoint.aggregate <- list()
+for (i in 1:4) {
+  # for (i in 1:nrow(bam.files)) {
+  bam.row <- bam.files[i, ]
+  species <- bam.row$species
+  tissue <- bam.row$tissue
+  timepoint <- bam.row$timepoint
+  gene_id <- bam.row$gene_id
+
+  # Create aggregates of all plots generated for later combination
+  if (is.null(species.aggregate[[species]])) {
+    species.aggregate[[species]] <- list()
+  }
+
+  if (is.null(tissue.aggregate[[tissue]])) {
+    tissue.aggregate[[tissue]] <- list()
+  }
+
+  if (is.null(timepoint.aggregate[[timepoint]])) {
+    timepoint.aggregate[[timepoint]] <- list()
+  }
+
+  cat("Detecting splice junctions for", species, tissue, timepoint, gene_id, "\n")
+
+  gene.data <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene_id, ]
+  coords <- parse.coordinates(gene.data$Location)
+
+  sashimi.data <- read.sashimi.data(
+    bam.file = bam.row$path,
+    gtf.data = GTF.DATA[[species]],
+    chr = coords$coord.chr, start = coords$coord.start, end = coords$coord.end,
+    reference.gene.id = gene.data$GeneId,
+    reference.transcript.id = gene.data$CanonicalTranscriptId
+  )
+
+  # Create plot with collapsed introns
+  sashimi.plot.collapsed <- make.gene.track.sashimi.panel(sashimi.data,
+    is.collapse.introns = TRUE, show.x.axis = FALSE,
+    min.spanning.reads = 5, label = paste0(species, "\n", tissue, "\n", timepoint)
+  )
+
+  save.double.width(paste0("report/raw_sashimi/", species, ".", tissue, ".", timepoint, ".", gene_id, ".condensed.png"),
+    sashimi.plot.collapsed$plot,
+    height = 80
+  )
+  # Create plot with expanded introns
+  sashimi.plot.expanded <- make.gene.track.sashimi.panel(sashimi.data,
+    is.collapse.introns = FALSE,
+    min.spanning.reads = 5, label = paste0(species, "\n", tissue, "\n", timepoint)
+  )
+
+  save.double.width(paste0("report/raw_sashimi/", species, ".", tissue, ".", timepoint, ".", gene_id, ".expanded.png"),
+    sashimi.plot.expanded$plot,
+    height = 80
+  )
+
+  species.aggregate[[species]] <- append(species.aggregate[[species]], sashimi.plot.collapsed$plot)
+  tissue.aggregate[[tissue]] <- append(tissue.aggregate[[tissue]], sashimi.plot.collapsed$plot)
+  timepoint.aggregate[[timepoint]] <- append(timepoint.aggregate[[timepoint]], sashimi.plot.collapsed$plot)
+}
+
+for (species in names(species.aggregate)) {
+  png.file <- paste0("report/species/", species, ".png")
+  wrapped.plots <- patchwork::wrap_plots(species.aggregate[[species]], ncol = 1)
+  save.double.width(filename = png.file, plot = wrapped.plots, height = 300)
+}
+
+for (tissue in names(tissue.aggregate)) {
+  png.file <- paste0("report/tissues/", tissue, ".png")
+  wrapped.plots <- patchwork::wrap_plots(tissue.aggregate[[tissue]], ncol = 1)
+  save.double.width(filename = png.file, plot = wrapped.plots, height = 300)
+}
+
+for (timepoint in names(timepoint.aggregate)) {
+  png.file <- paste0("report/timepoints/", timepoint, ".png")
+  wrapped.plots <- patchwork::wrap_plots(timepoint.aggregate[[timepoint]], ncol = 1)
+  save.double.width(filename = png.file, plot = wrapped.plots, height = 300)
+}
 
 
-#### Make non-condensed figures ####
-
-# Make species plots showing variation over tissues as a specific timepoint
-mapply(make.species.panel, species.groups$CommonName, species.groups$Timepoint, species.groups$GeneId)
-
-# Make tissue plots showing variation over species as a specific timepoint
-mapply(make.tissue.panel, tissue.groups$Organism_part, tissue.groups$Timepoint)
-
-# Make timepoint plots showing variation over times in a specific tissue
-# e.g. make.timepoint.panel("chicken", "testis", "ENSGALG00010003052")
-mapply(make.timepoint.panel, timepoint.groups$CommonName, timepoint.groups$Organism_part, timepoint.groups$GeneId)
 cat("Plot sashimi: Done!\n")

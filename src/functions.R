@@ -1,15 +1,15 @@
 cat("Setup: Loading packages\n")
-suppressPackageStartupMessages(library(parallel))
-suppressPackageStartupMessages(library(xlsx))
-suppressPackageStartupMessages(library(tidyverse))
-suppressPackageStartupMessages(library(GenomicRanges))
-suppressPackageStartupMessages(library(fs))
-suppressPackageStartupMessages(library(data.table))
-suppressPackageStartupMessages(library(patchwork))
-suppressPackageStartupMessages(library(grid))
-suppressPackageStartupMessages(library(scales))
-suppressPackageStartupMessages(library(ggbeeswarm))
-suppressPackageStartupMessages(library(rtracklayer))
+packages <- c(
+  "parallel", "xlsx", "tidyverse", "GenomicRanges",
+  "fs", "data.table", "patchwork", "grid", "scales", "ggbeeswarm",
+  "rtracklayer", "Rsamtools", "bitops", "rlang"
+)
+
+suppressPackageStartupMessages(
+  for (pkg in packages) {
+    if (!require(pkg, character.only = TRUE)) stop("Missing package", pkg)
+  }
+)
 
 cat("Setup: Defining global functions\n")
 
