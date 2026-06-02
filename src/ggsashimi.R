@@ -695,7 +695,7 @@ collapse_introns <- function(sashimi.data, exon.data, intron.data) {
 #' @export
 #'
 #' @examples
-make_sashimi_plot <- function(sashimi.data, min.spanning.reads = 5, label = "tissue",
+make_sashimi_plot <- function(sashimi.data, min.spanning.reads = 5, label = "label",
                               show.x.axis = TRUE, is.collapse.introns = FALSE) {
   if (is.collapse.introns) {
     sashimi.data <- collapse_introns(
@@ -898,7 +898,7 @@ make_sashimi_plot <- function(sashimi.data, min.spanning.reads = 5, label = "tis
   # Add the junctions, adjusting for plus vs minus strand
   if (nrow(junctions) > 0) {
     # Calculate charting coordinates
-    junctions$y.offset <- rep(seq(0, 1, 0.5), length.out = nrow(junctions)) # give each junction a separate y offset
+    junctions$y.offset <- rep(seq(0, 1, 0.5, 1.5), length.out = nrow(junctions)) # give each junction a separate y offset
 
     for (i in 1:nrow(junctions)) {
       jrow <- junctions[i, ]
@@ -917,6 +917,16 @@ make_sashimi_plot <- function(sashimi.data, min.spanning.reads = 5, label = "tis
   list(plot = splot, junctions = junctions)
 }
 
+#' Plot the coverage on each strand from sashimi data.
+#'
+#' @param sashimi.data sashimi data as produced by read_sashimi_data
+#' @param label the label for the gene track
+#'
+#' @returns a plot with the coverage
+#' @export
+#'
+#' @examples
+#' make_coverage_plot(cattle.sashimi.data, label = "cattle\ntestis\nadult\nZFY")
 make_coverage_plot <- function(sashimi.data, label = "label") {
   anns <- sashimi.data$reference.transcript.boundaries
   is.x.reverse <- sashimi.data$reference.transcript.strand == "-"
