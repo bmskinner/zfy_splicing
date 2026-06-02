@@ -220,15 +220,13 @@ find_read_strand <- function(strand.string, samflag) {
 #' @examples
 #' read_bam("/path/to/reads.bam", "1:118296484-118319811", "NONE")
 read_bam <- function(bam.file, coordinate.string, strand.string) {
-  cat("Reading bam file:", bam.file, "\n")
   coordinates <- parse.coordinates(coordinate.string)
-
+  cat("Reading bam file:", bam.file, "at", coordinates$coord.chr, ":", coordinates$coord.start, "-", coordinates$coord.end, "\n")
   # Initialize empty coverage array and junction maps
   coverage.array <- make.coverage.map(coordinates$coord.start, coordinates$coord.end)
   junction.map <- make.junction.map()
 
   bam.conn <- Rsamtools::BamFile(bam.file)
-  # bam.data <- Rsamtools::BamFile(bam.file, index = paste0(bam.file, ".csi"))
   bam.data <- scanBam(bam.conn)[[1]]
 
   # Go read by read
@@ -336,8 +334,18 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
 #' @export
 #'
 #' @examples
-get_exon_boundaries <- function(gtf.data, chr, start, end) {
-  region <- gtf.data[gtf.data$seqid == chr & gtf.data$start >= start - 5000 & gtf.data$end <= end + 5000, ]
+get_exon_boundaries <- function(gtf.data, chr, loc.start, loc.end) {
+  cat("Plot sashimi: Getting exon boundaries\n")
+
+  region <- gtf.data |>
+    dplyr::filter(
+      seqnames == as.character(chr),
+      start >= loc.start - 5000 &
+        end <= loc.end + 5000
+    )
+
+  cat("Plot sashimi: Region ", chr, ":", loc.start, "-", loc.end, "contains", nrow(region), "data rows\n")
+
   region.introns <- region |>
     as.data.frame() |>
     dplyr::filter(type == "exon") |>
@@ -350,21 +358,25 @@ get_exon_boundaries <- function(gtf.data, chr, start, end) {
       type = "intron"
     ) |>
     dplyr::filter(!is.na(intron.start), !is.na(intron.end)) |>
-    dplyr::select(gene_id, transcript_id, gene_name, transcript_name, type,
+    dplyr::select(seqnames, gene_id, transcript_id, gene_name, transcript_name, type,
       start = intron.start, end = intron.end, strand, length
     ) |>
     dplyr::ungroup() |>
     dplyr::arrange(transcript_id, start, end)
 
+  cat("Plot sashimi: Region ", chr, ":", loc.start, "-", loc.end, "contains", nrow(region.introns), "intron rows\n")
+
   region.exons <- region |>
     as.data.frame() |>
     dplyr::filter(type == "exon") |>
     dplyr::select(
-      gene_id, transcript_id, gene_name, transcript_name, type,
+      seqnames, gene_id, transcript_id, gene_name, transcript_name, type,
       start, end, strand
     ) |>
     dplyr::mutate(length = end - start + 1) |>
     dplyr::arrange(transcript_id, start, end)
+
+  cat("Plot sashimi: Region ", chr, ":", loc.start, "-", loc.end, "contains", nrow(region.exons), "exon rows\n")
 
   list(
     exons = region.exons,

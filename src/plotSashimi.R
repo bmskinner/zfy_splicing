@@ -16,7 +16,7 @@ fs::dir_create(c("report/species", "report/timepoints", "report/tissues", "repor
 # Read all the GTF files to a global variable
 read.gtf.data <- function() {
   cat("Plot sashimi: Reading full genome GTF files\n")
-  gtf.data <- mclapply(GENOME.DATA$GTF_FILE, rtracklayer::import,
+  gtf.data <- mclapply(GENOME.DATA$GTF_FILE, \(x) as.data.frame(rtracklayer::import(x)),
     mc.cores = ifelse(installr::is.windows(), 1, 6)
   )
   names(gtf.data) <- dplyr::pull(GENOME.DATA[, "CommonName"])
@@ -109,6 +109,7 @@ read.sashimi.data <- function(bam.file, gtf.data, chr, start, end,
                               reference.gene.id, reference.transcript.id = NA) {
   tryCatch(
     {
+      cat("Reading sashimi data in region '", paste0(chr, ":", start, "-", end), "'\n")
       sashimi.data <- list()
       sashimi.data$input.file <- bam.file
       bam.data <- read_bam(bam.file, paste0(chr, ":", start, "-", end), "SENSE")
@@ -116,6 +117,7 @@ read.sashimi.data <- function(bam.file, gtf.data, chr, start, end,
       sashimi.data$reference.gene.id <- reference.gene.id
       # Get the longest transcript in the gene if none specified
       if (is.na(reference.transcript.id)) {
+        cat("Plot sashimi: No reference transcript given, selecting longest for gene id", reference.gene.id, "\n")
         reference.transcript.id <- gtf.data |>
           dplyr::filter(gene_id == reference.gene.id, type == "transcript") |>
           dplyr::mutate(length = end - start + 1) |>
@@ -123,16 +125,30 @@ read.sashimi.data <- function(bam.file, gtf.data, chr, start, end,
           dplyr::slice_tail(n = 1) |>
           dplyr::select(transcript_id) |>
           dplyr::pull()
-
-        cat("No reference transcript given, selected", reference.transcript.id, "as longest\n")
       }
       sashimi.data$reference.transcript.id <- reference.transcript.id
+      cat("Plot sashimi: Reference transcript is", reference.transcript.id, "\n")
+
+      gene.gtf <- gtf.data[gtf.data$gene_id == reference.gene.id, ]
+      if (nrow(gene.gtf) == 0) {
+        stop("Plot sashimi: Unable to detect reference gene id in genome GTF\n")
+      }
 
       # Is the gene on the forward or reverse strand? Note - this is the gene, not the junctions or reads
-      sashimi.data$reference.transcript.strand <- unique(gtf.data[gtf.data$type == "exon" &
-        gtf.data$transcript_id == reference.transcript.id, "strand"])
+      sashimi.data$reference.transcript.strand <- gtf.data |>
+        dplyr::filter(
+          transcript_id == reference.transcript.id,
+          type == "exon"
+        ) |>
+        dplyr::select(strand) |>
+        dplyr::distinct() |>
+        dplyr::pull(strand)
+
+      cat("Plot sashimi: Reference transcript is on strand '", paste(sashimi.data$reference.transcript.strand, collapse = ","), "'\n")
 
       sashimi.data$reference.transcript.boundaries <- get_exon_boundaries(gtf.data, chr, start, end)
+
+      cat("Plot sashimi: Reference exon/intron bounds detected:\n")
 
       sashimi.data$reference.gene.name <- gtf.data |>
         dplyr::filter(gene_id == reference.gene.id) |>
@@ -173,61 +189,50 @@ read.sashimi.data <- function(bam.file, gtf.data, chr, start, end,
 #' @export
 #'
 #' @examples
-read.ggsashimi.py.rds <- function(rds.file) {
-  tryCatch(
-    {
-      rds.data <- readRDS(rds.file)
-
-      file.name.parts <- str_split_1(basename(rds.file), "\\.")
-
-      rds.data$junction.strand <- ifelse(str_detect(rds.file, "_\\+$"), "+",
-        ifelse(str_detect(rds.file, "_-$"), "-", "*")
-      )
-
-      cat("Plot sashimi: ", rds.file, "is for junctions on strand", rds.data$junction.strand, "\n")
-      rds.data$species <- file.name.parts[1]
-      rds.data$tissue <- file.name.parts[2]
-      rds.data$timepoint <- file.name.parts[3]
-      rds.data$gene.id <- file.name.parts[4]
-      rds.data$gene.name <- GENE.LOCATIONS |>
-        dplyr::filter(GeneId == rds.data$gene.id) |>
-        dplyr::select(Gene) |>
-        dplyr::pull()
-
-      rds.data$filename <- basename(rds.file)
-
-      rds.data$density_list <- rds.data$density_list[[1]]
-      rds.data$junction_list <- rds.data$junction_list[[1]]
-
-      rds.data$canonical.transcript.id <- GENE.LOCATIONS |>
-        dplyr::filter(GeneId == rds.data$gene.id) |>
-        dplyr::select(CanonicalTranscriptId) |>
-        dplyr::pull()
-
-      rds.data$gtf.data <- GTF.DATA[[rds.data$species]]
-
-      # Is the gene on the forward or reverse strand? Note - this is the gene, not the junctions or reads
-      rds.data$transcript.is.reverse.strand <- transcript.is.reverse.strand(rds.data$canonical.transcript.id, rds.data$gtf.data)
-      rds.data$transcript.strand <- ifelse(rds.data$transcript.is.reverse.strand, "-", "+")
-
-      rds.data$junction_list$matches.known.exons <- mapply(junction.is.in.GTF,
-        junction.start = rds.data$junction_list$x,
-        junction.end = rds.data$junction_list$xend,
-        MoreArgs = list(
-          transcript.id = rds.data$canonical.transcript.id,
-          gtf.data = rds.data$gtf.data
-        )
-      )
-
-
-      return(rds.data)
-    },
-    error = \(e) {
-      cat("Plot sashimi: ", "Error reading Rds data from", rds.file, "\n", paste(e))
-      e
-    }
-  )
-}
+# read.ggsashimi.py.rds <- function(rds.file) {
+#' #  tryCatch(
+#' #    {
+#' #      rds.data <- readRDS(rds.file)
+#' #      file.name.parts <- str_split_1(basename(rds.file), "\.")
+#' #      rds.data$junction.strand <- ifelse(str_detect(rds.file, "_\+$"), "+",
+#' #        ifelse(str_detect(rds.file, "_-$"), "-", "*")
+#' #      )
+#' #      cat("Plot sashimi: ", rds.file, "is for junctions on strand", rds.data$junction.strand, "\n")
+#' #      rds.data$species <- file.name.parts[1]
+#' #      rds.data$tissue <- file.name.parts[2]
+#' #      rds.data$timepoint <- file.name.parts[3]
+#' #      rds.data$gene.id <- file.name.parts[4]
+#' #      rds.data$gene.name <- GENE.LOCATIONS |>
+#' #        dplyr::filter(GeneId == rds.data$gene.id) |>
+#' #        dplyr::select(Gene) |>
+#' #        dplyr::pull()
+#' #      rds.data$filename <- basename(rds.file)
+#' #      rds.data$density_list <- rds.data$density_list[[1]]
+#' #      rds.data$junction_list <- rds.data$junction_list[[1]]
+#' #      rds.data$canonical.transcript.id <- GENE.LOCATIONS |>
+#' #        dplyr::filter(GeneId == rds.data$gene.id) |>
+#' #        dplyr::select(CanonicalTranscriptId) |>
+#' #        dplyr::pull()
+#' #      rds.data$gtf.data <- GTF.DATA[[rds.data$species]]
+#' #      # Is the gene on the forward or reverse strand? Note - this is the gene, not the junctions or reads
+#' #      rds.data$transcript.is.reverse.strand <- transcript.is.reverse.strand(rds.data$canonical.transcript.id, rds.data$gtf.data)
+#' #      rds.data$transcript.strand <- ifelse(rds.data$transcript.is.reverse.strand, "-", "+")
+#' #      rds.data$junction_list$matches.known.exons <- mapply(junction.is.in.GTF,
+#' #        junction.start = rds.data$junction_list$x,
+#' #        junction.end = rds.data$junction_list$xend,
+#' #        MoreArgs = list(
+#' #          transcript.id = rds.data$canonical.transcript.id,
+#' #          gtf.data = rds.data$gtf.data
+#' #        )
+#' #      )
+#' #      return(rds.data)
+#' #    },
+#' #    error = \(e) {
+#' #      cat("Plot sashimi: ", "Error reading Rds data from", rds.file, "\n", paste(e))
+#' #      e
+#' #    }
+#' #  )
+# }
 
 #' Make a conversion table that can rescale coordinates to collapse introns.
 #'
@@ -243,9 +248,12 @@ read.ggsashimi.py.rds <- function(rds.file) {
 create.intron.collapser <- function(exon.data, intron.data, strand, max.intron.length = 500) {
   if (is.null(exon.data)) stop("No exon data provided")
 
+  cat("Plot sashimi: Creating intron collapser\n")
   # Reduce any overlapping exons if we have multiple transcripts
   exon.data <- exon.data[exon.data$strand == strand, ]
   intron.data <- intron.data[intron.data$strand == strand, ]
+
+  cat("Plot sashimi: Detected", nrow(exon.data), "exons and", nrow(intron.data), "introns\n")
 
   exon.ranges <- GenomicRanges::reduce(GenomicRanges::GRanges(
     seqnames = rep("test", nrow(exon.data)),
@@ -323,7 +331,7 @@ create.intron.collapser <- function(exon.data, intron.data, strand, max.intron.l
 
     # If we find nothing, do not adjust
     if (nrow(feature) == 0) {
-      warning("No range table entry covering", coordinate)
+      warning("Plot sashimi: No range table entry covering", coordinate)
       return(coordinate)
     }
 
@@ -334,6 +342,7 @@ create.intron.collapser <- function(exon.data, intron.data, strand, max.intron.l
     result <- (fractional.distance * feature$new.length) + feature$new.start
     return(result)
   }
+  cat("Plot sashimi: Created intron collapser\n")
   list(
     calculate = calculate,
     full.ranges = full.ranges
@@ -345,6 +354,7 @@ collapse.introns <- function(sashimi.data, exon.data, intron.data) {
   # Calculate offsets to make all introns at most 500bp
   intron.collapser <- create.intron.collapser(exon.data, intron.data, sashimi.data$reference.transcript.strand)
 
+  cat("Plot sashimi: Collapsing introns\n")
   # Apply offsets to coordinates
   sashimi.data$reference.transcript.boundaries$exons <- sashimi.data$reference.transcript.boundaries$exons |>
     dplyr::rowwise() |>
@@ -368,21 +378,6 @@ collapse.introns <- function(sashimi.data, exon.data, intron.data) {
       start = intron.collapser$calculate(old.start),
       end = intron.collapser$calculate(old.end)
     )
-
-  # anns$exons$old.start <- anns$exons$start
-  # anns$exons$old.end <- anns$exons$end
-  # anns$exons$start <- mapply(intron.collapser, coordinate = anns$exons$old.start, SIMPLIFY = TRUE)
-  # anns$exons$end <- mapply(intron.collapser, coordinate = anns$exons$old.end, SIMPLIFY = TRUE)
-
-  # anns$introns$old.start <- anns$introns$start
-  # anns$introns$old.end <- anns$introns$end
-  # anns$introns$start <- mapply(intron.collapser, coordinate = anns$introns$old.start, SIMPLIFY = TRUE)
-  # anns$introns$end <- mapply(intron.collapser, coordinate = anns$introns$old.end, SIMPLIFY = TRUE)
-
-  # junctions$old.start <- junctions$start
-  # junctions$old.end <- junctions$end
-  # junctions$start <- sapply(junctions$old.start, intron.collapser)
-  # junctions$end <- sapply(junctions$old.end, intron.collapser)
 
   sashimi.data
 }
@@ -640,76 +635,76 @@ make.gene.track.sashimi.panel <- function(sashimi.data, min.spanning.reads = 5, 
 
 
 #### Functions to create multi-panel charts ####
-
-# Create a sashimi panel plot for all tissues of the given species and timepoint
-make.species.panel <- function(species, timepoint, gene.id) {
-  data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", timepoint, "\\.", gene.id, "\\..*Rds_*"), full.names = TRUE)
-  if (length(data.files) == 0) {
-    return()
-  }
-  data <- lapply(data.files, read.ggsashimi.py.rds)
-
-  gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene.id, ]$Gene
-
-  out.png.file <- paste0("report/species/", species, ".", timepoint, ".", gene.id, ".", gene.name, ".png")
-
-  plots <- lapply(data, \(x)  make.sashimi.panel(x, label = paste0(x$tissue, " ", x$junction.strand))$plot)
-  track <- make.gene.track(data[[1]]) # only one gene, only need one track
-  plots[[length(plots) + 1]] <- track
-
-  patchwork::wrap_plots(plots, nrow = length(plots))
-  save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
-}
-
-# Create a sashimi panel plot for all species of the given tissue and timepoint
-make.tissue.panel <- function(tissue, timepoint) {
-  cat("Plot sashimi: Making", tissue, "at", timepoint, "\n")
-  data.files <- list.files(path = "data/merged", pattern = paste0(".*\\.", tissue, "\\.", timepoint, "\\..*Rds_*"), full.names = TRUE)
-  if (length(data.files) == 0) {
-    return()
-  }
-  data <- lapply(data.files, read.ggsashimi.py.rds)
-
-  out.png.file <- paste0("report/tissues/", tissue, ".", timepoint, ".png")
-
-  plots <- lapply(data, \(x) make.sashimi.panel(x, label = paste0(x$species, "\n", x$gene.name, " ", x$junction.strand))$plot)
-  tracks <- lapply(data, make.gene.track)
-  plots <- c(rbind(plots, tracks))
-
-  patchwork::wrap_plots(plots, nrow = length(plots))
-  save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
-}
-
-# Create a sashimi panel plot for all timepoint of the given tissue and species
-make.timepoint.panel <- function(species, tissue, gene.id) {
-  data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", tissue, "\\..*", gene.id, "\\..*Rds_*"), full.names = TRUE)
-  if (length(data.files) == 0) {
-    return()
-  }
-
-  # Ensure files are plotted in time order
-  ordered.files <- list()
-  for (t in TIME.ORDER) {
-    for (f in data.files) {
-      if (str_detect(f, t)) {
-        ordered.files <- c(ordered.files, f)
-      }
-    }
-  }
-
-  data <- lapply(ordered.files, read.ggsashimi.py.rds)
-
-  gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene.id, ]$Gene
-
-  out.png.file <- paste0("report/timepoints/", species, ".", tissue, ".", gene.id, ".", gene.name, ".png")
-
-  plots <- lapply(data, \(x) make.sashimi.panel(x, label = paste0(x$species, " ", gene.name, "\n", x$timepoint, " ", x$junction.strand))$plot)
-  track <- make.gene.track(data[[1]])
-  plots[[length(plots) + 1]] <- track
-
-  patchwork::wrap_plots(plots, nrow = length(plots))
-  save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
-}
+#
+# # Create a sashimi panel plot for all tissues of the given species and timepoint
+# make.species.panel <- function(species, timepoint, gene.id) {
+#   data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", timepoint, "\\.", gene.id, "\\..*Rds_*"), full.names = TRUE)
+#   if (length(data.files) == 0) {
+#     return()
+#   }
+#   data <- lapply(data.files, read.ggsashimi.py.rds)
+#
+#   gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene.id, ]$Gene
+#
+#   out.png.file <- paste0("report/species/", species, ".", timepoint, ".", gene.id, ".", gene.name, ".png")
+#
+#   plots <- lapply(data, \(x)  make.sashimi.panel(x, label = paste0(x$tissue, " ", x$junction.strand))$plot)
+#   track <- make.gene.track(data[[1]]) # only one gene, only need one track
+#   plots[[length(plots) + 1]] <- track
+#
+#   patchwork::wrap_plots(plots, nrow = length(plots))
+#   save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
+# }
+#
+# # Create a sashimi panel plot for all species of the given tissue and timepoint
+# make.tissue.panel <- function(tissue, timepoint) {
+#   cat("Plot sashimi: Making", tissue, "at", timepoint, "\n")
+#   data.files <- list.files(path = "data/merged", pattern = paste0(".*\\.", tissue, "\\.", timepoint, "\\..*Rds_*"), full.names = TRUE)
+#   if (length(data.files) == 0) {
+#     return()
+#   }
+#   data <- lapply(data.files, read.ggsashimi.py.rds)
+#
+#   out.png.file <- paste0("report/tissues/", tissue, ".", timepoint, ".png")
+#
+#   plots <- lapply(data, \(x) make.sashimi.panel(x, label = paste0(x$species, "\n", x$gene.name, " ", x$junction.strand))$plot)
+#   tracks <- lapply(data, make.gene.track)
+#   plots <- c(rbind(plots, tracks))
+#
+#   patchwork::wrap_plots(plots, nrow = length(plots))
+#   save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
+# }
+#
+# # Create a sashimi panel plot for all timepoint of the given tissue and species
+# make.timepoint.panel <- function(species, tissue, gene.id) {
+#   data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", tissue, "\\..*", gene.id, "\\..*Rds_*"), full.names = TRUE)
+#   if (length(data.files) == 0) {
+#     return()
+#   }
+#
+#   # Ensure files are plotted in time order
+#   ordered.files <- list()
+#   for (t in TIME.ORDER) {
+#     for (f in data.files) {
+#       if (str_detect(f, t)) {
+#         ordered.files <- c(ordered.files, f)
+#       }
+#     }
+#   }
+#
+#   data <- lapply(ordered.files, read.ggsashimi.py.rds)
+#
+#   gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene.id, ]$Gene
+#
+#   out.png.file <- paste0("report/timepoints/", species, ".", tissue, ".", gene.id, ".", gene.name, ".png")
+#
+#   plots <- lapply(data, \(x) make.sashimi.panel(x, label = paste0(x$species, " ", gene.name, "\n", x$timepoint, " ", x$junction.strand))$plot)
+#   track <- make.gene.track(data[[1]])
+#   plots[[length(plots) + 1]] <- track
+#
+#   patchwork::wrap_plots(plots, nrow = length(plots))
+#   save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
+# }
 
 #### Select groups for plotting ####
 
@@ -733,77 +728,77 @@ make.timepoint.panel <- function(species, tissue, gene.id) {
 #### Functions to condense introns for neater plotting ####
 
 # Make species plot using combined panels
-make.condensed.species.panels <- function(species, timepoint, gene.id) {
-  data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", timepoint, "\\.", gene.id, "\\..*Rds_*"), full.names = TRUE)
-  if (length(data.files) == 0) {
-    return()
-  }
-  data <- lapply(data.files, read.ggsashimi.py.rds)
-
-  gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene.id, ]$Gene
-
-  out.png.file <- paste0("report/species/", species, ".", timepoint, ".", gene.id, ".", gene.name, ".condensed.png")
-  cat("Plot sashimi: Making", out.png.file, "\n")
-
-  plots <- lapply(data, \(x)  make.gene.track.sashimi.panel(x, label = paste0(species, " ", gene.name, "\n", x$tissue, " ", x$junction.strand), show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
-
-  patchwork::wrap_plots(plots, nrow = length(plots))
-
-  save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
-}
-
-# Make tissue plot using condensed panels
-make.condensed.tissue.panels <- function(tissue, timepoint) {
-  cat("Plot sashimi: Making", tissue, "at", timepoint, "\n")
-  data.files <- list.files(path = "data/merged", pattern = paste0(".*\\.", tissue, "\\.", timepoint, "\\..*Rds_*"), full.names = TRUE)
-  if (length(data.files) == 0) {
-    return()
-  }
-  data <- lapply(data.files, read.ggsashimi.py.rds)
-
-  out.png.file <- paste0("report/tissues/", tissue, ".", timepoint, ".condensed.png")
-
-  plots <- lapply(data, \(x) make.gene.track.sashimi.panel(x,
-    label = paste0(x$species, "\n", x$gene.name, " ", x$junction.strand),
-    show.x.axis = FALSE, is.collapse.introns = TRUE
-  )$plot)
-
-  patchwork::wrap_plots(plots, nrow = length(plots))
-  save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
-}
-
-# Make species plot using combined panels
-make.condensed.timepoint.panels <- function(species, tissue, gene.id) {
-  cat("Plot sashimi: Making", species, tissue, "for", gene.id, "\n")
-  data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", tissue, "\\..*", gene.id, "\\..*Rds_*"), full.names = TRUE)
-  if (length(data.files) == 0) {
-    return()
-  }
-
-  # Ensure files are plotted in time order
-  ordered.files <- list()
-  for (t in TIME.ORDER) {
-    for (f in data.files) {
-      if (str_detect(f, t)) {
-        ordered.files <- c(ordered.files, f)
-      }
-    }
-  }
-
-  data <- lapply(ordered.files, read.ggsashimi.py.rds)
-
-  gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene.id, ]$Gene
-
-  out.png.file <- paste0("report/timepoints/", species, ".", tissue, ".", gene.id, ".", gene.name, ".condensed.png")
-
-  plots <- lapply(data, \(x) make.gene.track.sashimi.panel(x,
-    label = paste0(x$species, " ", gene.name, "\n", x$timepoint, " ", x$junction.strand),
-    show.x.axis = FALSE, is.collapse.introns = TRUE
-  )$plot)
-
-  patchwork::wrap_plots(plots, nrow = length(plots))
-  save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
-}
+# make.condensed.species.panels <- function(species, timepoint, gene.id) {
+#   data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", timepoint, "\\.", gene.id, "\\..*Rds_*"), full.names = TRUE)
+#   if (length(data.files) == 0) {
+#     return()
+#   }
+#   data <- lapply(data.files, read.ggsashimi.py.rds)
+#
+#   gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene.id, ]$Gene
+#
+#   out.png.file <- paste0("report/species/", species, ".", timepoint, ".", gene.id, ".", gene.name, ".condensed.png")
+#   cat("Plot sashimi: Making", out.png.file, "\n")
+#
+#   plots <- lapply(data, \(x)  make.gene.track.sashimi.panel(x, label = paste0(species, " ", gene.name, "\n", x$tissue, " ", x$junction.strand), show.x.axis = FALSE, is.collapse.introns = TRUE)$plot)
+#
+#   patchwork::wrap_plots(plots, nrow = length(plots))
+#
+#   save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
+# }
+#
+# # Make tissue plot using condensed panels
+# make.condensed.tissue.panels <- function(tissue, timepoint) {
+#   cat("Plot sashimi: Making", tissue, "at", timepoint, "\n")
+#   data.files <- list.files(path = "data/merged", pattern = paste0(".*\\.", tissue, "\\.", timepoint, "\\..*Rds_*"), full.names = TRUE)
+#   if (length(data.files) == 0) {
+#     return()
+#   }
+#   data <- lapply(data.files, read.ggsashimi.py.rds)
+#
+#   out.png.file <- paste0("report/tissues/", tissue, ".", timepoint, ".condensed.png")
+#
+#   plots <- lapply(data, \(x) make.gene.track.sashimi.panel(x,
+#     label = paste0(x$species, "\n", x$gene.name, " ", x$junction.strand),
+#     show.x.axis = FALSE, is.collapse.introns = TRUE
+#   )$plot)
+#
+#   patchwork::wrap_plots(plots, nrow = length(plots))
+#   save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
+# }
+#
+# # Make species plot using combined panels
+# make.condensed.timepoint.panels <- function(species, tissue, gene.id) {
+#   cat("Plot sashimi: Making", species, tissue, "for", gene.id, "\n")
+#   data.files <- list.files(path = "data/merged", pattern = paste0(species, ".*\\.", tissue, "\\..*", gene.id, "\\..*Rds_*"), full.names = TRUE)
+#   if (length(data.files) == 0) {
+#     return()
+#   }
+#
+#   # Ensure files are plotted in time order
+#   ordered.files <- list()
+#   for (t in TIME.ORDER) {
+#     for (f in data.files) {
+#       if (str_detect(f, t)) {
+#         ordered.files <- c(ordered.files, f)
+#       }
+#     }
+#   }
+#
+#   data <- lapply(ordered.files, read.ggsashimi.py.rds)
+#
+#   gene.name <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene.id, ]$Gene
+#
+#   out.png.file <- paste0("report/timepoints/", species, ".", tissue, ".", gene.id, ".", gene.name, ".condensed.png")
+#
+#   plots <- lapply(data, \(x) make.gene.track.sashimi.panel(x,
+#     label = paste0(x$species, " ", gene.name, "\n", x$timepoint, " ", x$junction.strand),
+#     show.x.axis = FALSE, is.collapse.introns = TRUE
+#   )$plot)
+#
+#   patchwork::wrap_plots(plots, nrow = length(plots))
+#   save.double.width(filename = out.png.file, plot = last_plot(), height = 300)
+# }
 
 #### Make condensed figures ####
 cat("Plot sashimi: Making figures\n")
@@ -818,8 +813,8 @@ bam.files <- data.frame(path = list.files(path = "data/stringtie", pattern = ".*
 species.aggregate <- list()
 tissue.aggregate <- list()
 timepoint.aggregate <- list()
-for (i in 1:4) {
-  # for (i in 1:nrow(bam.files)) {
+
+for (i in 1:nrow(bam.files)) {
   bam.row <- bam.files[i, ]
   species <- bam.row$species
   tissue <- bam.row$tissue
@@ -843,6 +838,8 @@ for (i in 1:4) {
 
   gene.data <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene_id, ]
   coords <- parse.coordinates(gene.data$Location)
+
+  cat("Reference location:", coords$coord.chr, coords$coord.start, coords$coord.end, "\n")
 
   sashimi.data <- read.sashimi.data(
     bam.file = bam.row$path,
@@ -881,19 +878,19 @@ for (i in 1:4) {
 for (species in names(species.aggregate)) {
   png.file <- paste0("report/species/", species, ".png")
   wrapped.plots <- patchwork::wrap_plots(species.aggregate[[species]], ncol = 1)
-  save.double.width(filename = png.file, plot = wrapped.plots, height = 300)
+  save.double.width(filename = png.file, plot = wrapped.plots, height = 50 * length(wrapped.plots))
 }
 
 for (tissue in names(tissue.aggregate)) {
   png.file <- paste0("report/tissues/", tissue, ".png")
   wrapped.plots <- patchwork::wrap_plots(tissue.aggregate[[tissue]], ncol = 1)
-  save.double.width(filename = png.file, plot = wrapped.plots, height = 300)
+  save.double.width(filename = png.file, plot = wrapped.plots, height = 50 * length(wrapped.plots))
 }
 
 for (timepoint in names(timepoint.aggregate)) {
   png.file <- paste0("report/timepoints/", timepoint, ".png")
   wrapped.plots <- patchwork::wrap_plots(timepoint.aggregate[[timepoint]], ncol = 1)
-  save.double.width(filename = png.file, plot = wrapped.plots, height = 300)
+  save.double.width(filename = png.file, plot = wrapped.plots, height = 50 * length(wrapped.plots))
 }
 
 
