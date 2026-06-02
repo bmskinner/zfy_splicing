@@ -37,7 +37,6 @@ make_coverage_map <- function(start, end) {
   }
 
   coverage.array$incrementRange <- function(start, end, strand) {
-    # coverage.array$add(pos, strand, 1)
     base.range <- as.character(start:end)
     coverage.array[[strand]][base.range] <- coverage.array[[strand]][base.range] + 1
   }
@@ -131,41 +130,6 @@ parse_coordinates <- function(coordinate.string) {
     coord.end = coord.end
   )
 }
-
-#' Determine if a read is sense or antisense from SAM flag and strand string.
-#'
-#' @param strand.string the strand of the read
-#' @param samflag integer SAM flag
-#'
-#' @returns 0 if the read is sense, 1 if the read is antisense
-#' @export
-#'
-#' @examples
-# flip_read <- function(strand.string, samflag) {
-#   if (strand.string == "NONE" | strand.string == "SENSE") {
-#     return(0)
-#   }
-#   if (strand.string == "ANTISENSE") {
-#     return(1)
-#   }
-#   if (strand.string == "MATE1_SENSE") {
-#     # 64 = first in pair, 128 = second in pair
-#     if (has_sam_flag(samflag, SAM.FLAG.FIRST.IN.PAIR)) {
-#       return(0)
-#     }
-#     if (has_sam_flag(samflag, SAM.FLAG.SECOND.IN.PAIR)) {
-#       return(1)
-#     }
-#   }
-#   if (strand.string == "MATE2_SENSE") {
-#     if (has_sam_flag(samflag, SAM.FLAG.FIRST.IN.PAIR)) {
-#       return(1)
-#     }
-#     if (has_sam_flag(samflag, SAM.FLAG.SECOND.IN.PAIR)) {
-#       return(0)
-#     }
-#   }
-# }
 
 #' Determine if a read is sense or antisense from SAM flag relative to a
 #' reference strand.
@@ -342,7 +306,6 @@ transcript_is_reverse_strand <- function(transcript.id, gtf.data) {
   any(exons$strand == "-")
 }
 
-#
 #' Given a canonical transcript id, find the splice junctions
 #'
 #' @param transcript.id the transcript to test
@@ -394,8 +357,8 @@ junction_is_in_GTF <- function(transcript.id, gtf.data, junction.start, junction
 #'
 #' @param gtf.data the GTF data as read by e.g. rtracklayer
 #' @param chr the chromosome
-#' @param start the start of the window
-#' @param end the end of the window
+#' @param loc.start the start of the window
+#' @param loc.end the end of the window
 #'
 #' @returns a data frame of exon and intron locations within the window
 #' @export
@@ -452,18 +415,21 @@ get_exon_boundaries <- function(gtf.data, chr, loc.start, loc.end) {
 }
 
 
-#' Read ggshasimi output
+#' Read splice junctions from a bam file and integrate with GTF data
 #'
-#' Read junction and coverage data from ggsashimi R implementation. Build exon
-#' and intron annotations.
+#' Read junction and coverage data from the bam. Build exon and intron
+#' annotations from the GTF data and count known or novel splice junctions.
 #'
-#' @param coverage a ggsashimi coverage output
-#' @param junctions a ggsashimi junctions output
-#' @param gene.id the gene of interest
+#' @param bam.file the bam file to read
 #' @param gtf.data the full genome annotation
-#' @param location.string the location to restrict the search
+#' @param chr the chromosome of the window to report
+#' @param start the start coordinate of the window to report
+#' @param end the end coordinate of the window to report
+#' @param reference.gene.id the gene to use as the strand reference
+#' @param reference.transcript.id the transcript to use as the strand reference.
+#'   If not provided, the longest transcript of the gene will be used
 #'
-#' @returns
+#' @returns a list with junction, coverage and annotation data elements
 #' @export
 #'
 #' @examples

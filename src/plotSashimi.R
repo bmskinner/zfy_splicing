@@ -10,7 +10,7 @@ cat("Plot sashimi: running shashimi plotting\n")
 fs::dir_create(c("report/species", "report/timepoints", "report/tissues", "report/raw_sashimi"))
 
 # Read all GTF files once, since we have multiple genes/tissues per species
-GTF.DATA <- read_gtf_data(GENOME.DATA$GTF_FILE[c(1, 10)], GENOME.DATA$CommonName[c(1, 10)])
+GTF.DATA <- read_gtf_data(GENOME.DATA$GTF_FILE, GENOME.DATA$CommonName)
 
 cat("Plot sashimi: Making figures\n")
 
