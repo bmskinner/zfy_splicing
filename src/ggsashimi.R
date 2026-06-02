@@ -483,7 +483,7 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
 
       sashimi.data$reference.transcript.boundaries <- get_exon_boundaries(gtf.data, chr, start, end)
 
-      cat("Reference exon/intron bounds detected:\n")
+      cat("Reference exon/intron bounds detected\n")
 
       sashimi.data$reference.gene.name <- gtf.data |>
         dplyr::filter(gene_id == reference.gene.id) |>
@@ -503,7 +503,6 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
           gtf.data = gtf.data
         )
       )
-
 
       return(sashimi.data)
     },
@@ -697,8 +696,8 @@ collapse_introns <- function(sashimi.data, exon.data, intron.data) {
 #'
 #' @examples
 make_sashimi_plot <- function(sashimi.data, min.spanning.reads = 5, label = "tissue",
-                              show.x.axis = TRUE, is.collapse_introns = FALSE) {
-  if (is.collapse_introns) {
+                              show.x.axis = TRUE, is.collapse.introns = FALSE) {
+  if (is.collapse.introns) {
     sashimi.data <- collapse_introns(
       sashimi.data,
       sashimi.data$reference.transcript.boundaries$exons,
@@ -916,4 +915,94 @@ make_sashimi_plot <- function(sashimi.data, min.spanning.reads = 5, label = "tis
   }
 
   list(plot = splot, junctions = junctions)
+}
+
+make_coverage_plot <- function(sashimi.data, label = "label") {
+  anns <- sashimi.data$reference.transcript.boundaries
+  is.x.reverse <- sashimi.data$reference.transcript.strand == "-"
+
+  if (any(!is.numeric(anns$exons$end)) | any(!is.numeric(anns$exons$start))) {
+    cat("Error in annotations: at least one start or end is NA\n")
+    print(anns$exons)
+    str(anns$exons)
+  }
+
+  # Only plot exons from the reference transcript
+  reference.exons <- anns$exons |>
+    dplyr::filter(
+      transcript_id == sashimi.data$reference.transcript.id
+    )
+
+  non.reference.exons <- anns$exons |>
+    dplyr::filter(
+      gene_id != sashimi.data$reference.gene.id,
+      strand != sashimi.data$reference.transcript.strand
+    )
+
+  reference.introns <- anns$introns |>
+    dplyr::filter(
+      start > min(reference.exons$start),
+      end < max(reference.exons$start),
+      strand == sashimi.data$reference.transcript.strand
+    )
+
+  non.reference.introns <- anns$introns |>
+    dplyr::filter(
+      start > min(reference.exons$start),
+      end < max(reference.exons$start),
+      strand != sashimi.data$reference.transcript.strand
+    )
+
+  # Set coordinate range for the x axis
+  xmin <- min(c(reference.exons$start, reference.exons$end), na.rm = T) - 500
+  xmax <- max(c(reference.exons$start, reference.exons$end), na.rm = T) + 500
+  ymin <- -2
+  ymax <- 2
+
+  # Make the gene track
+  splot <- ggplot() +
+    geom_line(data = sashimi.data$coverage, aes(x = position, y = positive.strand / max(positive.strand) + 1.1)) +
+    geom_line(data = sashimi.data$coverage, aes(x = position, y = -negative.strand / max(negative.strand) - 1.1)) +
+    # Introns
+    geom_segment(data = reference.introns, aes(x = start, xend = end, y = 0.5, yend = 0.5), linewidth = 0.3) +
+    geom_segment(data = non.reference.introns, aes(x = start, xend = end, y = -0.5, yend = -0.5), linewidth = 0.3) +
+    geom_hline(yintercept = 0) +
+    annotate("text",
+      x = ifelse(is.x.reverse, xmax - 250, xmin + 250),
+      y = 0.5,
+      label = sashimi.data$reference.transcript.strand,
+      size = 5, col = "black"
+    ) +
+    annotate("text",
+      x = ifelse(is.x.reverse, xmax - 250, xmin + 250),
+      y = -0.5,
+      label = ifelse(sashimi.data$reference.transcript.strand == "+", "-", "+"),
+      size = 5, col = "black"
+    ) +
+
+    # Reference transcript exons
+    geom_rect(data = reference.exons, aes(xmin = start, xmax = end, ymin = 0, ymax = 1), fill = "blue", alpha = 1) +
+    geom_rect(data = non.reference.exons, aes(xmin = start, xmax = end, ymin = 0, ymax = -1), fill = "grey", alpha = 1) +
+    scale_y_discrete(expand = c(-2, 2)) +
+    coord_cartesian(xlim = c(xmin, xmax), ylim = c(ymin, ymax)) +
+    scale_x_continuous(expand = c(0, 0.25)) +
+    theme_minimal() +
+    labs(y = label) +
+    theme(
+      axis.line.y = element_blank(),
+      axis.line.x = element_line(),
+      axis.ticks.x = element_line(),
+      axis.title.x = element_blank(),
+      axis.title.y = element_text(angle = 0, hjust = 1, vjust = 0.5),
+      axis.ticks.y = element_blank(),
+      panel.grid = element_blank(),
+      legend.position = "none"
+    )
+
+  if (is.x.reverse) {
+    splot <- splot +
+      scale_x_reverse(expand = c(0, 0.25))
+  }
+
+  splot
 }
