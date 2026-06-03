@@ -3,6 +3,8 @@
 .RData
 .Ruserdata
 *.Rproj
+*.gz
+*.tar
 
 data/*
 genomes/*

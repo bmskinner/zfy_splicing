@@ -208,6 +208,10 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
   bam.conn <- Rsamtools::BamFile(bam.file)
   bam.data <- scanBam(bam.conn)[[1]]
 
+  if (length(bam.data$qname) == 0) {
+    stop("There are no reads in bam file", bam.file)
+  }
+
   # Go read by read
   for (i in 1:length(bam.data$qname)) {
     if (i %% 500 == 0) cat(sprintf("Processed %.2f%% of reads\n", i / length(bam.data$qname) * 100))
@@ -723,6 +727,13 @@ collapse_introns <- function(sashimi.data, exon.data, intron.data) {
       old.start = start, old.end = end,
       start = intron.collapser$calculate(old.start),
       end = intron.collapser$calculate(old.end)
+    )
+
+  sashimi.data$coverage <- sashimi.data$coverage |>
+    dplyr::rowwise() |>
+    dplyr::mutate(
+      old.position = position,
+      position = intron.collapser$calculate(old.position)
     )
 
   sashimi.data
