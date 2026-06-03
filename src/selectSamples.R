@@ -27,31 +27,7 @@ read.csv("metadata/human_generic.csv") %>%
   ) %>%
   write.csv(., file = "metadata/human_generic.filt.csv", row.names = FALSE, quote = TRUE)
 
-
-
 #### Samples from PRJEB26695 ####
-
-dplyr::rename(
-  DevStage = Experimental_Factor._developmental_stage..exp.,
-  OrganismPart = Experimental_Factor._organism_part..exp.
-) %>%
-  dplyr::mutate(
-    Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
-      DevStage == "postnatal day 0" ~ "birth",
-      DevStage == "postnatal day 7" ~ "birth",
-      DevStage == "postnatal day 70" ~ "mid-meiosis",
-      DevStage == "postnatal day 155" ~ "adult",
-      .default = "other"
-    ),
-    CommonName = "chicken",
-    Genome = "GRCg7b"
-  ) %>%
-  dplyr::filter(Timepoint != "other" & Timepoint != "embryo") %>%
-  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
-  write.csv(., file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE)
-
-
-
 
 # Chicken E-MTAB-6769
 read.csv("metadata/chicken.csv") %>%
