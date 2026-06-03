@@ -1,6 +1,17 @@
 # R implementation of ggsashimi.py from
 # https://github.com/guigolab/ggsashimi
 
+packages <- c(
+  "parallel", "tidyverse", "GenomicRanges", "grid",
+  "fs", "data.table", "rtracklayer", "Rsamtools", "bitops", "rlang"
+)
+
+suppressPackageStartupMessages({
+  is.installed <- sapply(packages, require, character.only = TRUE)
+  if (!all(is.installed)) stop("The following packages are required:", paste(packages[!is.installed], collapse = ", "))
+})
+
+
 SAM.FLAG.READ.UNMAPPED <- 0x4
 SAM.FLAG.MATE.UNMAPPED <- 0x8
 SAM.FLAG.READ.REVERSE.STRAND <- 0x10
@@ -352,6 +363,42 @@ junction_is_in_GTF <- function(transcript.id, gtf.data, junction.start, junction
   any(junctions$j1 == junction.start & junctions$j2 == junction.end)
 }
 
+#' Import GTF data from a vector of file paths and store in a named list
+#'
+#' The GTF data is converted to a data frame.
+#'
+#' @param gtf.files the file paths to read
+#' @param gtf.names the names to give the GTF data
+#'
+#' @returns a list in which [[gtf.names[1]]] contains the data from gtf.files[1]
+#' @export
+#'
+#' @examples
+#' gtf.data <- read_gtf_data(
+#'   c("genomes/GRCh38.gtf", "genomes/Sscrofa11.1.gtf"),
+#'   c("human", "pig")
+#' )
+#' gtf.data[[human]]
+read_gtf_data <- function(gtf.files, gtf.names) {
+  cat("Plot sashimi: Reading full genome GTF files\n")
+  gtf.data <- mclapply(gtf.files, \(x){
+    df <- as.data.frame(rtracklayer::import(x)) %>%
+      # Create gene_name column if missing. Ensembl vs NCBI GTF format
+      # We need to use magrittr pipe for this to access input data frame as .
+      dplyr::mutate(
+        gene_name = if ("gene_name" %in% colnames(.)) gene_name else if ("gene" %in% colnames(.)) gene else gene_id,
+        transcript_name = if ("transcript_name" %in% colnames(.)) transcript_name else if ("transcript" %in% colnames(.)) transcript else transcript_id,
+      )
+    df
+  },
+  mc.cores = ifelse(installr::is.windows(), 1, 6)
+  )
+  names(gtf.data) <- gtf.names
+  cat("Plot sashimi: Read full genome GTF files\n")
+  gtf.data
+}
+
+
 #' Get intron and exon boundaries for all transcripts within the given region of
 #' a GTF
 #'
@@ -388,7 +435,7 @@ get_exon_boundaries <- function(gtf.data, chr, loc.start, loc.end) {
       type = "intron"
     ) |>
     dplyr::filter(!is.na(intron.start), !is.na(intron.end)) |>
-    dplyr::select(seqnames, gene_id, transcript_id, gene_name, transcript_name, type,
+    dplyr::select(seqnames, gene_id, gene_name, transcript_id, transcript_name, type,
       start = intron.start, end = intron.end, strand, length
     ) |>
     dplyr::ungroup() |>
@@ -400,7 +447,7 @@ get_exon_boundaries <- function(gtf.data, chr, loc.start, loc.end) {
     as.data.frame() |>
     dplyr::filter(type == "exon") |>
     dplyr::select(
-      seqnames, gene_id, transcript_id, gene_name, transcript_name, type,
+      seqnames, gene_id, gene_name, transcript_id, transcript_name, type,
       start, end, strand
     ) |>
     dplyr::mutate(length = end - start + 1) |>
@@ -898,7 +945,7 @@ make_sashimi_plot <- function(sashimi.data, min.spanning.reads = 5, label = "lab
   # Add the junctions, adjusting for plus vs minus strand
   if (nrow(junctions) > 0) {
     # Calculate charting coordinates
-    junctions$y.offset <- rep(seq(0, 1, 0.5, 1.5), length.out = nrow(junctions)) # give each junction a separate y offset
+    junctions$y.offset <- rep(seq(0, 1.5, 0.5), length.out = nrow(junctions)) # give each junction a separate y offset
 
     for (i in 1:nrow(junctions)) {
       jrow <- junctions[i, ]

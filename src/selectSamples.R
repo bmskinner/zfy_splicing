@@ -3,7 +3,55 @@ source("src/functions.R")
 # Filter metadata from SRA searches to get samples of interest
 
 cat("Sample selection: Reading and filtering sample data\n")
+
+#### Samples from human excluding PRJEB26695 ####
+read.csv("metadata/human_generic.csv") %>%
+  dplyr::filter(
+    BioProject != "PRJEB26695",
+    Assay.Type == "RNA-Seq",
+    Bases > 1e8,
+    tissue == "testis",
+    AGE != "missing", as.numeric(AGE) > 18,
+    gender == "male"
+  ) %>%
+  dplyr::mutate(
+    DevStage = "adult",
+    Timepoint = "adult",
+    CommonName = "human",
+    Genome = "GRCh38"
+  ) %>%
+  dplyr::slice_head(n = 10) %>% # we don't need all of them
+  dplyr::select(
+    Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex,
+    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) %>%
+  write.csv(., file = "metadata/human_generic.filt.csv", row.names = FALSE, quote = TRUE)
+
+
+
 #### Samples from PRJEB26695 ####
+
+dplyr::rename(
+  DevStage = Experimental_Factor._developmental_stage..exp.,
+  OrganismPart = Experimental_Factor._organism_part..exp.
+) %>%
+  dplyr::mutate(
+    Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
+      DevStage == "postnatal day 0" ~ "birth",
+      DevStage == "postnatal day 7" ~ "birth",
+      DevStage == "postnatal day 70" ~ "mid-meiosis",
+      DevStage == "postnatal day 155" ~ "adult",
+      .default = "other"
+    ),
+    CommonName = "chicken",
+    Genome = "GRCg7b"
+  ) %>%
+  dplyr::filter(Timepoint != "other" & Timepoint != "embryo") %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
+  write.csv(., file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE)
+
+
+
 
 # Chicken E-MTAB-6769
 read.csv("metadata/chicken.csv") %>%

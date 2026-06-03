@@ -5,11 +5,10 @@ packages <- c(
   "rtracklayer", "Rsamtools", "bitops", "rlang"
 )
 
-suppressPackageStartupMessages(
-  for (pkg in packages) {
-    if (!require(pkg, character.only = TRUE)) stop("Missing package", pkg)
-  }
-)
+suppressPackageStartupMessages({
+  is.installed <- sapply(packages, require, character.only = TRUE)
+  if (!all(is.installed)) stop("The following packages are required:", paste(packages[!is.installed], collapse = ", "))
+})
 
 cat("Setup: Defining global functions\n")
 
@@ -40,31 +39,6 @@ create.xlsx <- function(data, file.name) {
 
 #### Reading metadata files ####
 
-#' Import GTF data from a vector of file paths and store in a named list
-#'
-#' The GTF data is converted to a data frame.
-#'
-#' @param gtf.files the file paths to read
-#' @param gtf.names the names to give the GTF data
-#'
-#' @returns a list in which [[gtf.names[1]]] contains the data from gtf.files[1]
-#' @export
-#'
-#' @examples
-#' gtf.data <- read_gtf_data(
-#'   c("genomes/GRCh38.gtf", "genomes/Sscrofa11.1.gtf"),
-#'   c("human", "pig")
-#' )
-#' gtf.data[[human]]
-read_gtf_data <- function(gtf.files, gtf.names) {
-  cat("Plot sashimi: Reading full genome GTF files\n")
-  gtf.data <- mclapply(gtf.files, \(x) as.data.frame(rtracklayer::import(x)),
-    mc.cores = ifelse(installr::is.windows(), 1, 6)
-  )
-  names(gtf.data) <- gtf.names
-  cat("Plot sashimi: Read full genome GTF files\n")
-  gtf.data
-}
 
 # Get the identifiers for genes of interest
 get.gene.locations <- function(genome.data) {
