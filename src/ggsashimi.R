@@ -559,6 +559,9 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
       sashimi.data$junctions <- bam.data$junctions
       sashimi.data$junctions.reference.strand <- bam.data$reference.strand
 
+
+      # junctions <- get_transcript_junctions(transcript.id, gtf.data)
+      # any(junctions$j1 == junction.start & junctions$j2 == junction.end)
       sashimi.data$junctions$matches.known.exon <- mapply(junction_is_in_GTF,
         junction.start = bam.data$junctions$start,
         junction.end = bam.data$junctions$end,
@@ -567,6 +570,25 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
           gtf.data = gtf.data
         )
       )
+
+      # If we have junctions that match know exon boundaries, but are on the
+      # wrong strand, this is usually because the library was not stranded.
+      # Combine onto the correct strand.
+
+      junctions.grouped <- sashimi.data$junctions |>
+        dplyr::group_by(start, end) |>
+        dplyr::filter(matches.known.exon) |> # reference transcript only
+        dplyr::summarise(
+          strand = sashimi.data$reference.transcript.strand, # here means SENSE
+          count = sum(count),
+          matches.known.exon = TRUE,
+          .groups = "drop_last"
+        )
+
+      sashimi.data$junctions <- sashimi.data$junctions |>
+        dplyr::filter(!matches.known.exon) |>
+        rbind(junctions.grouped)
+
 
       return(sashimi.data)
     },
@@ -918,7 +940,7 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
 
   # Add the sashimi splines. Each sashimi arc is made of two splines that can be
   # above or below the transcript
-  add.junction <- function(splot, xmin, xmax, is.above, ymin, ymax, count, matches.known.exons) {
+  add.junction <- function(splot, xmin, xmax, is.lower, ymin, ymax, count, matches.known.exons) {
     # Define the spline line styles that make the junction lines
     spline.color <- ifelse(matches.known.exons, "blue", "black")
     spline.size <- ifelse(matches.known.exons, 1, 1)
@@ -948,7 +970,7 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
     xmid <- (xmin + xmax) / 2
 
     # Left arc
-    if (is.above) { # Junctions below zero
+    if (is.lower) { # Junctions below zero
       splot <- splot + annotation_custom(
         grob = l.grob.btm,
         xmin = xmin,
@@ -967,7 +989,7 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
     }
 
     # Right arc
-    if (is.above) { # Junctions below zero
+    if (is.lower) { # Junctions below zero
       splot <- splot + annotation_custom(
         grob = r.grob.btm,
         xmin = xmid,
@@ -987,7 +1009,7 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
 
     splot <- splot + annotate("label",
       x = xmid,
-      y = ifelse(is.above, 0 - ymax - label.y.offset, ymax + label.y.offset),
+      y = ifelse(is.lower, 0 - ymax - label.y.offset, ymax + label.y.offset),
       label = as.character(count),
       size = 2, col = spline.color, fill = "white"
     )
@@ -1024,7 +1046,7 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
       splot <- add.junction(
         splot = splot,
         xmin = jrow$start, xmax = jrow$end,
-        is.above = jrow$strand == sashimi.data$reference.transcript.strand,
+        is.lower = jrow$strand != sashimi.data$reference.transcript.strand,
         ymin = 2, ymax = 2.5 + jrow$y.offset,
         count = jrow$count,
         matches.known.exons = jrow$matches.known.exon
