@@ -48,11 +48,11 @@ map_se_sample () {
 			# -k controls number of multimapping locations (default 5 for linear index)
 			# --downstream-transcriptome-assembly forces longer anchors at novel splice sites (more rigorous)
 			# --dta-cfflinks does this and also looks for novel splice sites, stored in tag XS:A:[+-]
-			# Note that a stranded library may be with respect to forward or reverse strand;
+			# Note that a stranded library may be with respect to forward or reverse strand depending on prep method;
 			# Use --rna-strandness R to specify single-end RNA-seq data is reverse stranded, F for forward strand.
 			# Analysis run with and without --dta to compare effects; we don't need to assemble transcripts, just see if there is greater splicing in testis
 			# hisat2 -x genomes/${GENOME} -p 8 -U data/${SPECIES}/${ERR}_trimmed.fq.gz --new-summary --downstream-transcriptome-assembly -S data/${SPECIES}/${ERR}.sam
-			hisat2 -x genomes/${GENOME} -p 8 -U data/${SPECIES}/${ERR}_trimmed.fq.gz --new-summary --rna-strandness R --dta-cufflinks -S data/${SPECIES}/${ERR}.sam > logs/${ERR}.mapping.log 2>&1
+			hisat2 -x genomes/${GENOME} -p 8 -U data/${SPECIES}/${ERR}_trimmed.fq.gz --new-summary --dta-cufflinks -S data/${SPECIES}/${ERR}.sam > logs/${ERR}.mapping.log 2>&1
 			samtools sort -T data/${SPECIES}/${ERR} -@ 8 -o data/${SPECIES}/${ERR}.bam data/${SPECIES}/${ERR}.sam
 			samtools index -c -@ 7 data/${SPECIES}/${ERR}.bam # index with csi due to long chromosomes in opossum
 			rm data/${SPECIES}/${ERR}.sam
@@ -109,7 +109,7 @@ map_pe_sample () {
 			# map
 			echo "${ERR}: mapping"
 			# -k controls number of multimapping locations (default 5 for linear index)
-			hisat2 -x genomes/${GENOME} -p 8 -1 data/${SPECIES}/${ERR}_1_val_1.fq.gz -2 data/${SPECIES}/${ERR}_2_val_2.fq.gz --new-summary -S data/${SPECIES}/${ERR}.sam
+			hisat2 -x genomes/${GENOME} -p 8 -1 data/${SPECIES}/${ERR}_1_val_1.fq.gz -2 data/${SPECIES}/${ERR}_2_val_2.fq.gz --new-summary -S data/${SPECIES}/${ERR}.sam > logs/${ERR}.mapping.log 2>&1
 			samtools sort -T data/${SPECIES}/${ERR} -@ 8 -o data/${SPECIES}/${ERR}.bam data/${SPECIES}/${ERR}.sam
 			samtools index -c -@ 7 data/${SPECIES}/${ERR}.bam # index with csi due to long chromosomes in opossum
 			rm data/${SPECIES}/${ERR}.sam

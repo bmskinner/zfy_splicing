@@ -18,7 +18,9 @@ read.csv("metadata/human_generic.csv") %>%
     DevStage = "adult",
     Timepoint = "adult",
     CommonName = "human",
-    Genome = "GRCh38"
+    Genome = "GRCh38",
+    Organism_part = "testis",
+    sex = "male"
   ) %>%
   dplyr::slice_head(n = 10) %>% # we don't need all of them
   dplyr::select(
@@ -26,6 +28,26 @@ read.csv("metadata/human_generic.csv") %>%
     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
   ) %>%
   write.csv(., file = "metadata/human_generic.filt.csv", row.names = FALSE, quote = TRUE)
+
+
+#### Duck testis ####
+
+read.csv("metadata/duck.csv") %>%
+  dplyr::filter(
+    Assay.Type == "RNA-Seq", Organism == "Anas platyrhynchos",
+    str_detect(tissue, "[T|t]estis"), Bases > 5e8
+  ) %>%
+  dplyr::slice_head(n = 5) %>% # we don't need all of them
+  dplyr::mutate(
+    DevStage = "adult",
+    Organism_part = "testis",
+    Timepoint = "adult",
+    CommonName = "duck",
+    Genome = "CAU_duck1.0"
+  ) %>%
+  dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
+  write.csv(., file = "metadata/duck.filt.csv", row.names = FALSE, quote = TRUE)
+
 
 #### Samples from PRJEB26695 ####
 

@@ -205,16 +205,29 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
   coverage.array <- make_coverage_map(coordinates$coord.start, coordinates$coord.end)
   junction.map <- make_junction_map()
 
-  bam.conn <- Rsamtools::BamFile(bam.file)
+  # Use an index if available - otherwise read directly but slower
+  bai.index.file <- paste0(bam.file, ".bai")
+  csi.index.file <- paste0(bam.file, ".csi")
+  if (file.exists(bai.index.file)) {
+    cat("Found an index file:", bai.index.file, "\n")
+    bam.conn <- Rsamtools::BamFile(bam.file, bai.index.file)
+  } else if (file.exists(csi.index.file)) {
+    cat("Found an index file:", csi.index.file, "\n")
+    bam.conn <- Rsamtools::BamFile(bam.file, csi.index.file)
+  } else {
+    bam.conn <- Rsamtools::BamFile(bam.file)
+  }
   bam.data <- scanBam(bam.conn)[[1]]
 
   if (length(bam.data$qname) == 0) {
     stop("There are no reads in bam file", bam.file)
+  } else {
+    cat("There are", length(bam.data$qname), "reads in the bam file\n")
   }
 
   # Go read by read
   for (i in 1:length(bam.data$qname)) {
-    if (i %% 500 == 0) cat(sprintf("Processed %.2f%% of reads\n", i / length(bam.data$qname) * 100))
+    if (i %% 500 == 0) cat(sprintf("Processed %.2f%% of %s reads\n", i / length(bam.data$qname) * 100, length(bam.data$qname)))
     read.data <- lapply(bam.data, function(xx) xx[i])
     # Skip if read is unmapped
     if (has_sam_flag(read.data$flag, SAM.FLAG.READ.UNMAPPED) |
@@ -740,21 +753,20 @@ collapse_introns <- function(sashimi.data, exon.data, intron.data) {
 }
 
 #### Charting functions ####
-
 #' Plot splice junctions on a gene exon track
 #'
 #' @param sashimi.data sashimi data as produced by read_sashimi_data
-#' @param min.spanning.reads  the minimum number of spanning reads to include
+#' @param min.spanning.reads  the minimum number of spanning reads for a splice junction to be plotted
 #' @param label the label for the gene track
-#' @param show.x.axis if true, display the x axis
-#' @param is.collapse_introns if true, make each intron at most 500bp wide
+#' @param show.x.axis if true, display the x axis with genome coordinates
+#' @param is.collapse_introns if true, make each intron at most 500bp wide. If this option is used, the x-axis will no longer match the genome coordinates
 #'
 #' @returns
 #' @export
 #'
 #' @examples
-make_sashimi_plot <- function(sashimi.data, min.spanning.reads = 5, label = "label",
-                              show.x.axis = TRUE, is.collapse.introns = FALSE) {
+make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, label = "label",
+                                       show.x.axis = TRUE, is.collapse.introns = FALSE) {
   if (is.collapse.introns) {
     sashimi.data <- collapse_introns(
       sashimi.data,
@@ -773,7 +785,7 @@ make_sashimi_plot <- function(sashimi.data, min.spanning.reads = 5, label = "lab
     str(anns$exons)
   }
 
-  # Only plot exons from the reference transcript
+  # Plot exons from the reference transcript
   reference.exons <- anns$exons |>
     dplyr::filter(
       transcript_id == sashimi.data$reference.transcript.id
@@ -781,53 +793,101 @@ make_sashimi_plot <- function(sashimi.data, min.spanning.reads = 5, label = "lab
 
   non.reference.exons <- anns$exons |>
     dplyr::filter(
-      gene_id != sashimi.data$reference.gene.id,
-      strand != sashimi.data$reference.transcript.strand
+      transcript_id != sashimi.data$reference.transcript.id
     )
 
   reference.introns <- anns$introns |>
     dplyr::filter(
       start > min(reference.exons$start),
       end < max(reference.exons$start),
-      strand == sashimi.data$reference.transcript.strand
+      transcript_id == sashimi.data$reference.transcript.id
     )
 
   non.reference.introns <- anns$introns |>
     dplyr::filter(
       start > min(reference.exons$start),
       end < max(reference.exons$start),
-      strand != sashimi.data$reference.transcript.strand
+      transcript_id != sashimi.data$reference.transcript.id
     )
 
   # Set coordinate range for the x axis
   xmin <- min(c(reference.exons$start, reference.exons$end), na.rm = T) - 500
   xmax <- max(c(reference.exons$start, reference.exons$end), na.rm = T) + 500
 
+  max.coverage <- max(c(sashimi.data$coverage$positive.strand, sashimi.data$coverage$negative.strand))
+
+  intron.y <- 1.5
+  exon.ymin <- 1.1
+  exon.ymax <- 2
+
   # Make the gene track
   splot <- ggplot() +
-    # Introns
-    geom_segment(data = reference.introns, aes(x = start, xend = end, y = 0.5, yend = 0.5), linewidth = 0.3) +
-    geom_segment(data = non.reference.introns, aes(x = start, xend = end, y = -0.5, yend = -0.5), linewidth = 0.3) +
+    # Add read coverage, scaled to 0-1
+    geom_area(data = sashimi.data$coverage, aes(x = position, y = positive.strand / max.coverage), fill = "darkgrey", col = "darkgrey") +
+    geom_area(data = sashimi.data$coverage, aes(x = position, y = -negative.strand / max.coverage), fill = "darkgrey", col = "darkgrey") +
+
+    # Non reference transcript introns
+    geom_segment(
+      data = non.reference.introns, aes(
+        x = start,
+        xend = end,
+        y = ifelse(strand == sashimi.data$reference.transcript.strand, intron.y, -intron.y),
+        yend = ifelse(strand == sashimi.data$reference.transcript.strand, intron.y, -intron.y)
+      ),
+      linewidth = 0.3, col = "grey"
+    ) +
+    # Reference transcript introns
+    geom_segment(
+      data = reference.introns, aes(
+        x = start,
+        xend = end,
+        y = ifelse(strand == sashimi.data$reference.transcript.strand, intron.y, -intron.y),
+        yend = ifelse(strand == sashimi.data$reference.transcript.strand, intron.y, -intron.y)
+      ),
+      linewidth = 0.3, col = "blue"
+    ) +
+
+    # Add upper strand label
     geom_hline(yintercept = 0) +
     annotate("text",
-      x = ifelse(is.x.reverse, xmax - 250, xmin + 250),
-      y = 0.5,
+      x = ifelse(is.x.reverse, Inf, -Inf),
+      y = intron.y + 1,
       label = sashimi.data$reference.transcript.strand,
-      size = 5, col = "black"
+      hjust = 0, vjust = 0.5
     ) +
+
+    # Add lower strand label
     annotate("text",
-      x = ifelse(is.x.reverse, xmax - 250, xmin + 250),
-      y = -0.5,
+      x = ifelse(is.x.reverse, Inf, -Inf),
+      y = -intron.y - 1,
       label = ifelse(sashimi.data$reference.transcript.strand == "+", "-", "+"),
-      size = 5, col = "black"
+      hjust = 0, vjust = 0.5
+    ) +
+
+    # Non-reference transcript exons
+    geom_rect(
+      data = non.reference.exons, aes(
+        xmin = start,
+        xmax = end,
+        ymin = ifelse(strand == sashimi.data$reference.transcript.strand, exon.ymin, -exon.ymin),
+        ymax = ifelse(strand == sashimi.data$reference.transcript.strand, exon.ymax, -exon.ymax)
+      ),
+      fill = "grey", alpha = 1
     ) +
 
     # Reference transcript exons
-    geom_rect(data = reference.exons, aes(xmin = start, xmax = end, ymin = 0, ymax = 1), fill = "blue", alpha = 1) +
-    geom_rect(data = non.reference.exons, aes(xmin = start, xmax = end, ymin = 0, ymax = -1), fill = "grey", alpha = 1) +
-    scale_y_discrete(expand = c(-2, 2)) +
-    coord_cartesian(xlim = c(xmin, xmax), ylim = c(-2, 2)) +
-    scale_x_continuous(expand = c(0, 0.25)) +
+    geom_rect(
+      data = reference.exons, aes(
+        xmin = start,
+        xmax = end,
+        ymin = ifelse(strand == sashimi.data$reference.transcript.strand, exon.ymin, -exon.ymin),
+        ymax = ifelse(strand == sashimi.data$reference.transcript.strand, exon.ymax, -exon.ymax)
+      ),
+      fill = "blue", alpha = 1
+    ) +
+    scale_y_discrete(expand = c(0.35, 0.35)) +
+    coord_cartesian(xlim = c(xmin, xmax), ylim = c(-3, 3)) +
+    scale_x_continuous(expand = c(0.05, 0.05)) +
     theme_minimal() +
     labs(y = label) +
     theme(
@@ -843,7 +903,7 @@ make_sashimi_plot <- function(sashimi.data, min.spanning.reads = 5, label = "lab
 
   if (is.x.reverse) {
     splot <- splot +
-      scale_x_reverse(expand = c(0, 0.25))
+      scale_x_reverse(expand = c(0.05, 0.05))
   }
 
   # Hide x-axis if needed
@@ -870,7 +930,7 @@ make_sashimi_plot <- function(sashimi.data, min.spanning.reads = 5, label = "lab
     r.spline.btm <- grid::xsplineGrob(x = c(1, 1, 0, 0), y = c(1, 0, 0, 0), shape = 1, gp = gpar(lwd = spline.size, col = spline.color, alpha = spline.alpha))
     r.spline.top <- grid::xsplineGrob(x = c(1, 1, 0, 0), y = c(0, 1, 1, 1), shape = 1, gp = gpar(lwd = spline.size, col = spline.color, alpha = spline.alpha))
 
-    label.y.offset <- 0.2 # separation between spline and label
+    label.y.offset <- 0.4 # separation between spline and label
 
     # Determine which splines to use for minus strand versus plus strand transcripts
     l.grob.btm <- l.spline.btm
@@ -929,7 +989,7 @@ make_sashimi_plot <- function(sashimi.data, min.spanning.reads = 5, label = "lab
       x = xmid,
       y = ifelse(is.above, 0 - ymax - label.y.offset, ymax + label.y.offset),
       label = as.character(count),
-      size = 2, col = spline.color, fill = "white", label.size = NA
+      size = 2, col = spline.color, fill = "white"
     )
 
     return(splot)
@@ -965,112 +1025,12 @@ make_sashimi_plot <- function(sashimi.data, min.spanning.reads = 5, label = "lab
         splot = splot,
         xmin = jrow$start, xmax = jrow$end,
         is.above = jrow$strand == sashimi.data$reference.transcript.strand,
-        ymin = 1, ymax = 1.5 + jrow$y.offset,
+        ymin = 2, ymax = 2.5 + jrow$y.offset,
         count = jrow$count,
         matches.known.exons = jrow$matches.known.exon
       )
     }
   }
 
-  list(plot = splot, junctions = junctions)
-}
-
-#' Plot the coverage on each strand from sashimi data.
-#'
-#' @param sashimi.data sashimi data as produced by read_sashimi_data
-#' @param label the label for the gene track
-#'
-#' @returns a plot with the coverage
-#' @export
-#'
-#' @examples
-#' make_coverage_plot(cattle.sashimi.data, label = "cattle\ntestis\nadult\nZFY")
-make_coverage_plot <- function(sashimi.data, label = "label") {
-  anns <- sashimi.data$reference.transcript.boundaries
-  is.x.reverse <- sashimi.data$reference.transcript.strand == "-"
-
-  if (any(!is.numeric(anns$exons$end)) | any(!is.numeric(anns$exons$start))) {
-    cat("Error in annotations: at least one start or end is NA\n")
-    print(anns$exons)
-    str(anns$exons)
-  }
-
-  # Only plot exons from the reference transcript
-  reference.exons <- anns$exons |>
-    dplyr::filter(
-      transcript_id == sashimi.data$reference.transcript.id
-    )
-
-  non.reference.exons <- anns$exons |>
-    dplyr::filter(
-      gene_id != sashimi.data$reference.gene.id,
-      strand != sashimi.data$reference.transcript.strand
-    )
-
-  reference.introns <- anns$introns |>
-    dplyr::filter(
-      start > min(reference.exons$start),
-      end < max(reference.exons$start),
-      strand == sashimi.data$reference.transcript.strand
-    )
-
-  non.reference.introns <- anns$introns |>
-    dplyr::filter(
-      start > min(reference.exons$start),
-      end < max(reference.exons$start),
-      strand != sashimi.data$reference.transcript.strand
-    )
-
-  # Set coordinate range for the x axis
-  xmin <- min(c(reference.exons$start, reference.exons$end), na.rm = T) - 500
-  xmax <- max(c(reference.exons$start, reference.exons$end), na.rm = T) + 500
-  ymin <- -2
-  ymax <- 2
-
-  # Make the gene track
-  splot <- ggplot() +
-    geom_line(data = sashimi.data$coverage, aes(x = position, y = positive.strand / max(positive.strand) + 1.1)) +
-    geom_line(data = sashimi.data$coverage, aes(x = position, y = -negative.strand / max(negative.strand) - 1.1)) +
-    # Introns
-    geom_segment(data = reference.introns, aes(x = start, xend = end, y = 0.5, yend = 0.5), linewidth = 0.3) +
-    geom_segment(data = non.reference.introns, aes(x = start, xend = end, y = -0.5, yend = -0.5), linewidth = 0.3) +
-    geom_hline(yintercept = 0) +
-    annotate("text",
-      x = ifelse(is.x.reverse, xmax - 250, xmin + 250),
-      y = 0.5,
-      label = sashimi.data$reference.transcript.strand,
-      size = 5, col = "black"
-    ) +
-    annotate("text",
-      x = ifelse(is.x.reverse, xmax - 250, xmin + 250),
-      y = -0.5,
-      label = ifelse(sashimi.data$reference.transcript.strand == "+", "-", "+"),
-      size = 5, col = "black"
-    ) +
-
-    # Reference transcript exons
-    geom_rect(data = reference.exons, aes(xmin = start, xmax = end, ymin = 0, ymax = 1), fill = "blue", alpha = 1) +
-    geom_rect(data = non.reference.exons, aes(xmin = start, xmax = end, ymin = 0, ymax = -1), fill = "grey", alpha = 1) +
-    scale_y_discrete(expand = c(-2, 2)) +
-    coord_cartesian(xlim = c(xmin, xmax), ylim = c(ymin, ymax)) +
-    scale_x_continuous(expand = c(0, 0.25)) +
-    theme_minimal() +
-    labs(y = label) +
-    theme(
-      axis.line.y = element_blank(),
-      axis.line.x = element_line(),
-      axis.ticks.x = element_line(),
-      axis.title.x = element_blank(),
-      axis.title.y = element_text(angle = 0, hjust = 1, vjust = 0.5),
-      axis.ticks.y = element_blank(),
-      panel.grid = element_blank(),
-      legend.position = "none"
-    )
-
-  if (is.x.reverse) {
-    splot <- splot +
-      scale_x_reverse(expand = c(0, 0.25))
-  }
-
-  splot
+  list(plot = splot, sashimi.data = sashimi.data)
 }
