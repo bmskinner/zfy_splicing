@@ -25,13 +25,13 @@ map_se_sample () {
 		if [ ! -e data/${SPECIES}/${ERR}.lck ]; then
 
 			touch data/${SPECIES}/${ERR}.lck
-			echo "${ERR}: bam not found"
+			echo "${ERR}: bam not found" >> logs/${ERR}.mapping.log 2>&1
 
 			# Check for existing downloads before running fasterq-dump
 			if [ ! -e data/${SPECIES}/${ERR}.fastq.gz ] && [ ! -e data/${SPECIES}/${ERR}_trimmed.fq.gz ]; then
 				# Fetch data
 				if [ ! -e data/${SPECIES}/${ERR}.fastq ]; then
-					echo -n "${ERR}: downloading fastq"
+					echo -n "${ERR}: downloading fastq" >> logs/${ERR}.mapping.log 2>&1
 					fasterq-dump -o data/${SPECIES}/${ERR}.fastq ${ERR}
 				fi
 				gzip data/${SPECIES}/${ERR}.fastq
@@ -39,12 +39,12 @@ map_se_sample () {
 
 			# Trim
 			if [ ! -e data/${SPECIES}/${ERR}_trimmed.fq.gz ]; then
-				echo "${ERR}: trimming"
+				echo "${ERR}: trimming" >> logs/${ERR}.mapping.log 2>&1
 				trim_galore -o data/${SPECIES} --suppress_warn --fastqc --fastqc_args "-t 8 --outdir report/FASTQC --nogroup --extract" data/${SPECIES}/${ERR}.fastq.gz
 			fi
 
 			# map
-			echo "${ERR}: mapping"
+			echo "${ERR}: mapping" >> logs/${ERR}.mapping.log 2>&1
 			# -k controls number of multimapping locations (default 5 for linear index)
 			# --downstream-transcriptome-assembly forces longer anchors at novel splice sites (more rigorous)
 			# --dta-cfflinks does this and also looks for novel splice sites, stored in tag XS:A:[+-]
@@ -52,7 +52,7 @@ map_se_sample () {
 			# Use --rna-strandness R to specify single-end RNA-seq data is reverse stranded, F for forward strand.
 			# Analysis run with and without --dta to compare effects; we don't need to assemble transcripts, just see if there is greater splicing in testis
 			# hisat2 -x genomes/${GENOME} -p 8 -U data/${SPECIES}/${ERR}_trimmed.fq.gz --new-summary --downstream-transcriptome-assembly -S data/${SPECIES}/${ERR}.sam
-			hisat2 -x genomes/${GENOME} -p 8 -U data/${SPECIES}/${ERR}_trimmed.fq.gz --new-summary --dta-cufflinks -S data/${SPECIES}/${ERR}.sam > logs/${ERR}.mapping.log 2>&1
+			hisat2 -x genomes/${GENOME} -p 8 -U data/${SPECIES}/${ERR}_trimmed.fq.gz --new-summary --dta-cufflinks -S data/${SPECIES}/${ERR}.sam >> logs/${ERR}.mapping.log 2>&1
 			samtools sort -T data/${SPECIES}/${ERR} -@ 8 -o data/${SPECIES}/${ERR}.bam data/${SPECIES}/${ERR}.sam
 			samtools index -c -@ 7 data/${SPECIES}/${ERR}.bam # index with csi due to long chromosomes in opossum
 			rm data/${SPECIES}/${ERR}.sam
@@ -87,13 +87,13 @@ map_pe_sample () {
 		if [ ! -e data/${SPECIES}/${ERR}.lck ]; then
 
 			touch data/${SPECIES}/${ERR}.lck
-			echo "${ERR}: bam not found"
+			echo "${ERR}: bam not found" >> logs/${ERR}.mapping.log 2>&1
 
 			# Check for existing downloads before running fasterq-dump
 			if [ ! -e data/${SPECIES}/${ERR}_2.fastq.gz ] && [ ! -e data/${SPECIES}/${ERR}_2_val_2.fq.gz ]; then
 				# Fetch data
 				if [ ! -e data/${SPECIES}/${ERR}_2.fastq ]; then
-					echo -n "${ERR}: downloading fastq"
+					echo -n "${ERR}: downloading fastq" >> logs/${ERR}.mapping.log 2>&1
 					fasterq-dump -O data/${SPECIES}/ ${ERR}
 				fi
 				gzip data/${SPECIES}/${ERR}_1.fastq
@@ -102,14 +102,14 @@ map_pe_sample () {
 
 			# Trim
 			if [ ! -e data/${SPECIES}/${ERR}_1_val_1.fq.gz ]; then
-				echo "${ERR}: trimming"
+				echo "${ERR}: trimming" >> logs/${ERR}.mapping.log 2>&1
 				trim_galore -o data/${SPECIES} --paired --suppress_warn --fastqc --fastqc_args "-t 8 --outdir report/FASTQC --nogroup --extract" data/${SPECIES}/${ERR}_1.fastq.gz data/${SPECIES}/${ERR}_2.fastq.gz
 			fi
 
 			# map
-			echo "${ERR}: mapping"
+			echo "${ERR}: mapping" >> logs/${ERR}.mapping.log 2>&1
 			# -k controls number of multimapping locations (default 5 for linear index)
-			hisat2 -x genomes/${GENOME} -p 8 -1 data/${SPECIES}/${ERR}_1_val_1.fq.gz -2 data/${SPECIES}/${ERR}_2_val_2.fq.gz --new-summary -S data/${SPECIES}/${ERR}.sam > logs/${ERR}.mapping.log 2>&1
+			hisat2 -x genomes/${GENOME} -p 8 -1 data/${SPECIES}/${ERR}_1_val_1.fq.gz -2 data/${SPECIES}/${ERR}_2_val_2.fq.gz --new-summary -S data/${SPECIES}/${ERR}.sam >> logs/${ERR}.mapping.log 2>&1
 			samtools sort -T data/${SPECIES}/${ERR} -@ 8 -o data/${SPECIES}/${ERR}.bam data/${SPECIES}/${ERR}.sam
 			samtools index -c -@ 7 data/${SPECIES}/${ERR}.bam # index with csi due to long chromosomes in opossum
 			rm data/${SPECIES}/${ERR}.sam
@@ -130,18 +130,18 @@ map_pe_sample () {
 # We may have parallel scripts running, so ensure only one runs this step
 if [ ! -e data/preMapping.lck ]; then
 	touch data/preMapping.lck
-	echo "Running genome indexing and sample selection"
+	echo "Running genome indexing and sample selection" > logs/preMapping.log 2>&1
 	# Ensure all genome and annotations are present
-	bash src/makeIndexedGenomes.sh > logs/makeIndexedGenomes.log 2>&1
+	bash src/makeIndexedGenomes.sh >> logs/preMapping.log 2>&1
 	if [ $? -ne 0 ]; then
-		echo "Error making genome indexes, exiting"
+		echo "Error making genome indexes, exiting" >> logs/preMapping.log 2>&1
 		rm data/preMapping.lck
 		exit 1
 	fi
 	# Select samples to map from metadata
-	Rscript src/selectSamples.R > logs/selectSamples.log 2>&1
+	Rscript src/selectSamples.R >> logs/preMapping.log 2>&1
 	if [ $? -ne 0 ]; then
-		echo "Error running sample selection, exiting"
+		echo "Error running sample selection, exiting" >> logs/preMapping.log 2>&1
 		rm data/preMapping.lck
 		exit 1
 	fi
@@ -153,22 +153,22 @@ else
 	done
 fi
 
-echo "Processing single end samples"
+echo "Processing single end samples" >> logs/mapping.log 2>&1
 for LINE in ${SE_SAMPLES}; do
 
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
 	SPECIES=$(echo ${LINE} | cut -f 3 -d , )
 	GENOME=$(echo ${LINE} | cut -f 4 -d , )
-	echo "${ERR}: beginning mapping to ${SPECIES}"
+	echo "${ERR}: beginning mapping to ${SPECIES}" >> logs/mapping.log 2>&1
 	map_se_sample ${SPECIES} ${ERR} ${GENOME}
 done
 
-echo "Processing paired end samples"
+echo "Processing paired end samples" >> logs/mapping.log 2>&1
 for LINE in ${PE_SAMPLES}; do
 
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
 	SPECIES=$(echo ${LINE} | cut -f 3 -d , )
 	GENOME=$(echo ${LINE} | cut -f 4 -d , )
-	echo "${ERR}: beginning mapping to ${SPECIES}"
+	echo "${ERR}: beginning mapping to ${SPECIES}" >> logs/mapping.log 2>&1
 	map_pe_sample ${SPECIES} ${ERR} ${GENOME}
 done

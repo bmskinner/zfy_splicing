@@ -2,7 +2,7 @@ cat("Setup: Loading packages\n")
 packages <- c(
   "parallel", "xlsx", "tidyverse", "GenomicRanges",
   "fs", "data.table", "patchwork", "grid", "scales", "ggbeeswarm",
-  "rtracklayer", "Rsamtools", "bitops", "rlang"
+  "rtracklayer", "Rsamtools", "bitops", "rlang", "R.utils"
 )
 
 suppressPackageStartupMessages({
@@ -94,12 +94,11 @@ get.gene.locations <- function(genome.data) {
   cat("Setup: Finding gene coordinates in GTF\n")
   # Identify the coordinates of a given gene id from GTF. Expand by size on each flank if desired
   get.gene.coordinates <- function(common.name, gtf.file, size = 1000) {
-    cat("Reading GTF file for", common.name, "\n")
+    cat("Setup: Reading GTF file for", common.name, "\n")
     if (!file.exists(gtf.file)) stop("Missing GTF file", gtf.file)
     gtf.data <- rtracklayer::import(gtf.file)
 
     # Get all genes for this gtf file
-    # TODO rewrite to do all genes in a loop
     species.zfxy.location.data <- zfx.y.locations[zfx.y.locations$CommonName == common.name, ]
     species.zfxy.location.data$GTF_FILE <- gtf.file
     species.zfxy.location.data$Location <- sapply(species.zfxy.location.data$GeneId, \(gene.id){
@@ -180,10 +179,19 @@ cat("Setup: Defining global variables\n")
 GENOME.DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE) |>
   dplyr::mutate(GTF_FILE = paste0("./genomes/", stringr::str_remove(basename(GTF_URL), ".gz")))
 
-# Global data frame with gene ids for all species
+# Download GTF files if missing
+download.gtf <- function(file, url) {
+  if (!file.exists(file)) {
+    download.file(url, paste0(file, ".gz"))
+    R.utils::gunzip(paste0(file, ".gz"))
+  }
+}
+invisible(mapply(download.gtf, GENOME.DATA$GTF_FILE, GENOME.DATA$GTF_URL))
+
+# Match the gene ids to coordinates in the genome version downloaded
 GENE.LOCATIONS <- get.gene.locations(GENOME.DATA)
 
-# Read the filtered samples, match folder names
+# Read the filtered SRR samples and merge the genome and gene metadata
 SELECTED.SAMPLES <- read.selected.samples()
 
 cat("Setup: Common functions and global variables loaded\n")

@@ -4,7 +4,7 @@ source("src/functions.R")
 
 cat("Sample selection: Reading and filtering sample data\n")
 
-#### Samples from human excluding PRJEB26695 ####
+#### Samples from human not from PRJEB26695 ####
 read.csv("metadata/human_generic.csv") %>%
   dplyr::filter(
     BioProject != "PRJEB26695",
@@ -420,19 +420,31 @@ echidna <- read.csv("metadata/echidna.csv") %>%
 
 #### Samples from cattle testis ####
 
+# PRJNA471564 - 2 day old and 18 month old
+
+# PRJNA776655 - three groups - TY0 = prepuberty; TY1 = puberty; TY2 =
+# postpuberty.
+# bulls are prepuberty (at birth, n = 23), the second group
+# represents the bulls are puberty (about 1 year old showing heat for the first
+# time, n = 23), and the last group represents the bulls are postpuberty (about
+# 2 years of age, n = 23).
+
 cattle <- read.csv("metadata/cattle.csv") %>%
   dplyr::filter(
     Organism == "Bos taurus",
-    Assay.Type == "RNA-Seq", str_detect(tissue, "[T|t]estis"),
-    str_detect(dev_stage, "[A|a]dult"),
-    !str_detect(Sample.Name, "pachytene"),
-    !str_detect(Sample.Name, "roundspermatid"),
+    Assay.Type == "RNA-Seq",
+    BioProject %in% c("PRJNA471564", "PRJNA776655"),
   ) %>%
   dplyr::mutate(
     Organism_part = "testis",
-    DevStage = "adult",
-    Timepoint = "adult",
-    sex = "male",
+    Timepoint = case_when(str_detect(Sample.Name, "neonatal") ~ "birth",
+      str_detect(Sample.Name, "mature") ~ "adult",
+      str_detect(Sample.Name, "TY0") ~ "birth",
+      str_detect(Sample.Name, "TY1") ~ "mid-meiosis",
+      str_detect(Sample.Name, "TY2") ~ "adult",
+      .default = "missing"
+    ),
+    DevStage = Timepoint,
     CommonName = "cattle"
   ) %>%
   merge(., GENOME.DATA, by = "CommonName") %>%
@@ -441,6 +453,32 @@ cattle <- read.csv("metadata/cattle.csv") %>%
     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
   ) %>%
   write.table(., file = "metadata/cattle.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+
+
+#### Samples from tree shrew ####
+
+# PRJNA1396893 - Exploring key genes regulating seasonal changes in the
+# reproductive organs of tree shrews and the regulatory network of sRNA-key
+# genes through RNA-seq and sRNA-seq.
+
+tree.shrew <- read.csv("metadata/treeshrew.csv") %>%
+  dplyr::filter(
+    Organism == "Tupaia chinensis",
+    Assay.Type == "RNA-Seq",
+    sex == "male"
+  ) %>%
+  dplyr::mutate(
+    Organism_part = "testis",
+    Timepoint = dev_stage,
+    DevStage = Timepoint,
+    CommonName = "treeshrew"
+  ) %>%
+  merge(., GENOME.DATA, by = "CommonName") %>%
+  dplyr::select(
+    Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex,
+    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) %>%
+  write.table(., file = "metadata/treeshrew.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
 
 
@@ -458,7 +496,14 @@ sample.groups <- SELECTED.SAMPLES %>%
     MappedTimepoint = Timepoint
   ) %>%
   dplyr::group_by(Organism, CommonName, MappedTimepoint, Organism_part) %>%
-  dplyr::summarise(count = n(), TotalBases = sum(Bases)) %>%
+  dplyr::summarise(
+    count = n(), TotalBases = sum(Bases),
+    .groups = "drop_last"
+  ) %>%
+  dplyr::mutate(BaseSizeGroup = case_when(TotalBases < 1e10 ~ "Poor",
+    TotalBases < 5e10 ~ "OK",
+    .default = "Good"
+  )) %>%
   dplyr::arrange(CommonName) %>%
   dplyr::ungroup()
 
@@ -470,19 +515,22 @@ create.xlsx(sample.groups, "report/sample.groups.xlsx")
 # Make summary plot of total bases
 ggplot(
   sample.groups %>% dplyr::filter(MappedTimepoint %in% c("adult", "mid-meiosis", "birth")),
-  aes(x = CommonName, y = TotalBases / 1e9, col = Organism_part, size = Organism_part == "testis")
+  aes(x = CommonName, y = TotalBases / 1e9, fill = BaseSizeGroup)
 ) +
-  geom_hline(yintercept = 10) +
-  geom_point() +
+  geom_hline(yintercept = 10, col = "lightgreen") +
+  geom_hline(yintercept = 50, col = "darkgreen") +
+  geom_col() +
   scale_y_log10() +
   scale_size_manual(values = c(1, 3), guide = "none") +
-  labs(y = "Total bases (Gb)", col = "Tissue") +
-  facet_grid(. ~ MappedTimepoint) +
+  scale_fill_manual(values = c("Poor" = "salmon", "OK" = "lightgreen", "Good" = "darkgreen")) +
+  labs(y = "Total bases (Gb)") +
+  facet_grid(Organism_part ~ MappedTimepoint) +
   theme_bw() +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
-    axis.title.x = element_blank()
+    axis.title.x = element_blank(),
+    legend.position = "none"
   )
 
-save.double.width("report/read.depths.png", last_plot())
+save.double.width("report/read.depths.png", last_plot(), height = 230)
 cat("Sample selection: Done!\n")
