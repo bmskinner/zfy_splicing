@@ -18,7 +18,7 @@ read.csv("metadata/human_generic.csv") %>%
     DevStage = "adult",
     Timepoint = "adult",
     CommonName = "human",
-    Genome = "GRCh38",
+    Genome = "GRCh38p14",
     Organism_part = "testis",
     sex = "male"
   ) %>%
@@ -129,7 +129,7 @@ read.csv("metadata/human.csv") %>%
       .default = "other"
     ),
     CommonName = "human",
-    Genome = "GRCh38"
+    Genome = "GRCh38p14"
   ) %>%
   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") %>%
   dplyr::select(Run, BioProject, LibraryLayout, CommonName, Genome, DevStage, sex, Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases) %>%
