@@ -103,13 +103,12 @@ get.gene.locations <- function(genome.data) {
     species.zfxy.location.data$GTF_FILE <- gtf.file
     species.zfxy.location.data$Location <- sapply(species.zfxy.location.data$GeneId, \(gene.id){
       filt.data <- gtf.data[gtf.data$gene_id == gene.id]
-      # Expand by size on each flank
+      # Expand on each flank
       # Return a location string
-      if (size > 0) filt.data <- GenomicRanges::resize(filt.data, size * 2, fix = "center")
       location.string <- paste0(
         unique(GenomicRanges::seqnames(filt.data)), ":",
-        min(GenomicRanges::start(filt.data)), "-",
-        max(GenomicRanges::end(filt.data))
+        min(GenomicRanges::start(filt.data) - size), "-",
+        max(GenomicRanges::end(filt.data) + size)
       )
       cat("Setup: Found", gene.id, "in", common.name, "at", location.string, "\n")
       location.string

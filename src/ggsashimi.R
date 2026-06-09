@@ -33,11 +33,11 @@ make_coverage_map <- function(start, end) {
 
   n.indexes <- end - start + 1
 
-  coverage.array$"+" <- rep(0, n.indexes)
-  names(coverage.array$`+`) <- start:end
+  coverage.array$"FORWARD" <- rep(0, n.indexes)
+  names(coverage.array$FORWARD) <- start:end
 
-  coverage.array$"-" <- rep(0, n.indexes)
-  names(coverage.array$`-`) <- start:end
+  coverage.array$"REVERSE" <- rep(0, n.indexes)
+  names(coverage.array$REVERSE) <- start:end
 
   coverage.array$add <- function(pos, strand, value) {
     coverage.array[[strand]][as.character(pos)] <- coverage.array[[strand]][as.character(pos)] + value
@@ -54,17 +54,17 @@ make_coverage_map <- function(start, end) {
 
   coverage.array$get <- function(strand) {
     pos <- data.frame(
-      position = names(coverage.array[["+"]]),
-      positive.strand = coverage.array[["+"]]
+      position = names(coverage.array[["FORWARD"]]),
+      forward.strand = coverage.array[["FORWARD"]]
     )
 
     neg <- data.frame(
-      position = names(coverage.array[["-"]]),
-      negative.strand = coverage.array[["-"]]
+      position = names(coverage.array[["REVERSE"]]),
+      reverse.strand = coverage.array[["REVERSE"]]
     )
 
     merge(pos, neg, by = "position", all = TRUE) |>
-      dplyr::mutate(coverage = positive.strand + negative.strand)
+      dplyr::mutate(coverage = forward.strand + reverse.strand)
   }
   coverage.array
 }
@@ -154,32 +154,32 @@ parse_coordinates <- function(coordinate.string) {
 #' find_read_strand("SENSE", 42)
 find_read_strand <- function(strand.string, samflag) {
   if (strand.string == "NONE") {
-    return("+")
+    return("FORWARD")
   }
 
   is.reverse.strand <- has_sam_flag(samflag, SAM.FLAG.READ.REVERSE.STRAND)
   if (strand.string == "SENSE") {
-    return(ifelse(is.reverse.strand, "-", "+"))
+    return(ifelse(is.reverse.strand, "REVERSE", "FORWARD"))
   }
 
   if (strand.string == "ANTISENSE") {
-    return(ifelse(is.reverse.strand, "+", "-"))
+    return(ifelse(is.reverse.strand, "FORWARD", "REVERSE"))
   }
   if (strand.string == "MATE1_SENSE") {
     # 64 = first in pair, 128 = second in pair
     if (has_sam_flag(samflag, SAM.FLAG.FIRST.IN.PAIR)) {
-      return(ifelse(is.reverse.strand, "-", "+"))
+      return(ifelse(is.reverse.strand, "REVERSE", "FORWARD"))
     }
     if (has_sam_flag(samflag, SAM.FLAG.SECOND.IN.PAIR)) {
-      return(ifelse(is.reverse.strand, "+", "-"))
+      return(ifelse(is.reverse.strand, "FORWARD", "REVERSE"))
     }
   }
   if (strand.string == "MATE2_SENSE") {
     if (has_sam_flag(samflag, SAM.FLAG.FIRST.IN.PAIR)) {
-      return(ifelse(is.reverse.strand, "+", "-"))
+      return(ifelse(is.reverse.strand, "FORWARD", "REVERSE"))
     }
     if (has_sam_flag(samflag, SAM.FLAG.SECOND.IN.PAIR)) {
-      return(ifelse(is.reverse.strand, "-", "+"))
+      return(ifelse(is.reverse.strand, "REVERSE", "FORWARD"))
     }
   }
 }
@@ -239,7 +239,7 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
     # print(read.data$cigar)
     if (any(stringr::str_detect(read.data$cigar, c("H", "P", "X", "=")))) next
 
-    # Determine the strand of the read
+    # Determine the strand of this read in the genome
     read.strand <- find_read_strand(strand.string, read.data$flag)
 
     # Parse the cigar string
@@ -285,7 +285,7 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
 
       # Junction
       if (op == "N") {
-        don <- pos # splice donor
+        don <- pos - 1 # splice donor TODO
         acc <- pos + len # splice acceptor - somewhere downstream
         if (don >= coordinates$coord.start & acc <= coordinates$coord.end) {
           junction.map$add(don, acc, strand, 1)
@@ -334,7 +334,7 @@ transcript_is_reverse_strand <- function(transcript.id, gtf.data) {
   any(exons$strand == "-")
 }
 
-#' Given a canonical transcript id, find the splice junctions
+#' Given a transcript id, find the splice junctions within that transcript
 #'
 #' @param transcript.id the transcript to test
 #' @param gtf.data the GTF data for the genome as GenomicRanges e.g. as read by rtracklayer
@@ -344,20 +344,13 @@ transcript_is_reverse_strand <- function(transcript.id, gtf.data) {
 #'
 #' @examples
 get_transcript_junctions <- function(transcript.id, gtf.data) {
-  # Find the exons for this transcript
-  exons <- gtf.data[gtf.data$type == "exon" & gtf.data$transcript_id == transcript.id, ]
-
-  if (transcript_is_reverse_strand(transcript.id, gtf.data)) {
-    return(na.omit(data.frame(
-      j1 = dplyr::lead(exons$end) + 1, # end of intron is start of next exon (end coordinate rev strand)
-      j2 = exons$start # first base of intron is start of exon coordinate (rev strand)
-    )))
-  }
-
-  data.frame(
-    j1 = exons$end + 1, # start of the intron is the end of the exon
-    j2 = dplyr::lead(exons$start) # end of the intron is the start of the next exon
-  )
+  # Junction coordinates should be final base of exon to first base of next exon
+  gtf.data |>
+    dplyr::filter(type == "exon", transcript_id == transcript.id) |>
+    dplyr::arrange(start, end) |>
+    dplyr::mutate(j1 = end, j2 = lead(start)) |>
+    dplyr::select(gene_id, transcript_id, j1, j2, strand) |>
+    na.omit() # final exon of the transcript has no next junction
 }
 
 #' Is the given junction found in a genome GTF file?
@@ -377,7 +370,161 @@ get_transcript_junctions <- function(transcript.id, gtf.data) {
 #' junction_is_in_GTF("ENSGALT00010007119", chicken.gtf, 118299992, 118301364)
 junction_is_in_GTF <- function(transcript.id, gtf.data, junction.start, junction.end) {
   junctions <- get_transcript_junctions(transcript.id, gtf.data)
-  any(junctions$j1 == junction.start & junctions$j2 == junction.end)
+  any((junctions$j1 == junction.start & junctions$j2 == junction.end) |
+    (junctions$j1 == junction.end & junctions$j2 == junction.start))
+}
+
+#' Classify a splice junction relative to a reference gene and transcript.
+#'
+#' @param reference.gene.id the reference gene id in the GTF
+#' @param reference.transcript.id the reference transcript variant in the GTF
+#' @param reference.junctions the splice junctions expected from the GTF
+#' @param junction.start the start base of the junction
+#' @param junction.end the end base of the junction
+#' @param junction.strand the strand of the junction, one of FORWARD or REVERSE
+#' @param count the number of instance of this junction observed
+#'
+#' @returns
+#' @export
+#'
+#' @examples
+classify_junction <- function(reference.gene.id, reference.transcript.id, reference.junctions,
+                              junction.start, junction.end, junction.strand, count) {
+  # cat("Classifying junction", junction.start, junction.end, junction.strand, "\n")
+  if (is.na(junction.start) | is.na(junction.end)) {
+    return(data.frame(
+      start = junction.start,
+      end = junction.end,
+      strand = ifelse(junction.strand == "FORWARD", "+", "-"),
+      count = count,
+      junction.strand = junction.strand,
+      type = "novel"
+    ))
+  }
+
+  # Check for matching transcripts
+  full.matches <- reference.junctions |>
+    dplyr::filter(j1 == junction.start, j2 == junction.end)
+
+  if (nrow(full.matches) > 0) {
+    transcript.strand <- unique(full.matches$strand)
+    if (reference.transcript.id %in% full.matches$transcript_id) {
+      return(data.frame(
+        start = junction.start,
+        end = junction.end,
+        strand = transcript.strand,
+        count = count,
+        junction.strand = junction.strand,
+        type = "reference_transcript_full_junction"
+      ))
+    }
+
+    if (reference.gene.id %in% full.matches$gene_id) {
+      return(data.frame(
+        start = junction.start,
+        end = junction.end,
+        strand = transcript.strand,
+        count = count,
+        junction.strand = junction.strand,
+        type = "reference_gene_alternative_transcript_full_junction"
+      ))
+    }
+    return(data.frame(
+      start = junction.start,
+      end = junction.end,
+      strand = ifelse(junction.strand == "FORWARD", "+", "-"),
+      count = count,
+      junction.strand = junction.strand,
+      type = "non-reference_gene_full_junction"
+    ))
+  }
+
+
+  partial.matches <- reference.junctions |>
+    dplyr::filter(j1 == junction.start | j2 == junction.end)
+
+  if (nrow(partial.matches) > 0) {
+    transcript.strand <- unique(partial.matches$strand)
+    if (reference.transcript.id %in% partial.matches$transcript_id) {
+      return(data.frame(
+        start = junction.start,
+        end = junction.end,
+        strand = transcript.strand,
+        count = count,
+        junction.strand = junction.strand,
+        type = "reference_transcript_one_junction"
+      ))
+    }
+
+    if (reference.transcript.id %in% partial.matches$gene_id) {
+      return(data.frame(
+        start = junction.start,
+        end = junction.end,
+        strand = transcript.strand, count = count,
+        junction.strand = junction.strand,
+        type = "reference_gene_alternative_transcript_one_junction"
+      ))
+    }
+    return(data.frame(
+      start = junction.start,
+      end = junction.end,
+      strand = ifelse(junction.strand == "FORWARD", "+", "-"),
+      count = count,
+      junction.strand = junction.strand,
+      type = "non-reference_gene_one_junction"
+    ))
+  }
+
+
+  # for (transcript.id in na.omit(unique(gtf.data$transcript_id))) {
+  #   junctions <- get_transcript_junctions(transcript.id, gtf.data)
+  #   transcript.strand <- na.omit(unique(gtf.data[gtf.data$transcript_id == transcript.id, "strand"]))
+  #   transcript.gene.id <- na.omit(unique(gtf.data[gtf.data$transcript_id == transcript.id, "gene_id"]))
+  #   if (reference.transcript.id == transcript.id & any(junctions$j1 == junction.start & junctions$j2 == junction.end)) {
+  #     return(data.frame(
+  #       start = junction.start,
+  #       end = junction.end, strand = transcript.strand, count = count, type = "reference_transcript_full_junction"
+  #     ))
+  #   }
+  #   if (reference.transcript.id == transcript.id & any(junctions$j1 == junction.start | junctions$j2 == junction.end)) {
+  #     return(data.frame(
+  #       start = junction.start,
+  #       end = junction.end, strand = transcript.strand, count = count, type = "reference_transcript_one_junction"
+  #     ))
+  #   }
+  #   if (any(junctions$j1 == junction.start & junctions$j2 == junction.end) & transcript.gene.id == reference.gene.id) {
+  #     return(data.frame(
+  #       start = junction.start,
+  #       end = junction.end, strand = transcript.strand, count = count, type = "reference_gene_alternative_transcript_full_junction"
+  #     ))
+  #   }
+  #   if (any(junctions$j1 == junction.start | junctions$j2 == junction.end) & transcript.gene.id == reference.gene.id) {
+  #     return(data.frame(
+  #       start = junction.start,
+  #       end = junction.end, strand = transcript.strand, count = count, type = "reference_gene_alternative_transcript_one_junction"
+  #     ))
+  #   }
+  #
+  #   if (any(junctions$j1 == junction.start & junctions$j2 == junction.end)) {
+  #     return(data.frame(
+  #       start = junction.start,
+  #       end = junction.end, strand = transcript.strand, count = count, type = "reference_gene_full_junction"
+  #     ))
+  #   }
+  #
+  #   if (any(junctions$j1 == junction.start | junctions$j2 == junction.end)) {
+  #     return(data.frame(
+  #       start = junction.start,
+  #       end = junction.end, strand = transcript.strand, count = count, type = "reference_gene_one_junction"
+  #     ))
+  #   }
+  # }
+
+  return(data.frame(
+    start = junction.start,
+    end = junction.end, strand = ifelse(junction.strand == "FORWARD", "+", "-"),
+    junction.strand = junction.strand, count = count, type = "novel"
+  ))
 }
 
 #' Import GTF data from a vector of file paths and store in a named list
@@ -472,9 +619,12 @@ get_exon_boundaries <- function(gtf.data, chr, loc.start, loc.end) {
 
   cat("Region ", chr, ":", loc.start, "-", loc.end, "contains", nrow(region.exons), "exon rows\n")
 
+  region.junctions <- do.call(rbind, lapply(unique(region.exons$transcript_id), get_transcript_junctions, gtf.data = gtf.data))
+
   list(
     exons = region.exons,
-    introns = region.introns
+    introns = region.introns,
+    junctions = region.junctions
   )
 }
 
@@ -507,96 +657,151 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
   if (is.null(end)) stop("No end coordinate given")
   if (is.null(reference.gene.id)) stop("No reference gene id given")
 
-  tryCatch(
-    {
-      cat("Reading sashimi data from bam file in region '", paste0(chr, ":", start, "-", end), "'\n")
-      sashimi.data <- list()
-      sashimi.data$input.file <- bam.file
-      bam.data <- read_bam(bam.file, paste0(chr, ":", start, "-", end), "SENSE")
+  cat("Reading sashimi data from bam file in region '", paste0(chr, ":", start, "-", end), "'\n")
+  sashimi.data <- list()
+  sashimi.data$input.file <- bam.file
+  bam.data <- read_bam(bam.file, paste0(chr, ":", start, "-", end), "SENSE")
 
-      sashimi.data$reference.gene.id <- reference.gene.id
-      # Get the longest transcript in the gene if none specified
-      if (is.na(reference.transcript.id)) {
-        cat("No reference transcript given, selecting longest for gene id", reference.gene.id, "\n")
-        reference.transcript.id <- gtf.data |>
-          dplyr::filter(gene_id == reference.gene.id, type == "transcript") |>
-          dplyr::mutate(length = end - start + 1) |>
-          dplyr::arrange(length) |>
-          dplyr::slice_tail(n = 1) |>
-          dplyr::select(transcript_id) |>
-          dplyr::pull()
-      }
-      sashimi.data$reference.transcript.id <- reference.transcript.id
-      cat("Reference transcript is", reference.transcript.id, "\n")
+  sashimi.data$reference.gtf.region <- gtf.data[gtf.data$seqnames == chr &
+    gtf.data$start >= start &
+    gtf.data$end <= end, ]
 
-      if (nrow(gtf.data[gtf.data$gene_id == reference.gene.id, ]) == 0) {
-        stop("Unable to detect reference gene id in genome GTF\n")
-      }
+  sashimi.data$reference.gene.id <- reference.gene.id
+  # Get the longest transcript in the gene if none specified
+  if (is.na(reference.transcript.id)) {
+    cat("No reference transcript given, selecting longest for gene id", sashimi.data$reference.gene.id, "\n")
+    reference.transcript.id <- sashimi.data$reference.gtf.region |>
+      dplyr::filter(gene_id == sashimi.data$reference.gene.id, type == "transcript") |>
+      dplyr::mutate(length = end - start + 1) |>
+      dplyr::arrange(length) |>
+      dplyr::slice_tail(n = 1) |>
+      dplyr::select(transcript_id) |>
+      dplyr::pull()
+  }
+  sashimi.data$reference.transcript.id <- reference.transcript.id
+  cat("Reference transcript is", reference.transcript.id, "\n")
 
-      # Is the gene on the forward or reverse strand? Note - this is the gene, not the junctions or reads
-      sashimi.data$reference.transcript.strand <- gtf.data |>
-        dplyr::filter(
-          transcript_id == reference.transcript.id,
-          type == "exon"
-        ) |>
-        dplyr::select(strand) |>
-        dplyr::distinct() |>
-        dplyr::pull(strand)
+  if (nrow(sashimi.data$reference.gtf.region[sashimi.data$reference.gtf.region$gene_id == sashimi.data$reference.gene.id, ]) == 0) {
+    stop("Unable to detect reference gene id in genome region GTF\n")
+  }
 
-      cat("Reference transcript is on strand '", paste(sashimi.data$reference.transcript.strand, collapse = ","), "'\n")
+  # Is the gene on the forward or reverse strand? Note - this is the gene, not the junctions or reads
+  sashimi.data$reference.transcript.strand <- sashimi.data$reference.gtf.region |>
+    dplyr::filter(
+      transcript_id == sashimi.data$reference.transcript.id,
+      type == "exon"
+    ) |>
+    dplyr::select(strand) |>
+    dplyr::distinct() |>
+    dplyr::pull(strand) |>
+    as.character()
 
-      sashimi.data$reference.transcript.boundaries <- get_exon_boundaries(gtf.data, chr, start, end)
+  sashimi.data$non.reference.transcript.strand <- ifelse(sashimi.data$reference.transcript.strand == "+", "-", "+")
 
-      cat("Reference exon/intron bounds detected\n")
+  cat("Reference transcript is on strand '", paste(sashimi.data$reference.transcript.strand, collapse = ","), "'\n")
 
-      sashimi.data$reference.gene.name <- gtf.data |>
-        dplyr::filter(gene_id == reference.gene.id) |>
-        dplyr::select(gene_name) |>
-        dplyr::distinct() |>
-        dplyr::pull()
+  sashimi.data$reference.transcript.boundaries <- get_exon_boundaries(sashimi.data$reference.gtf.region, chr, start, end)
 
-      sashimi.data$coverage <- bam.data$coverage
-      sashimi.data$junctions <- bam.data$junctions
-      sashimi.data$junctions.reference.strand <- bam.data$reference.strand
+  cat("Reference exon/intron bounds detected\n")
+
+  sashimi.data$reference.gene.name <- sashimi.data$reference.gtf.region |>
+    dplyr::filter(gene_id == reference.gene.id) |>
+    dplyr::select(gene_name) |>
+    dplyr::distinct() |>
+    dplyr::pull()
+
+  sashimi.data$junctions.all <- do.call(rbind, mapply(classify_junction,
+    junction.start = bam.data$junctions$start,
+    junction.end = bam.data$junctions$end,
+    junction.strand = bam.data$junctions$strand,
+    count = bam.data$junctions$count,
+    MoreArgs = list(
+      reference.transcript.id = reference.transcript.id,
+      reference.gene.id = reference.gene.id,
+      reference.junctions = sashimi.data$reference.transcript.boundaries$junctions
+    ),
+    SIMPLIFY = FALSE
+  ))
+
+  # The mapping may be reversed e.g. if the wrong strand was set in mapping.
+  # Check the strand the reference transcript is on, and swap forward and reverse
+  # strands of coverage and junctions if needed
+  sashimi.data$reference.read.strand <- sashimi.data$junctions.all |>
+    dplyr::filter(type == "reference_transcript_full_junction") |>
+    dplyr::group_by(junction.strand) |>
+    dplyr::summarise(count = sum(count)) |>
+    dplyr::arrange(count) |>
+    dplyr::slice_tail(n = 1) |>
+    dplyr::select(junction.strand) |>
+    dplyr::pull()
+
+  # Now we know the reference strand, we can map the forward and reverse reads here
+  # to the genome + or - strand confidently
+  sashimi.data$junctions.all <- sashimi.data$junctions.all |>
+    dplyr::mutate(corrected.strand = ifelse(junction.strand == sashimi.data$reference.read.strand,
+      sashimi.data$reference.transcript.strand,
+      sashimi.data$non.reference.transcript.strand
+    )) |>
+    dplyr::rowwise() |>
+    dplyr::mutate(corrected.strand = case_when(type == "reference_transcript_full_junction" ~ sashimi.data$reference.transcript.strand,
+      type == "reference_transcript_one_junction" ~ sashimi.data$reference.transcript.strand,
+      type == "reference_gene_alternative_transcript_full_junction" ~ sashimi.data$reference.transcript.strand,
+      type == "reference_gene_alternative_transcript_one_junction" ~ sashimi.data$reference.transcript.strand,
+      .default = corrected.strand
+    ))
+
+  # Combine junctions on the same strand and location
+  sashimi.data$junctions <- sashimi.data$junctions.all |>
+    dplyr::group_by(start, end, type, corrected.strand) |>
+    dplyr::summarise(
+      count = sum(count),
+      .groups = "drop_last"
+    ) |>
+    dplyr::rename(strand = corrected.strand)
+
+  # Do we need to reverse the coverage values? Check if the reference transcript reads
+  # are on the expected strand.
+  sashimi.data$coverage <- bam.data$coverage |>
+    dplyr::rowwise() |>
+    dplyr::mutate(
+      reference.strand = ifelse(sashimi.data$reference.read.strand == "FORWARD", forward.strand, reverse.strand),
+      non.reference.strand = ifelse(sashimi.data$reference.read.strand == "FORWARD", reverse.strand, forward.strand),
+    )
+
+  # sashimi.data$junctions <- bam.data$junctions
+  # sashimi.data$junctions.reference.strand <- bam.data$reference.strand
 
 
-      # junctions <- get_transcript_junctions(transcript.id, gtf.data)
-      # any(junctions$j1 == junction.start & junctions$j2 == junction.end)
-      sashimi.data$junctions$matches.known.exon <- mapply(junction_is_in_GTF,
-        junction.start = bam.data$junctions$start,
-        junction.end = bam.data$junctions$end,
-        MoreArgs = list(
-          transcript.id = reference.transcript.id,
-          gtf.data = gtf.data
-        )
-      )
+  # junctions <- get_transcript_junctions(transcript.id, gtf.data)
+  # any(junctions$j1 == junction.start & junctions$j2 == junction.end)
+  # sashimi.data$junctions$matches.reference.splice.junction <- mapply(junction_is_in_GTF,
+  #   junction.start = bam.data$junctions$start,
+  #   junction.end = bam.data$junctions$end,
+  #   MoreArgs = list(
+  #     transcript.id = reference.transcript.id,
+  #     gtf.data = sashimi.data$reference.gtf.region
+  #   )
+  # )
+  # If we have junctions that match know exon boundaries, but are on the
+  # wrong strand, this is usually because the library was not stranded.
+  # Combine onto the correct strand.
+  #
+  #   junctions.grouped <- sashimi.data$junctions |>
+  #     dplyr::group_by(start, end) |>
+  #     dplyr::filter(matches.reference.splice.junction) |> # reference transcript only
+  #     dplyr::summarise(
+  #       strand = "SENSE",
+  #       count = sum(count),
+  #       matches.reference.splice.junction = TRUE,
+  #       .groups = "drop_last"
+  #     )
+  #
+  #   sashimi.data$junctions <- sashimi.data$junctions |>
+  #     dplyr::filter(!matches.reference.splice.junction) |>
+  #     rbind(junctions.grouped)
 
-      # If we have junctions that match know exon boundaries, but are on the
-      # wrong strand, this is usually because the library was not stranded.
-      # Combine onto the correct strand.
 
-      junctions.grouped <- sashimi.data$junctions |>
-        dplyr::group_by(start, end) |>
-        dplyr::filter(matches.known.exon) |> # reference transcript only
-        dplyr::summarise(
-          strand = sashimi.data$reference.transcript.strand, # here means SENSE
-          count = sum(count),
-          matches.known.exon = TRUE,
-          .groups = "drop_last"
-        )
-
-      sashimi.data$junctions <- sashimi.data$junctions |>
-        dplyr::filter(!matches.known.exon) |>
-        rbind(junctions.grouped)
-
-
-      return(sashimi.data)
-    },
-    error = \(e) {
-      cat("Error reading sashimi data from", bam.file, "\n", paste(e))
-      e
-    }
-  )
+  return(sashimi.data)
 }
 
 
@@ -833,10 +1038,10 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
     )
 
   # Set coordinate range for the x axis
-  xmin <- min(c(reference.exons$start, reference.exons$end), na.rm = T) - 500
-  xmax <- max(c(reference.exons$start, reference.exons$end), na.rm = T) + 500
+  xmin <- min(sashimi.data$coverage$position) - 500
+  xmax <- max(sashimi.data$coverage$position) + 500
 
-  max.coverage <- max(c(sashimi.data$coverage$positive.strand, sashimi.data$coverage$negative.strand))
+  max.coverage <- max(sashimi.data$coverage$coverage)
 
   intron.y <- 1.5
   exon.ymin <- 1.1
@@ -845,8 +1050,8 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
   # Make the gene track
   splot <- ggplot() +
     # Add read coverage, scaled to 0-1
-    geom_area(data = sashimi.data$coverage, aes(x = position, y = positive.strand / max.coverage), fill = "darkgrey", col = "darkgrey") +
-    geom_area(data = sashimi.data$coverage, aes(x = position, y = -negative.strand / max.coverage), fill = "darkgrey", col = "darkgrey") +
+    geom_area(data = sashimi.data$coverage, aes(x = position, y = reference.strand / max.coverage), fill = "darkgrey", col = "darkgrey") +
+    geom_area(data = sashimi.data$coverage, aes(x = position, y = -non.reference.strand / max.coverage), fill = "darkgrey", col = "darkgrey") +
 
     # Non reference transcript introns
     geom_segment(
@@ -882,7 +1087,7 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
     annotate("text",
       x = ifelse(is.x.reverse, Inf, -Inf),
       y = -intron.y - 1,
-      label = ifelse(sashimi.data$reference.transcript.strand == "+", "-", "+"),
+      label = sashimi.data$non.reference.transcript.strand,
       hjust = 0, vjust = 0.5
     ) +
 
@@ -940,11 +1145,21 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
 
   # Add the sashimi splines. Each sashimi arc is made of two splines that can be
   # above or below the transcript
-  add.junction <- function(splot, xmin, xmax, is.lower, ymin, ymax, count, matches.known.exons) {
+  add.junction <- function(splot, xmin, xmax, is.lower, ymin, ymax, count, junction.type) {
     # Define the spline line styles that make the junction lines
-    spline.color <- ifelse(matches.known.exons, "blue", "black")
-    spline.size <- ifelse(matches.known.exons, 1, 1)
-    spline.alpha <- ifelse(matches.known.exons, 1, 1)
+    SPLINE.COLOURS <- c(
+      "reference_transcript_full_junction" = "blue",
+      "reference_gene_alternative_transcript_full_junction" = "black",
+      "reference_transcript_one_junction" = "black",
+      "reference_gene_alternative_transcript_one_junction" = "black",
+      "non-reference_gene_full_junction" = "grey",
+      "non-reference_gene_one_junction" = "grey",
+      "novel" = "grey"
+    )
+
+    spline.color <- SPLINE.COLOURS[junction.type]
+    spline.size <- 1
+    spline.alpha <- 1
 
     # Define splice shapes.
     l.spline.btm <- grid::xsplineGrob(x = c(0, 0, 1, 1), y = c(1, 0, 0, 0), shape = 1, gp = gpar(lwd = spline.size, col = spline.color, alpha = spline.alpha))
@@ -1011,7 +1226,7 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
       x = xmid,
       y = ifelse(is.lower, 0 - ymax - label.y.offset, ymax + label.y.offset),
       label = as.character(count),
-      size = 2, col = spline.color, fill = "white"
+      size = 2, col = spline.color, fill = NA
     )
 
     return(splot)
@@ -1049,10 +1264,12 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
         is.lower = jrow$strand != sashimi.data$reference.transcript.strand,
         ymin = 2, ymax = 2.5 + jrow$y.offset,
         count = jrow$count,
-        matches.known.exons = jrow$matches.known.exon
+        junction.type = jrow$type
       )
     }
   }
 
   list(plot = splot, sashimi.data = sashimi.data)
 }
+# TODO - chicken has an issue - the antisense transcript is on the wrong strand.
+# Check for other anomalies before finalising the junction merging.

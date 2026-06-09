@@ -4,19 +4,28 @@ mkdir -p report/FASTQC
 
 # Remap samples and generate bam files for splice junction detection
 # Select the Run, Library type, species and genome columns
-SE_SAMPLES=$(cat metadata/*.filt.csv | cut -f 1,3,4,5 -d , | grep -e '[S|E|D]RR' | grep -e 'SINGLE')
-PE_SAMPLES=$(cat metadata/*.filt.csv | cut -f 1,3,4,5 -d , | grep -e '[S|E|D]RR' | grep -e 'PAIRED')
+SE_SAMPLES=$(cat metadata/*.filt.csv | cut -f 1,3,4,5,6 -d , | grep -e '[S|E|D]RR' | grep -e 'SINGLE')
+PE_SAMPLES=$(cat metadata/*.filt.csv | cut -f 1,3,4,5,6 -d , | grep -e '[S|E|D]RR' | grep -e 'PAIRED')
 
 # Map a single end sample
 # $1 species e.g chicken - should match a folder name in ./data
 # $2 ERR id e.g ERR2576379
 # $3 genome build id e.g. GRCg7b - should match a .ht2 prefix in ./genomes
+# $4 gtf file corresponding to the genome build e.g. ./genomes/example.gtf
 map_se_sample () {
 	SPECIES=$(echo $1 | tr -d '"')
 	ERR=$(echo $2 | tr -d '"')
 	GENOME=$(echo $3 | tr -d '"')
+	GTF_FILE=$(echo $4 | tr -d '"')
+	
+	echo "${ERR}: beginning mapping to ${SPECIES} against ${GENOME} and ${GTF_FILE}" >> logs/mapping.log 2>&1
 
 	mkdir -p data/${SPECIES}
+	
+	if [ ! -e ${GTF_FILE} ]; then
+	  echo "${ERR}: Could not find GTF file ${GTF_FILE}, skipping" >> logs/mapping.log 2>&1
+	  continue
+	fi
 	
 	# Create if missing
 	if [ ! -e data/${SPECIES}/${ERR}.bam ]; then
@@ -57,6 +66,11 @@ map_se_sample () {
 			samtools index -c -@ 7 data/${SPECIES}/${ERR}.bam # index with csi due to long chromosomes in opossum
 			rm data/${SPECIES}/${ERR}.sam
 			
+			# Run feature counts for expression quantification
+			if [ ! -e data/${SPECIES}/${ERR}.counts.txt ]; then
+		  	featureCounts -t exon -g gene_id -a ${GTF_FILE} -o data/${SPECIES}/${ERR}.counts.txt data/${SPECIES}/${ERR}.bam
+		  fi
+			
 			# Remove original FASTQ, we have the trimmed reads still
 			if [ -e data/${SPECIES}/${ERR}.fastq.gz ]; then
 			  rm data/${SPECIES}/${ERR}.fastq.gz
@@ -73,12 +87,21 @@ map_se_sample () {
 # $1 species e.g chicken - should match a folder name in ./data
 # $2 ERR id e.g ERR2576379
 # $3 genome build id e.g. GRCg7b - should match a .ht2 prefix in ./genomes
+# $4 gtf file corresponding to the genome build e.g. ./genomes/example.gtf
 map_pe_sample () {
 	SPECIES=$(echo $1 | tr -d '"')
 	ERR=$(echo $2 | tr -d '"')
 	GENOME=$(echo $3 | tr -d '"')
+	GTF_FILE=$(echo $4 | tr -d '"')
+	
+	echo "${ERR}: beginning mapping to ${SPECIES} against ${GENOME} and ${GTF_FILE}" >> logs/mapping.log 2>&1
 
 	mkdir -p data/${SPECIES}
+	
+	if [ ! -e ${GTF_FILE} ]; then
+	  echo "${ERR}: Could not find GTF file ${GTF_FILE}, skipping" >> logs/mapping.log 2>&1
+	  continue
+	fi
 	
 	# Create if missing
 	if [ ! -e data/${SPECIES}/${ERR}.bam ]; then
@@ -113,6 +136,11 @@ map_pe_sample () {
 			samtools sort -T data/${SPECIES}/${ERR} -@ 8 -o data/${SPECIES}/${ERR}.bam data/${SPECIES}/${ERR}.sam
 			samtools index -c -@ 7 data/${SPECIES}/${ERR}.bam # index with csi due to long chromosomes in opossum
 			rm data/${SPECIES}/${ERR}.sam
+			
+			# Run feature counts for expression quantification
+			if [ ! -e data/${SPECIES}/${ERR}.counts.txt ]; then
+			  featureCounts -p --countReadPairs -t exon -g gene_id -a ${GTF_FILE} -o data/${SPECIES}/${ERR}.counts.txt data/${SPECIES}/${ERR}.bam
+			fi
 			
 			# Remove original FASTQ, we have the trimmed reads still
 			if [ -e data/${SPECIES}/${ERR}_2.fastq.gz ]; then
@@ -155,20 +183,20 @@ fi
 
 echo "Processing single end samples" >> logs/mapping.log 2>&1
 for LINE in ${SE_SAMPLES}; do
-
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
 	SPECIES=$(echo ${LINE} | cut -f 3 -d , )
 	GENOME=$(echo ${LINE} | cut -f 4 -d , )
-	echo "${ERR}: beginning mapping to ${SPECIES}" >> logs/mapping.log 2>&1
-	map_se_sample ${SPECIES} ${ERR} ${GENOME}
+	GTF_FILE=$(echo ${LINE} | cut -f 5 -d , )
+	echo ${LINE} >> logs/mapping.log 2>&1
+	map_se_sample ${SPECIES} ${ERR} ${GENOME} ${GTF_FILE}
 done
 
 echo "Processing paired end samples" >> logs/mapping.log 2>&1
 for LINE in ${PE_SAMPLES}; do
-
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
 	SPECIES=$(echo ${LINE} | cut -f 3 -d , )
 	GENOME=$(echo ${LINE} | cut -f 4 -d , )
-	echo "${ERR}: beginning mapping to ${SPECIES}" >> logs/mapping.log 2>&1
-	map_pe_sample ${SPECIES} ${ERR} ${GENOME}
+	GTF_FILE=$(echo ${LINE} | cut -f 5 -d , )
+	echo ${LINE} >> logs/mapping.log 2>&1
+	map_pe_sample ${SPECIES} ${ERR} ${GENOME} ${GTF_FILE}
 done
