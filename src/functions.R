@@ -45,7 +45,7 @@ get.gene.locations <- function(genome.data) {
   # We don't want to constantly reload the GTFs if they have not changed.
   # But, if a GTF is updated, redo everything from scratch and write a new data
   # file
-  zfx.y.locations <- readr::read_csv("metadata/gene_locations.csv", show_col_types = FALSE)
+  gene.locations <- readr::read_csv("metadata/gene_locations.csv", show_col_types = FALSE)
 
   if (file.exists("./data/gene_coordinates.csv")) {
     cat("Setup: An existing gene coordinate file was found\n")
@@ -53,8 +53,8 @@ get.gene.locations <- function(genome.data) {
 
     has.raw.gtfs <- all(genome.data$GTF_FILE %in% existing.coordinates$GTF_FILE)
     has.saved.gtfs <- all(existing.coordinates$GTF_FILE %in% genome.data$GTF_FILE)
-    has.raw.genes <- all(zfx.y.locations$GeneId %in% existing.coordinates$GeneId)
-    has.saved.genes <- all(existing.coordinates$GeneId %in% zfx.y.locations$GeneId)
+    has.raw.genes <- all(gene.locations$GeneId %in% existing.coordinates$GeneId)
+    has.saved.genes <- all(existing.coordinates$GeneId %in% gene.locations$GeneId)
 
     if (!has.raw.gtfs) {
       cat(
@@ -73,7 +73,7 @@ get.gene.locations <- function(genome.data) {
     if (!has.raw.genes) {
       cat(
         "Setup: Missing coordinates from a gene in metadata/gene_locations.csv : ",
-        paste(zfx.y.locations$GeneId[!zfx.y.locations$GeneId %in% existing.coordinates$GeneId], collapse = ", "),
+        paste(gene.locations$GeneId[!gene.locations$GeneId %in% existing.coordinates$GeneId], collapse = ", "),
         "\n"
       )
     }
@@ -81,7 +81,7 @@ get.gene.locations <- function(genome.data) {
       cat("Setup: Saved coordinates from a gene are not found in in metadata/gene_locations.csv\n")
       cat(
         "Setup: Saved coordinates from a gene are not found in in metadata/gene_locations.csv : ",
-        paste(existing.coordinates$GeneId[!existing.coordinates$GeneId %in% zfx.y.locations$GeneId], collapse = ", "),
+        paste(existing.coordinates$GeneId[!existing.coordinates$GeneId %in% gene.locations$GeneId], collapse = ", "),
         "\n"
       )
     }
@@ -99,7 +99,7 @@ get.gene.locations <- function(genome.data) {
     gtf.data <- rtracklayer::import(gtf.file)
 
     # Get all genes for this gtf file
-    species.zfxy.location.data <- zfx.y.locations[zfx.y.locations$CommonName == common.name, ]
+    species.zfxy.location.data <- gene.locations[gene.locations$CommonName == common.name, ]
     species.zfxy.location.data$GTF_FILE <- gtf.file
     species.zfxy.location.data$Location <- sapply(species.zfxy.location.data$GeneId, \(gene.id){
       filt.data <- gtf.data[gtf.data$gene_id == gene.id]
@@ -175,14 +175,27 @@ make.sample.groups <- function() {
 
 cat("Setup: Defining global variables\n")
 
-GENOME.DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE) |>
-  dplyr::mutate(GTF_FILE = paste0("./genomes/", stringr::str_remove(basename(GTF_URL), ".gz")))
+GENOME.DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE)
+# |>
+# dplyr::mutate(
+#   # Keep .gz extension for FASTA file - only used once uncompressed
+#   FASTA_FILE = case_when(basename(FASTA_URL) == "unmasked.fa.gz" ~ paste0("./genomes/", Genome, ".fa.gz"),
+#     .default = paste0("./genomes/", basename(FASTA_URL))
+#   ),
+#   # Keep GTF uncompressed, used several times in pipeline
+#   GTF_FILE = case_when(basename(GTF_URL) == "genes.gtf.gz" ~ paste0("./genomes/", Genome, ".gtf"),
+#     .default = paste0("./genomes/", stringr::str_remove(basename(GTF_URL), ".gz"))
+#   )
+# )
 
 # Download GTF files if missing
 download.gtf <- function(file, url) {
   if (!file.exists(file)) {
-    download.file(url, paste0(file, ".gz"))
-    R.utils::gunzip(paste0(file, ".gz"))
+    gz.file <- paste0(file, ".gz")
+    cat("Downloading ", url, "to ", gz.file, "\n")
+    download.file(url, destfile = gz.file)
+    dl.file <- R.utils::gunzip(gz.file)
+    fs::file_move(dl.file, file)
   }
 }
 invisible(mapply(download.gtf, GENOME.DATA$GTF_FILE, GENOME.DATA$GTF_URL))

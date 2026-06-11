@@ -511,6 +511,31 @@ tree.shrew <- read.csv("metadata/treeshrew.csv") %>%
 
 
 
+#### Samples from wallaby ####
+
+# From PRJDB1934
+
+wallaby <- read.csv("metadata/wallaby.csv") %>%
+  dplyr::filter(
+    Organism == "Notamacropus eugenii",
+    BioProject == "PRJDB1934"
+  ) %>%
+  dplyr::mutate(
+    Organism_part = "testis",
+    Timepoint = "adult", # assumed - no publication for this!
+    DevStage = Timepoint,
+    CommonName = "wallaby",
+    sex = "male"
+  ) %>%
+  merge(., GENOME.DATA, by = "CommonName") %>%
+  dplyr::select(
+    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) %>%
+  write.table(., file = "metadata/wallaby.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+
+
+
 #### Make summary tables ####
 
 cat("Making sample summary tables\n")
