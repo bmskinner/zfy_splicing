@@ -61,6 +61,4 @@ create.xlsx(groups, "report/grouped.bams.xlsx")
 cat("Merge samples: Exported grouped bam table to report/grouped.bams.xlsx\n")
 
 #### Zip the results ####
-fs::file_delete("values.tar.gz")
-system2("tar", "-czf values.tar.gz data/merged/*.Rds*")
 cat("Merge samples: Done!\n")

@@ -43,7 +43,9 @@ fastqc.data <- do.call(rbind, lapply(fastqc.summary.files, read.table, sep = "\t
 colnames(fastqc.data) <- c("Outcome", "Measure", "Sample")
 fastqc.check <- fastqc.data %>%
   dplyr::filter(Measure %in% c("Basic Statistics", "Adapter Content", "Per base sequence quality")) %>%
-  tidyr::pivot_wider(id_cols = Sample, names_from = Measure, values_from = Outcome)
+  tidyr::pivot_wider(id_cols = Sample, names_from = Measure, values_from = Outcome) |>
+  dplyr::mutate(Run = stringr::str_extract(Sample, "^([A-Z\\d]+)_", group = 1)) |>
+  merge(SELECTED.SAMPLES, by = "Run")
 
 create.xlsx(fastqc.check, file.name = "report/_qc/FASTQC_report.xlsx")
 
@@ -89,7 +91,7 @@ if (length(list.files(path = "logs", pattern = ".*.mapping.log")) > 0) {
 
 # Spread to separate columns
 map.data <- read.table("report/_qc/mapping.txt", sep = "$") %>% #  sep char does not exist, force single column
-  tidyr::extract(V1, c("Run"), "([S|E]RR\\d+)", remove = FALSE) %>% # column from regex
+  tidyr::extract(V1, c("Run"), "([A-Z]RR\\d+)", remove = FALSE) %>% # column from regex
   tidyr::fill(Run, .direction = "down") %>% # fill missing run values
   tidyr::extract(V1, c("Measure", "Reads", "Pct"), "(.*): ?(\\d+)? \\(?(\\d+\\.\\d+)%\\)?", remove = FALSE, convert = TRUE) %>% # find columns from regex
   dplyr::mutate(Measure = str_replace_all(Measure, " ", "_")) %>% # ensure colnames will not have spaces
@@ -102,66 +104,23 @@ map.data <- read.table("report/_qc/mapping.txt", sep = "$") %>% #  sep char does
 
 create.xlsx(map.data, "report/_qc/mapping.xlsx")
 
+if (any(map.data$Pct_Overall_alignment_rate < 80)) cat("QC check: Some samples have poor mapping rates\n")
+
 # Plot the mapping efficiencies
 
 plot.single.end.mapping <- function(map.data) {
-  p2 <- ggplot(map.data, aes(x = CommonName, y = Pct_Aligned_0_time, col = Timepoint)) +
-    geom_beeswarm(size = 1) +
-    labs(y = "Percentage of reads (%)", col = "Timepoint", title = "Unmapped") +
+  ggplot(map.data |> dplyr::filter(map.data$LibraryLayout == "SINGLE"), aes(x = Run)) +
+    geom_col(aes(y = Pct_Aligned_0_time), fill = "salmon", position = "stack") +
+    geom_col(aes(y = Pct_Aligned_1_time), fill = "lightgreen", position = "stack") +
+    geom_col(aes(y = `Pct_Aligned_>1_times`), fill = "orange", position = "stack") +
+    labs(y = "Percentage of reads (%)", title = "Mapping groups: Single mapped, multimapped, unmapped") +
     coord_cartesian(ylim = c(0, 100)) +
-    facet_wrap(~Organism_part) +
+    facet_wrap(Organism_part ~ CommonName, scales = "free_x") +
     theme_bw() +
     theme(
       axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
       axis.title.x = element_blank()
     )
-
-  p3 <- ggplot(map.data, aes(x = CommonName, y = Pct_Aligned_1_time, col = Timepoint)) +
-    geom_beeswarm(size = 1) +
-    labs(y = "Percentage of reads (%)", col = "Timepoint", title = "Uniquely mapped") +
-    coord_cartesian(ylim = c(0, 100)) +
-    facet_wrap(~Organism_part) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-      axis.title.x = element_blank()
-    )
-
-  p4 <- ggplot(map.data, aes(x = CommonName, y = `Pct_Aligned_>1_times`, col = Timepoint)) +
-    geom_beeswarm(size = 1) +
-    labs(y = "Percentage of reads (%)", col = "Timepoint", title = "Multiple mapped") +
-    coord_cartesian(ylim = c(0, 100)) +
-    facet_wrap(~Organism_part) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-      axis.title.x = element_blank()
-    )
-
-  p5 <- ggplot(map.data, aes(x = CommonName, y = Reads_Overall_alignment_rate, col = Timepoint)) +
-    geom_beeswarm(size = 1) +
-    labs(y = "Number of reads", col = "Timepoint", title = "Total reads") +
-    facet_wrap(~Organism_part) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-      axis.title.x = element_blank()
-    )
-
-
-  p1 <- ggplot(map.data, aes(x = CommonName, y = Pct_Overall_alignment_rate, col = Timepoint)) +
-    geom_beeswarm(size = 1) +
-    labs(y = "Overall mapping (%)", col = "Timepoint", title = "Overall mapping") +
-    theme_bw() +
-    facet_wrap(~Organism_part) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-      axis.title.x = element_blank()
-    )
-
-
-  p2 + p3 + p4 + patchwork::plot_layout(guides = "collect", axes = "collect") & theme(legend.position = "bottom")
 
   ggsave(
     plot = last_plot(), filename = "report/_qc/mapping.qc.pct.se.png", dpi = 300, units = "mm",
@@ -169,7 +128,18 @@ plot.single.end.mapping <- function(map.data) {
   )
 
 
-  p1 + p5 + patchwork::plot_layout(guides = "collect") & theme(legend.position = "bottom")
+  p1 <- ggplot(map.data, aes(x = CommonName, y = Pct_Overall_alignment_rate, col = Pct_Overall_alignment_rate > 80)) +
+    geom_beeswarm(size = 1) +
+    labs(y = "Overall mapping (%)", col = "OK", title = "Overall mapping") +
+    scale_color_manual(values = c(`FALSE` = "salmon", `TRUE` = "lightgreen")) +
+    theme_bw() +
+    facet_wrap(~Organism_part) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      axis.title.x = element_blank()
+    )
+
   ggsave(
     plot = last_plot(), filename = "report/_qc/mapping.qc.total.se.png", dpi = 300, units = "mm",
     width = 200, height = 170
@@ -177,75 +147,43 @@ plot.single.end.mapping <- function(map.data) {
 }
 
 plot.paired.end.mapping <- function(map.data) {
-  p2 <- ggplot(map.data, aes(x = CommonName, y = Pct_Aligned_concordantly_or_discordantly_0_time, col = Timepoint)) +
-    geom_beeswarm(size = 1) +
-    labs(y = "Percentage of reads (%)", col = "Timepoint", title = "Unmapped") +
+  ggplot(map.data |> dplyr::filter(map.data$LibraryLayout == "PAIRED"), aes(x = Run)) +
+    geom_col(aes(y = Pct_Aligned_concordantly_or_discordantly_0_time), fill = "salmon", position = "stack") +
+    geom_col(aes(y = Pct_Aligned_concordantly_1_time), fill = "lightgreen", position = "stack") +
+    geom_col(aes(y = `Pct_Aligned_concordantly_>1_times`), fill = "orange", position = "stack") +
+    labs(y = "Percentage of reads (%)", title = "Mapping groups: Single mapped, multimapped, unmapped") +
     coord_cartesian(ylim = c(0, 100)) +
-    facet_wrap(~Organism_part) +
+    facet_wrap(Organism_part ~ CommonName, scales = "free_x") +
     theme_bw() +
     theme(
       axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
       axis.title.x = element_blank()
     )
-
-  p3 <- ggplot(map.data, aes(x = CommonName, y = Pct_Aligned_concordantly_1_time, col = Timepoint)) +
-    geom_beeswarm(size = 1) +
-    labs(y = "Percentage of reads (%)", col = "Timepoint", title = "Uniquely mapped") +
-    coord_cartesian(ylim = c(0, 100)) +
-    facet_wrap(~Organism_part) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-      axis.title.x = element_blank()
-    )
-
-  p4 <- ggplot(map.data, aes(x = CommonName, y = `Pct_Aligned_concordantly_>1_times`, col = Timepoint)) +
-    geom_beeswarm(size = 1) +
-    labs(y = "Percentage of reads (%)", col = "Timepoint", title = "Multiple mapped") +
-    coord_cartesian(ylim = c(0, 100)) +
-    facet_wrap(~Organism_part) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-      axis.title.x = element_blank()
-    )
-
-  p5 <- ggplot(map.data, aes(x = CommonName, y = Reads_Overall_alignment_rate, col = Timepoint)) +
-    geom_beeswarm(size = 1) +
-    labs(y = "Number of reads", col = "Timepoint", title = "Total reads") +
-    facet_wrap(~Organism_part) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-      axis.title.x = element_blank()
-    )
-
-
-  p1 <- ggplot(map.data, aes(x = CommonName, y = Pct_Overall_alignment_rate, col = Timepoint)) +
-    geom_beeswarm(size = 1) +
-    labs(y = "Overall mapping (%)", col = "Timepoint", title = "Overall mapping") +
-    theme_bw() +
-    facet_wrap(~Organism_part) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-      axis.title.x = element_blank()
-    )
-
-
-  p2 + p3 + p4 + patchwork::plot_layout(guides = "collect", axes = "collect") & theme(legend.position = "bottom")
 
   ggsave(
     plot = last_plot(), filename = "report/_qc/mapping.qc.pct.pe.png", dpi = 300, units = "mm",
     width = 200, height = 170
   )
 
+  p1 <- ggplot(map.data, aes(x = CommonName, y = Pct_Overall_alignment_rate, col = `Pct_Overall_alignment_rate` > 80)) +
+    geom_beeswarm(size = 1) +
+    labs(y = "Overall mapping (%)", col = "OK", title = "Overall mapping") +
+    scale_color_manual(values = c(`FALSE` = "salmon", `TRUE` = "lightgreen")) +
+    theme_bw() +
+    facet_wrap(~Organism_part) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      axis.title.x = element_blank()
+    )
 
-  p1 + p5 + patchwork::plot_layout(guides = "collect") & theme(legend.position = "bottom")
   ggsave(
     plot = last_plot(), filename = "report/_qc/mapping.qc.total.pe.png", dpi = 300, units = "mm",
     width = 200, height = 170
   )
+
+
+  # p1 + p5 + patchwork::plot_layout(guides = "collect") & theme(legend.position = "bottom")
 }
 tryCatch(
   {

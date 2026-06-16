@@ -5,14 +5,13 @@ source("src/functions.R")
 cat("Sample selection: Reading and filtering sample data\n")
 
 #### Samples from human not from PRJEB26695 ####
+# None of the reads from SRR6253462 - SRR6253470 mapped successfully.
+# Skip these and select more.
 read.csv("metadata/human_generic.csv") %>%
   dplyr::filter(
-    BioProject != "PRJEB26695",
+    BioProject == "PRJNA597586",
     Assay.Type == "RNA-Seq",
-    Bases > 1e8,
-    tissue == "testis",
-    AGE != "missing", as.numeric(AGE) > 18,
-    gender == "male"
+    Bases > 1e8
   ) %>%
   dplyr::mutate(
     DevStage = "adult",
