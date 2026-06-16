@@ -3,7 +3,8 @@
 
 packages <- c(
   "parallel", "tidyverse", "GenomicRanges", "grid",
-  "fs", "data.table", "rtracklayer", "Rsamtools", "bitops", "rlang"
+  "fs", "data.table", "rtracklayer", "Rsamtools", "bitops", "rlang",
+  "data.table"
 )
 
 suppressPackageStartupMessages({
@@ -76,6 +77,12 @@ make_coverage_map <- function(start, end) {
 #' @examples
 make_junction_map <- function() {
   junction.map <- new.env()
+  # An empty data frame that will be overwritten if there are any reads
+  rlang::env_poke(
+    junction.map, "values",
+    data.frame(start = c(), end = c(), strand = c(), count = c())
+  )
+
   junction.map$add <- function(start, end, strand, value) {
     if (rlang::env_has(junction.map, "values")) {
       existing <- rlang::env_get(junction.map, "values")
@@ -209,10 +216,8 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
   bai.index.file <- paste0(bam.file, ".bai")
   csi.index.file <- paste0(bam.file, ".csi")
   if (file.exists(bai.index.file)) {
-    cat("Found an index file:", bai.index.file, "\n")
     bam.conn <- Rsamtools::BamFile(bam.file, bai.index.file)
   } else if (file.exists(csi.index.file)) {
-    cat("Found an index file:", csi.index.file, "\n")
     bam.conn <- Rsamtools::BamFile(bam.file, csi.index.file)
   } else {
     bam.conn <- Rsamtools::BamFile(bam.file)
@@ -390,7 +395,6 @@ junction_is_in_GTF <- function(transcript.id, gtf.data, junction.start, junction
 #' @examples
 classify_junction <- function(reference.gene.id, reference.transcript.id, reference.junctions,
                               junction.start, junction.end, junction.strand, count) {
-  # cat("Classifying junction", junction.start, junction.end, junction.strand, "\n")
   if (is.na(junction.start) | is.na(junction.end)) {
     return(data.frame(
       start = junction.start,
@@ -475,51 +479,6 @@ classify_junction <- function(reference.gene.id, reference.transcript.id, refere
     ))
   }
 
-
-  # for (transcript.id in na.omit(unique(gtf.data$transcript_id))) {
-  #   junctions <- get_transcript_junctions(transcript.id, gtf.data)
-  #   transcript.strand <- na.omit(unique(gtf.data[gtf.data$transcript_id == transcript.id, "strand"]))
-  #   transcript.gene.id <- na.omit(unique(gtf.data[gtf.data$transcript_id == transcript.id, "gene_id"]))
-  #   if (reference.transcript.id == transcript.id & any(junctions$j1 == junction.start & junctions$j2 == junction.end)) {
-  #     return(data.frame(
-  #       start = junction.start,
-  #       end = junction.end, strand = transcript.strand, count = count, type = "reference_transcript_full_junction"
-  #     ))
-  #   }
-  #   if (reference.transcript.id == transcript.id & any(junctions$j1 == junction.start | junctions$j2 == junction.end)) {
-  #     return(data.frame(
-  #       start = junction.start,
-  #       end = junction.end, strand = transcript.strand, count = count, type = "reference_transcript_one_junction"
-  #     ))
-  #   }
-  #   if (any(junctions$j1 == junction.start & junctions$j2 == junction.end) & transcript.gene.id == reference.gene.id) {
-  #     return(data.frame(
-  #       start = junction.start,
-  #       end = junction.end, strand = transcript.strand, count = count, type = "reference_gene_alternative_transcript_full_junction"
-  #     ))
-  #   }
-  #   if (any(junctions$j1 == junction.start | junctions$j2 == junction.end) & transcript.gene.id == reference.gene.id) {
-  #     return(data.frame(
-  #       start = junction.start,
-  #       end = junction.end, strand = transcript.strand, count = count, type = "reference_gene_alternative_transcript_one_junction"
-  #     ))
-  #   }
-  #
-  #   if (any(junctions$j1 == junction.start & junctions$j2 == junction.end)) {
-  #     return(data.frame(
-  #       start = junction.start,
-  #       end = junction.end, strand = transcript.strand, count = count, type = "reference_gene_full_junction"
-  #     ))
-  #   }
-  #
-  #   if (any(junctions$j1 == junction.start | junctions$j2 == junction.end)) {
-  #     return(data.frame(
-  #       start = junction.start,
-  #       end = junction.end, strand = transcript.strand, count = count, type = "reference_gene_one_junction"
-  #     ))
-  #   }
-  # }
-
   return(data.frame(
     start = junction.start,
     end = junction.end, strand = ifelse(junction.strand == "FORWARD", "+", "-"),
@@ -585,7 +544,7 @@ get_exon_boundaries <- function(gtf.data, chr, loc.start, loc.end) {
         end <= loc.end + 5000
     )
 
-  cat("Region ", chr, ":", loc.start, "-", loc.end, "contains", nrow(region), "data rows\n")
+  # cat("Region ", chr, ":", loc.start, "-", loc.end, "contains", nrow(region), "data rows\n")
 
   region.introns <- region |>
     as.data.frame() |>
@@ -605,7 +564,7 @@ get_exon_boundaries <- function(gtf.data, chr, loc.start, loc.end) {
     dplyr::ungroup() |>
     dplyr::arrange(transcript_id, start, end)
 
-  cat("Region ", chr, ":", loc.start, "-", loc.end, "contains", nrow(region.introns), "intron rows\n")
+  # cat("Region ", chr, ":", loc.start, "-", loc.end, "contains", nrow(region.introns), "intron rows\n")
 
   region.exons <- region |>
     as.data.frame() |>
@@ -617,7 +576,7 @@ get_exon_boundaries <- function(gtf.data, chr, loc.start, loc.end) {
     dplyr::mutate(length = end - start + 1) |>
     dplyr::arrange(transcript_id, start, end)
 
-  cat("Region ", chr, ":", loc.start, "-", loc.end, "contains", nrow(region.exons), "exon rows\n")
+  # cat("Region ", chr, ":", loc.start, "-", loc.end, "contains", nrow(region.exons), "exon rows\n")
 
   region.junctions <- do.call(rbind, lapply(unique(region.exons$transcript_id), get_transcript_junctions, gtf.data = gtf.data))
 
@@ -702,26 +661,52 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
 
   sashimi.data$reference.transcript.boundaries <- get_exon_boundaries(sashimi.data$reference.gtf.region, chr, start, end)
 
-  cat("Reference exon/intron bounds detected\n")
-
   sashimi.data$reference.gene.name <- sashimi.data$reference.gtf.region |>
     dplyr::filter(gene_id == reference.gene.id) |>
     dplyr::select(gene_name) |>
     dplyr::distinct() |>
     dplyr::pull()
 
-  sashimi.data$junctions.all <- do.call(rbind, mapply(classify_junction,
-    junction.start = bam.data$junctions$start,
-    junction.end = bam.data$junctions$end,
-    junction.strand = bam.data$junctions$strand,
-    count = bam.data$junctions$count,
-    MoreArgs = list(
-      reference.transcript.id = reference.transcript.id,
-      reference.gene.id = reference.gene.id,
-      reference.junctions = sashimi.data$reference.transcript.boundaries$junctions
-    ),
-    SIMPLIFY = FALSE
-  ))
+  cat("Detected", nrow(bam.data$junctions), "splice junctions\n")
+  if (nrow(bam.data$junctions) > 0) {
+    sashimi.data$junctions.all <- do.call(rbind, mapply(classify_junction,
+      junction.start = bam.data$junctions$start,
+      junction.end = bam.data$junctions$end,
+      junction.strand = bam.data$junctions$strand,
+      count = bam.data$junctions$count,
+      MoreArgs = list(
+        reference.transcript.id = reference.transcript.id,
+        reference.gene.id = reference.gene.id,
+        reference.junctions = sashimi.data$reference.transcript.boundaries$junctions
+      ),
+      SIMPLIFY = FALSE
+    ))
+  } else {
+    # No junctions detected, return the coverage
+    sashimi.data$junctions <- data.frame(
+      start = c(),
+      end = c(),
+      strand = c(),
+      count = c(),
+      junction.strand = c(),
+      type = c()
+    )
+
+    # With no junctions, just use coverage. The strand with the max coverage
+    # is probably the transcript stand - but we have very low coverage anyway
+    sashimi.data$reference.read.strand <- ifelse(sum(bam.data$coverage$forward.strand) > sum(bam.data$coverage$reverse.strand),
+      "FORWARD", "REVERSE"
+    )
+
+    sashimi.data$coverage <- bam.data$coverage |>
+      dplyr::rowwise() |>
+      dplyr::mutate(
+        reference.strand = ifelse(sashimi.data$reference.read.strand == "FORWARD", forward.strand, reverse.strand),
+        non.reference.strand = ifelse(sashimi.data$reference.read.strand == "FORWARD", reverse.strand, forward.strand),
+      )
+
+    return(sashimi.data)
+  }
 
   # The mapping may be reversed e.g. if the wrong strand was set in mapping.
   # Check the strand the reference transcript is on, and swap forward and reverse
@@ -824,13 +809,11 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
 create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.length = 500) {
   if (is.null(exon.data)) stop("No exon data provided")
 
-  cat("Creating intron collapser\n")
-  # Reduce any overlapping exons if we have multiple transcripts
   exon.data <- exon.data[exon.data$strand == strand, ]
   intron.data <- intron.data[intron.data$strand == strand, ]
+  cat("Creating intron collapser; detected", nrow(exon.data), "exons and", nrow(intron.data), "introns\n")
 
-  cat("Detected", nrow(exon.data), "exons and", nrow(intron.data), "introns\n")
-
+  # Reduce any overlapping exons if we have multiple transcripts
   exon.ranges <- GenomicRanges::reduce(GenomicRanges::GRanges(
     seqnames = rep("test", nrow(exon.data)),
     ranges = IRanges::IRanges(
@@ -840,7 +823,8 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
     strand = strand
   ))
 
-  # Break introns apart, since they can be part of an exon for a different transcript
+  # Break overlapping introns apart, since they can be part of an exon for a
+  # different transcript
   intron.ranges <- GenomicRanges::disjoin(GenomicRanges::GRanges(
     seqnames = rep("test", nrow(intron.data)),
     ranges = IRanges::IRanges(
@@ -854,7 +838,7 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
   intron.ranges$overlappingExons <- GenomicRanges::countOverlaps(intron.ranges, exon.ranges, minoverlap = 1)
   intron.ranges <- intron.ranges[intron.ranges$overlappingExons == 0, ]
 
-  # Some introns may be missing. Fill in gaps from min start to max end that are
+  # Some introns or intergenic sequence may be missing. Fill in gaps from min start to max end that are
   # not covered by intron or exons
   missing.introns <- GenomicRanges::gaps(GenomicRanges::reduce(c(intron.ranges, exon.ranges)),
     start = min(exon.data$start)
@@ -874,54 +858,55 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
 
   full.ranges <- rbind(intron.ranges, exon.ranges)
 
+  # Create the new start and end coordinates with the desired scaling
   full.ranges <- full.ranges |>
     dplyr::arrange(start, end) |>
     dplyr::distinct() |>
     dplyr::mutate(
       original.length = end - start + 1,
-      new.length = ifelse(original.length > 500 & Type == "intron", 500, original.length),
+      new.length = ifelse(original.length > max.intron.length & Type == "intron", max.intron.length, original.length),
       new.end = min(start) + cumsum(new.length) - 1,
       new.start = new.end - new.length + 1, # how much offset to apply
       is.ordered = new.start < new.end,
       is.contiguous = new.start == dplyr::lag(new.end) + 1,
-      is.full.coverage = start == dplyr::lag(end) + 1
-    ) |>
-    dplyr::select(everything(), new.start, new.end)
+      is.full.coverage = start == dplyr::lag(end) + 1,
+      step.size = new.length / original.length
+    )
 
-  # Create a function that uses the above tables to convert a coordinate to the new ranges
+  range.min <- min(full.ranges$start)
+  range.max <- max(full.ranges$end)
+  new.range.max <- max(full.ranges$new.end)
+
+  # Create a mapping of old to new coordinate
+  lookup.table <- do.call(rbind, mapply(\(new.start, new.end, old.start, old.end, original.length, new.length){
+    data.frame(
+      old.position = old.start:old.end,
+      new.position = ((as.double(0:(old.end - old.start))) / original.length * new.length) + new.start
+    )
+  }, full.ranges$new.start, full.ranges$new.end, full.ranges$start, full.ranges$end, full.ranges$original.length, full.ranges$new.length, SIMPLIFY = FALSE))
+
+  # rownames(lookup.table) <- lookup.table$old.position
+
+  # Create a function that uses the above tables to convert a coordinate vector
+  # to the new ranges.
   calculate <- function(coordinate) {
-    # If a coordinate is out of min bounds, don't adjust it
-    if (coordinate < min(full.ranges$start)) {
-      return(coordinate)
-    }
-    # If a coordinate is out of max bounds, reduce as needed
-    if (coordinate > max(full.ranges$end)) {
-      difference.from.end <- coordinate - max(full.ranges$end)
-      return(max(full.ranges$new.end) + difference.from.end)
-    }
+    pre <- coordinate[coordinate < range.min]
+    post <- coordinate[coordinate > range.max]
 
-    # Find the range within which to fit
-    feature <- full.ranges %>%
-      dplyr::filter(start <= coordinate & end >= coordinate) %>%
-      dplyr::slice_head(n = 1)
+    middle <- coordinate[coordinate >= range.min & coordinate <= range.max]
+    indexes <- sapply(middle, \(x)which(lookup.table$old.position == x))
 
-    # If we find nothing, do not adjust
-    if (nrow(feature) == 0) {
-      warning("No range table entry covering", coordinate)
-      return(coordinate)
-    }
+    middle <- lookup.table[indexes, "new.position"]
 
-    # How far along the feature are we?
-    fractional.distance <- (coordinate - feature$start) / feature$original.length
+    post <- (post - range.max) + new.range.max
 
-    # Nearest integer to the same fraction of the new coordinate space
-    result <- (fractional.distance * feature$new.length) + feature$new.start
-    return(result)
+    c(pre, middle, post)
   }
-  cat("Created intron collapser\n")
+
   list(
     calculate = calculate,
-    full.ranges = full.ranges
+    full.ranges = full.ranges,
+    lookup.table = lookup.table
   )
 }
 
@@ -941,40 +926,32 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
 #'
 #' @examples
 collapse_introns <- function(sashimi.data, exon.data, intron.data) {
-  # Calculate offsets to make all introns at most 500bp
+  # Calculate offsets
   intron.collapser <- create_intron_collapser(exon.data, intron.data, sashimi.data$reference.transcript.strand)
 
-  cat("Collapsing introns\n")
-  # Apply offsets to coordinates
-  sashimi.data$reference.transcript.boundaries$exons <- sashimi.data$reference.transcript.boundaries$exons |>
-    dplyr::rowwise() |>
-    dplyr::mutate(
-      old.start = start, old.end = end,
-      start = intron.collapser$calculate(old.start),
-      end = intron.collapser$calculate(old.end)
-    )
-  sashimi.data$reference.transcript.boundaries$introns <- sashimi.data$reference.transcript.boundaries$introns |>
-    dplyr::rowwise() |>
-    dplyr::mutate(
-      old.start = start, old.end = end,
-      start = intron.collapser$calculate(old.start),
-      end = intron.collapser$calculate(old.end)
-    )
+  # Exons
+  sashimi.data$reference.transcript.boundaries$exons$old.start <- sashimi.data$reference.transcript.boundaries$exons$start
+  sashimi.data$reference.transcript.boundaries$exons$old.end <- sashimi.data$reference.transcript.boundaries$exons$end
+  sashimi.data$reference.transcript.boundaries$exons$start <- intron.collapser$calculate(sashimi.data$reference.transcript.boundaries$exons$start)
+  sashimi.data$reference.transcript.boundaries$exons$end <- intron.collapser$calculate(sashimi.data$reference.transcript.boundaries$exons$old.end)
 
-  sashimi.data$junctions <- sashimi.data$junctions |>
-    dplyr::rowwise() |>
-    dplyr::mutate(
-      old.start = start, old.end = end,
-      start = intron.collapser$calculate(old.start),
-      end = intron.collapser$calculate(old.end)
-    )
+  # Introns
+  sashimi.data$reference.transcript.boundaries$introns$old.start <- sashimi.data$reference.transcript.boundaries$introns$start
+  sashimi.data$reference.transcript.boundaries$introns$old.end <- sashimi.data$reference.transcript.boundaries$introns$end
+  sashimi.data$reference.transcript.boundaries$introns$start <- intron.collapser$calculate(sashimi.data$reference.transcript.boundaries$introns$start)
+  sashimi.data$reference.transcript.boundaries$introns$end <- intron.collapser$calculate(sashimi.data$reference.transcript.boundaries$introns$old.end)
 
-  sashimi.data$coverage <- sashimi.data$coverage |>
-    dplyr::rowwise() |>
-    dplyr::mutate(
-      old.position = position,
-      position = intron.collapser$calculate(old.position)
-    )
+  # Splice junctions
+  if (nrow(sashimi.data$junctions) > 0) {
+    sashimi.data$junctions$old.start <- sashimi.data$junctions$start
+    sashimi.data$junctions$old.end <- sashimi.data$junctions$end
+    sashimi.data$junctions$start <- intron.collapser$calculate(sashimi.data$junctions$old.start)
+    sashimi.data$junctions$end <- intron.collapser$calculate(sashimi.data$junctions$old.end)
+  }
+
+  # Coverage
+  sashimi.data$coverage$old.position <- sashimi.data$coverage$position
+  sashimi.data$coverage$position <- intron.collapser$calculate(sashimi.data$coverage$old.position)
 
   sashimi.data
 }
@@ -1038,8 +1015,8 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
     )
 
   # Set coordinate range for the x axis
-  xmin <- min(sashimi.data$coverage$position) - 500
-  xmax <- max(sashimi.data$coverage$position) + 500
+  xmin <- min(sashimi.data$coverage$position)
+  xmax <- max(sashimi.data$coverage$position)
 
   max.coverage <- max(sashimi.data$coverage$coverage)
 
