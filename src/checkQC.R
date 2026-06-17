@@ -201,17 +201,34 @@ plot.mapping.rates <- function(map.data) {
     width = 200, height = 170
   )
 
-  ggplot(map.data |> dplyr::filter(Timepoint %in% c("birth", "mid-meiosis", "adult")), aes(x = CommonName, y = sum(Single_mapped) / 1e9, group = Organism_part)) +
+  total.mapped.bases <- map.data |>
+    dplyr::filter(Timepoint %in% c("birth", "mid-meiosis", "adult")) |>
+    dplyr::group_by(CommonName, Organism_part, Timepoint) |>
+    dplyr::summarise(TotalMappedReads = sum(Single_mapped)) |>
+    dplyr::mutate(BaseSizeGroup = case_when(TotalMappedReads < 1e8 ~ "Low",
+      TotalMappedReads < 4e8 ~ "Mid",
+      .default = "High"
+    ))
+
+  ggplot(
+    total.mapped.bases,
+    aes(
+      x = CommonName, y = TotalMappedReads / 1e6,
+      fill = BaseSizeGroup
+    )
+  ) +
     geom_hline(yintercept = 100, col = "lightgreen") +
-    geom_hline(yintercept = 500, col = "darkgreen") +
+    geom_hline(yintercept = 400, col = "darkgreen") +
+    scale_fill_manual(values = c("Low" = "salmon", "Mid" = "lightgreen", "High" = "darkgreen")) +
     geom_col() +
-    labs(y = "Total mapped reads (Gb)") +
+    labs(y = "Total mapped reads (Millions)") +
     theme_bw() +
     facet_grid(Organism_part ~ Timepoint) +
     theme_bw() +
     theme(
       axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-      axis.title.x = element_blank()
+      axis.title.x = element_blank(),
+      legend.position = "none"
     )
   ggsave(
     plot = last_plot(), filename = "report/_qc/mapping.qc.mapped_reads.png", dpi = 300, units = "mm",
