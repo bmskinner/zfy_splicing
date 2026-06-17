@@ -20,8 +20,8 @@ assemble.transcript <- function(common.name, tissue, timepoint, gene.id, gene, c
 
   if (!file.exists(gene.bam.file)) {
     # Write the reads covering the gene
-    system2("samtools", paste0("view -o ", gene.bam.file, " ", full.bam.file, " '", coordinates, "'"))
-    system2("samtools", paste0("index -c", gene.bam.file))
+    system2("samtools", paste0("view -o ", gene.bam.file, " ", full.bam.file, " '", coordinates, "'")) # keep paste0 for location quoting
+    system2("samtools", paste("index -c ", gene.bam.file))
   } else {
     cat("Assemble transcripts: Gene bam already exists for", common.name, tissue, timepoint, gene.id, "\n")
   }

@@ -172,7 +172,7 @@ plot.mapping.rates <- function(map.data) {
     geom_col(aes(y = Unmapped_pct), fill = "salmon", position = "stack") +
     labs(y = "Percentage of reads (%)", title = "Mapping groups: Single mapped, multimapped, unmapped") +
     coord_cartesian(ylim = c(0, 100)) +
-    facet_wrap(Organism_part ~ CommonName, scales = "free_x") +
+    facet_wrap(CommonName ~ Organism_part, scales = "free_x") +
     theme_bw() +
     theme(
       axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
