@@ -86,29 +86,89 @@ fs::file_delete("report/_qc/mapping.txt")
 if (length(list.files(path = "logs", pattern = "*.mapping.log")) > 0) {
   tryCatch(
     {
-      system2("cat", "logs/*.mapping.log | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' > report/_qc/mapping.txt")
+      system2("for", "f in logs/*.mapping.log; do  grep -w -e 'Aligned' -e 'rate' $f | echo $f `tr --delete '\t'`  >> report/_qc/mapping.txt; done")
     },
     error = function(e) warning(e)
   )
 }
 
 # Spread to separate columns
-map.data <- read.table("report/_qc/mapping.txt", sep = "$") %>% #  sep char does not exist, force single column
-  tidyr::extract(V1, c("Run"), "([A-Z]RR\\d+)", remove = FALSE) %>% # column from regex
-  tidyr::fill(Run, .direction = "down") %>% # fill missing run values
-  tidyr::extract(V1, c("Measure", "Reads", "Pct"), "(.*): ?(\\d+)? \\(?(\\d+\\.\\d+)%\\)?", remove = FALSE, convert = TRUE) %>% # find columns from regex
-  dplyr::mutate(Measure = str_replace_all(Measure, " ", "_")) %>% # ensure colnames will not have spaces
-  dplyr::filter(!str_detect(V1, "mapping")) %>% # remove rows with just 'SRRxxxx mapping'
-  dplyr::group_by(Run, Measure) %>%
-  dplyr::slice_tail(n = 1) %>% # if a sample has been mapped more than once, take only the most recent
-  tidyr::pivot_wider(id_cols = Run, names_from = Measure, values_from = c(Reads, Pct)) %>% # make new columns
+map.data <- read.table("report/_qc/mapping.txt", sep = "$") |> #  sep char does not exist, force single column
+  tidyr::extract(V1, "Run", "([A-Z]RR\\d+)", remove = FALSE) |> # columns from regex
+  tidyr::extract(V1,
+    into = c("Aligned_concordantly_or_discordantly_0_time", "Pct_aligned_concordantly_or_discordantly_0_time"),
+    regex = "Aligned concordantly or discordantly 0 time: (\\d+) \\(([\\d+\\.]+)%\\)",
+    remove = FALSE
+  ) |>
+  tidyr::extract(V1,
+    into = c("Aligned_concordantly_1_time", "Pct_aligned_concordantly_1_time"),
+    regex = "Aligned concordantly 1 time: (\\d+) \\(([\\d+\\.]+)%\\)",
+    remove = FALSE
+  ) |>
+  tidyr::extract(V1,
+    into = c("Aligned_concordantly_greater_1_time", "Pct_aligned_concordantly_greater_1_time"),
+    regex = "Aligned concordantly >1 times: (\\d+) \\(([\\d+\\.]+)%\\)",
+    remove = FALSE
+  ) |>
+  tidyr::extract(V1,
+    into = c("Aligned_discordantly_1_time", "Pct_aligned_discordantly_1_time"),
+    regex = "Aligned discordantly 1 time: (\\d+) \\(([\\d+\\.]+)%\\)",
+    remove = FALSE
+  ) |>
+  tidyr::extract(V1,
+    into = c("Pct_overall_alignment_rate"),
+    regex = "Overall alignment rate: ([\\d+\\.]+)%",
+    remove = FALSE
+  ) |>
+  tidyr::extract(V1,
+    into = c("Aligned_1_time", "Pct_aligned_1_time"),
+    regex = "Aligned 1 time: (\\d+) \\(([\\d+\\.]+)%\\)",
+    remove = FALSE
+  ) |>
+  tidyr::extract(V1,
+    into = c("Aligned_0_time", "Pct_aligned_0_time"),
+    regex = "Aligned 0 time: (\\d+) \\(([\\d+\\.]+)%\\)",
+    remove = FALSE
+  ) |>
+  tidyr::extract(V1,
+    into = c("Aligned_greater_1_time", "Pct_aligned_greater_1_time"),
+    regex = "Aligned >1 times: (\\d+) \\(([\\d+\\.]+)%\\)",
+    remove = FALSE
+  ) |>
+  dplyr::mutate(across(contains("time"), as.numeric),
+    Pct_overall_alignment_rate = as.numeric(Pct_overall_alignment_rate)
+  ) |>
   dplyr::mutate(
-    Reads_Overall_alignment_rate = rowSums(across(dplyr::starts_with("Reads_")), na.rm = TRUE),
-    Single_mapped_pct = sum(Pct_Aligned_1_time, Pct_Aligned_concordantly_1_time),
-    Multi_mapped_pct = sum(`Pct_Aligned_>1_times`, `Pct_Aligned_concordantly_>1_times`),
-    Unmapped_pct = sum(Pct_Aligned_0_time, `Pct_Aligned_concordantly_or_discordantly_0_time`)
-  ) %>%
-  merge(., SELECTED.SAMPLES, by = "Run") # Merge in the sample info
+    Single_mapped_pct = ifelse(is.na(Pct_aligned_concordantly_1_time),
+      Pct_aligned_1_time,
+      Pct_aligned_concordantly_1_time
+    ),
+    Multi_mapped_pct = ifelse(is.na(Pct_aligned_concordantly_greater_1_time),
+      Pct_aligned_greater_1_time,
+      Pct_aligned_concordantly_greater_1_time
+    ),
+    Unmapped_pct = ifelse(is.na(Pct_aligned_concordantly_or_discordantly_0_time),
+      Pct_aligned_0_time,
+      Pct_aligned_concordantly_or_discordantly_0_time
+    )
+  ) |>
+  merge(SELECTED.SAMPLES, by = "Run") # Merge in the sample info
+
+
+# tidyr::fill(Run, .direction = "down") %>% # fill missing run values
+# tidyr::extract(V1, c("Measure", "Reads", "Pct"), "(.*): ?(\\d+)? \\(?(\\d+\\.\\d+)%\\)?", remove = FALSE, convert = TRUE) %>% # find columns from regex
+#   dplyr::mutate(Measure = str_replace_all(Measure, " ", "_")) %>% # ensure colnames will not have spaces
+#   dplyr::filter(!str_detect(V1, "mapping")) %>% # remove rows with just 'SRRxxxx mapping'
+#   dplyr::group_by(Run, Measure) %>%
+#   dplyr::slice_tail(n = 1) %>% # if a sample has been mapped more than once, take only the most recent
+#   tidyr::pivot_wider(id_cols = Run, names_from = Measure, values_from = c(Reads, Pct)) %>% # make new columns
+#   dplyr::mutate(
+#     Reads_Overall_alignment_rate = rowSums(across(dplyr::starts_with("Reads_")), na.rm = TRUE),
+#     Single_mapped_pct = sum(Pct_Aligned_1_time, Pct_Aligned_concordantly_1_time),
+#     Multi_mapped_pct = sum(`Pct_Aligned_>1_times`, `Pct_Aligned_concordantly_>1_times`),
+#     Unmapped_pct = sum(Pct_Aligned_0_time, `Pct_Aligned_concordantly_or_discordantly_0_time`)
+#   ) %>%
+#   merge(., SELECTED.SAMPLES, by = "Run") # Merge in the sample info
 
 create.xlsx(map.data, "report/_qc/mapping.xlsx")
 
@@ -132,10 +192,10 @@ plot.mapping.rates <- function(map.data) {
 
   ggsave(
     plot = last_plot(), filename = "report/_qc/mapping.qc.pct.png", dpi = 300, units = "mm",
-    width = 200, height = 230
+    width = 300, height = 400
   )
 
-  p1 <- ggplot(map.data, aes(x = CommonName, y = Pct_Overall_alignment_rate, col = Pct_Overall_alignment_rate > 80)) +
+  p1 <- ggplot(map.data, aes(x = CommonName, y = Pct_overall_alignment_rate, col = Pct_overall_alignment_rate > 80)) +
     geom_beeswarm(size = 1) +
     labs(y = "Overall mapping (%)", col = "OK", title = "Overall mapping") +
     scale_color_manual(values = c(`FALSE` = "salmon", `TRUE` = "lightgreen")) +
