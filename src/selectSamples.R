@@ -543,6 +543,32 @@ wallaby <- read.csv("metadata/wallaby.csv") %>%
   write.table(., file = "metadata/wallaby.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
 
+#### Samples from tasmanian devil ####
+# SRA run selector down, so manually write equivalent table from ENA
+
+data.frame(
+  Run = c("ERR3568424", "ERR3568434"),
+  BioProject = "PRJEB34650",
+  LibraryLayout = "PAIRED",
+  CommonName = "tasmaniandevil",
+  DevStage = "adult",
+  sex = "male",
+  Timepoint = "adult",
+  Organism_part = "testis",
+  Organism = "Sarcophilus harrisii",
+  LibrarySelection = "cDNA",
+  LibrarySource = "TRANSCRIPTOMIC",
+  Bases = c(16643508000, 18824106750)
+) |>
+  merge(GENOME.DATA, by = "CommonName") |>
+  dplyr::select(
+    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) |>
+  write.table(
+    file = "metadata/tasmaniandevil.filt.csv", row.names = FALSE, quote = TRUE,
+    append = FALSE, sep = ",", col.names = TRUE
+  )
 
 #### Make summary tables ####
 
