@@ -6,11 +6,14 @@ cat("Sample selection: Reading and filtering sample data\n")
 
 #### Samples from human not from PRJEB26695 ####
 # None of the reads from SRR6253462 - SRR6253470 mapped successfully.
+# PRJNA597586 is single cell data - skip these too.
+
 # Skip these and select more.
 read.csv("metadata/human_generic.csv") %>%
   dplyr::filter(
-    BioProject == "PRJNA597586",
+    BioProject == "PRJNA301742",
     Assay.Type == "RNA-Seq",
+    source_name == "Total testis",
     Bases > 1e8
   ) %>%
   dplyr::mutate(
@@ -27,7 +30,6 @@ read.csv("metadata/human_generic.csv") %>%
     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
   ) %>%
   write.csv(., file = "metadata/human_generic.filt.csv", row.names = FALSE, quote = TRUE)
-
 
 #### Duck testis ####
 
