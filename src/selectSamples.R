@@ -236,6 +236,7 @@ read.csv("metadata/mouse.testis.csv") %>%
     Species = Experimental_Factor._organism..exp.,
     DevStage = Developmental_stage
   ) %>%
+  dplyr::filter(BioProject != "PRJNA630221") |> # project has dsRNA only
   dplyr::filter(Assay.Type == "RNA-Seq" & cell_type == "") %>%
   dplyr::filter(!is.na(AGE) & AGE != "" & AGE != "not collected" & !str_starts(AGE, "E") & AGE != "adult") %>%
   dplyr::filter(!str_detect(OrganismPart, "adipose") & !str_detect(OrganismPart, "brain")) %>%
@@ -365,9 +366,13 @@ xenopus <- read.csv("metadata/xenopus.csv") %>%
 
 # Mature at ~3 months
 zebrafish <- read.csv("metadata/zebrafish.csv") %>%
-  dplyr::filter(Assay.Type == "RNA-Seq", tissue == "testis", genotype == "wild type") %>%
+  dplyr::filter(
+    Assay.Type == "RNA-Seq", tissue == "testis", genotype == "wild type"
+  ) %>%
+  dplyr::filter(BioProject != "PRJNA540466") |> # skip known single cell
   dplyr::mutate(
     Organism_part = str_to_lower(tissue),
+    sex = "male",
     DevStage = "adult",
     Timepoint = "adult",
     CommonName = "zebrafish"
@@ -401,6 +406,8 @@ anole <- read.csv("metadata/anole.csv") %>%
 
 
 #### Samples from Koala testis ####
+# PRJNA1158232 and PRJNA1187226 is a study of miRNA, but performed standard RNA-seq some samples
+# Their own mapping efficiencies were similar (Table S7, Yu et al 10.21203/rs.3.rs-5671983/v1)
 
 koala <- read.csv("metadata/koala.csv") %>%
   dplyr::rename(dev_stage = Developmental_Stage) %>%

@@ -139,6 +139,10 @@ map.data <- read.table("report/_qc/mapping.txt", sep = "$") |> #  sep char does 
     Pct_overall_alignment_rate = as.numeric(Pct_overall_alignment_rate)
   ) |>
   dplyr::mutate(
+    Single_mapped = ifelse(is.na(Aligned_concordantly_1_time),
+      Aligned_1_time,
+      Aligned_concordantly_1_time
+    ),
     Single_mapped_pct = ifelse(is.na(Pct_aligned_concordantly_1_time),
       Pct_aligned_1_time,
       Pct_aligned_concordantly_1_time
@@ -152,35 +156,20 @@ map.data <- read.table("report/_qc/mapping.txt", sep = "$") |> #  sep char does 
       Pct_aligned_concordantly_or_discordantly_0_time
     )
   ) |>
+  dplyr::select(-V1) |>
   merge(SELECTED.SAMPLES, by = "Run") # Merge in the sample info
-
-
-# tidyr::fill(Run, .direction = "down") %>% # fill missing run values
-# tidyr::extract(V1, c("Measure", "Reads", "Pct"), "(.*): ?(\\d+)? \\(?(\\d+\\.\\d+)%\\)?", remove = FALSE, convert = TRUE) %>% # find columns from regex
-#   dplyr::mutate(Measure = str_replace_all(Measure, " ", "_")) %>% # ensure colnames will not have spaces
-#   dplyr::filter(!str_detect(V1, "mapping")) %>% # remove rows with just 'SRRxxxx mapping'
-#   dplyr::group_by(Run, Measure) %>%
-#   dplyr::slice_tail(n = 1) %>% # if a sample has been mapped more than once, take only the most recent
-#   tidyr::pivot_wider(id_cols = Run, names_from = Measure, values_from = c(Reads, Pct)) %>% # make new columns
-#   dplyr::mutate(
-#     Reads_Overall_alignment_rate = rowSums(across(dplyr::starts_with("Reads_")), na.rm = TRUE),
-#     Single_mapped_pct = sum(Pct_Aligned_1_time, Pct_Aligned_concordantly_1_time),
-#     Multi_mapped_pct = sum(`Pct_Aligned_>1_times`, `Pct_Aligned_concordantly_>1_times`),
-#     Unmapped_pct = sum(Pct_Aligned_0_time, `Pct_Aligned_concordantly_or_discordantly_0_time`)
-#   ) %>%
-#   merge(., SELECTED.SAMPLES, by = "Run") # Merge in the sample info
 
 create.xlsx(map.data, "report/_qc/mapping.xlsx")
 
-if (any(map.data$Pct_Overall_alignment_rate < 80)) cat("QC check: Some samples have poor mapping rates\n")
+if (any(map.data$Pct_overall_alignment_rate < 80)) cat("QC check: Some samples have poor mapping rates\n")
 
 # Plot the mapping efficiencies
 
 plot.mapping.rates <- function(map.data) {
   ggplot(map.data, aes(x = Run)) +
+    geom_col(aes(y = Unmapped_pct + Multi_mapped_pct + Single_mapped_pct), fill = "lightgreen", position = "stack") +
+    geom_col(aes(y = Unmapped_pct + Multi_mapped_pct), fill = "orange", position = "stack") +
     geom_col(aes(y = Unmapped_pct), fill = "salmon", position = "stack") +
-    geom_col(aes(y = Single_mapped_pct), fill = "lightgreen", position = "stack") +
-    geom_col(aes(y = Multi_mapped_pct), fill = "orange", position = "stack") +
     labs(y = "Percentage of reads (%)", title = "Mapping groups: Single mapped, multimapped, unmapped") +
     coord_cartesian(ylim = c(0, 100)) +
     facet_wrap(Organism_part ~ CommonName, scales = "free_x") +
@@ -195,7 +184,7 @@ plot.mapping.rates <- function(map.data) {
     width = 300, height = 400
   )
 
-  p1 <- ggplot(map.data, aes(x = CommonName, y = Pct_overall_alignment_rate, col = Pct_overall_alignment_rate > 80)) +
+  ggplot(map.data, aes(x = CommonName, y = Pct_overall_alignment_rate, col = Pct_overall_alignment_rate > 80)) +
     geom_beeswarm(size = 1) +
     labs(y = "Overall mapping (%)", col = "OK", title = "Overall mapping") +
     scale_color_manual(values = c(`FALSE` = "salmon", `TRUE` = "lightgreen")) +
@@ -210,6 +199,23 @@ plot.mapping.rates <- function(map.data) {
   ggsave(
     plot = last_plot(), filename = "report/_qc/mapping.qc.total.png", dpi = 300, units = "mm",
     width = 200, height = 170
+  )
+
+  ggplot(map.data |> dplyr::filter(Timepoint %in% c("birth", "mid-meiosis", "adult")), aes(x = CommonName, y = sum(Single_mapped) / 1e9, group = Organism_part)) +
+    geom_hline(yintercept = 100, col = "lightgreen") +
+    geom_hline(yintercept = 500, col = "darkgreen") +
+    geom_col() +
+    labs(y = "Total mapped reads (Gb)") +
+    theme_bw() +
+    facet_grid(Organism_part ~ Timepoint) +
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      axis.title.x = element_blank()
+    )
+  ggsave(
+    plot = last_plot(), filename = "report/_qc/mapping.qc.mapped_reads.png", dpi = 300, units = "mm",
+    width = 170, height = 170
   )
 }
 
