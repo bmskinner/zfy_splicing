@@ -37,21 +37,21 @@ for (i in 1:nrow(bam.files)) {
 
   cat("Detecting splice junctions for", species, tissue, timepoint, gene_id, "\n")
 
-  gene.data <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene_id, ]
+  gene.data <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene_id & GENE.LOCATIONS$CommonName == species, ] # filter on species too - some genomes do not have an accession for geneid
   coords <- parse_coordinates(gene.data$Location)
 
   sashimi.data <- read_sashimi_data(
     bam.file = bam.row$path,
     gtf.data = GTF.DATA[[species]],
     chr = coords$coord.chr, start = coords$coord.start, end = coords$coord.end,
-    reference.gene.id = gene.data$GeneId,
+    reference.gene.id = gene_id,
     reference.transcript.id = gene.data$CanonicalTranscriptId
   )
 
   # Create plot with collapsed introns
   sashimi.plot.collapsed <- make_sashimi_coverage_plot(sashimi.data,
     is.collapse.introns = TRUE, show.x.axis = FALSE,
-    min.spanning.reads = 5, label = paste0(species, "\n", tissue, "\n", timepoint, "\n", gene_name)
+    min.spanning.reads = 2, label = paste0(species, "\n", tissue, "\n", timepoint, "\n", gene_name)
   )
 
   save.double.width(paste0("report/raw_sashimi/", species, ".", tissue, ".", timepoint, ".", gene_id, ".", gene_name, ".condensed.png"),
@@ -61,7 +61,7 @@ for (i in 1:nrow(bam.files)) {
   # Create plot with expanded introns
   sashimi.plot.expanded <- make_sashimi_coverage_plot(sashimi.data,
     is.collapse.introns = FALSE,
-    min.spanning.reads = 5, label = paste0(species, "\n", tissue, "\n", timepoint, "\n", gene_name)
+    min.spanning.reads = 2, label = paste0(species, "\n", tissue, "\n", timepoint, "\n", gene_name)
   )
 
   save.double.width(paste0("report/raw_sashimi/", species, ".", tissue, ".", timepoint, ".", gene_id, ".", gene_name, ".expanded.png"),

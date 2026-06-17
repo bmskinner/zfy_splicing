@@ -512,6 +512,7 @@ read_gtf_data <- function(gtf.files, gtf.names) {
         gene_name = if ("gene_name" %in% colnames(.)) gene_name else if ("gene" %in% colnames(.)) gene else gene_id,
         transcript_name = if ("transcript_name" %in% colnames(.)) transcript_name else if ("transcript" %in% colnames(.)) transcript else transcript_id,
       )
+    cat("Plot sashimi: Read ", x, "\n")
     df
   },
   mc.cores = ifelse(installr::is.windows(), 1, 6)
@@ -626,6 +627,8 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
     gtf.data$end <= end, ]
 
   sashimi.data$reference.gene.id <- reference.gene.id
+  cat("Reference gene id is '", reference.gene.id, "'\n")
+
   # Get the longest transcript in the gene if none specified
   if (is.na(reference.transcript.id)) {
     cat("No reference transcript given, selecting longest for gene id", sashimi.data$reference.gene.id, "\n")

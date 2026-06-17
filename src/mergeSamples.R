@@ -56,7 +56,6 @@ if (nrow(to.index) > 0) {
 
 # Combine the gene locations with bams
 groups <- merge(groups, GENE.LOCATIONS, by = "CommonName")
-
 create.xlsx(groups, "report/grouped.bams.xlsx")
 cat("Merge samples: Exported grouped bam table to report/grouped.bams.xlsx\n")
 
