@@ -40,7 +40,7 @@ map_se_sample () {
 			if [ ! -e data/${SPECIES}/${ERR}.fastq.gz ] && [ ! -e data/${SPECIES}/${ERR}_trimmed.fq.gz ]; then
 				# Fetch data
 				if [ ! -e data/${SPECIES}/${ERR}.fastq ]; then
-					echo -n "${ERR}: downloading fastq" >> logs/${ERR}.mapping.log 2>&1
+					echo "${ERR}: downloading fastq" >> logs/${ERR}.mapping.log 2>&1
 					fasterq-dump -o data/${SPECIES}/${ERR}.fastq ${ERR}
 				fi
 				gzip data/${SPECIES}/${ERR}.fastq
@@ -118,7 +118,7 @@ map_pe_sample () {
 			if [ ! -e data/${SPECIES}/${ERR}_2.fastq.gz ] && [ ! -e data/${SPECIES}/${ERR}_2_val_2.fq.gz ]; then
 				# Fetch data
 				if [ ! -e data/${SPECIES}/${ERR}_2.fastq ]; then
-					echo -n "${ERR}: downloading fastq" >> logs/${ERR}.mapping.log 2>&1
+					echo "${ERR}: downloading fastq" >> logs/${ERR}.mapping.log 2>&1
 					fasterq-dump -O data/${SPECIES}/ ${ERR}
 				fi
 				gzip data/${SPECIES}/${ERR}_1.fastq

@@ -63,27 +63,30 @@ extract.val <- function(x) {
   as.numeric(stringr::str_replace(x, " \\(.*\\)", ""))
 }
 
+fs::file_delete("report/_qc/mapping.txt")
+
 # Extract the mapping summary from stdout files directed to logs
-if (length(list.files(path = "logs", pattern = "bash.o.*")) > 0) {
+# if (length(list.files(path = "logs", pattern = "bash.o.*")) > 0) {
+#   tryCatch(
+#     {
+#       system2("cat", "logs/bash.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' >> report/_qc/mapping.txt")
+#     },
+#     error = function(e) warning(e)
+#   )
+# }
+# if (length(list.files(path = "logs", pattern = "mapSamples.sh.o.*")) > 0) {
+#   tryCatch(
+#     {
+#       system2("cat", "logs/mapSamples.sh.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' >> report/_qc/mapping.txt")
+#     },
+#     error = function(e) warning(e)
+#   )
+# }
+
+if (length(list.files(path = "logs", pattern = "*.mapping.log")) > 0) {
   tryCatch(
     {
-      system2("cat", "logs/bash.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' > report/_qc/mapping.txt")
-    },
-    error = function(e) warning(e)
-  )
-}
-if (length(list.files(path = "logs", pattern = "mapSamples.sh.o.*")) > 0) {
-  tryCatch(
-    {
-      system2("cat", "logs/mapSamples.sh.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' >> report/_qc/mapping.txt")
-    },
-    error = function(e) warning(e)
-  )
-}
-if (length(list.files(path = "logs", pattern = ".*.mapping.log")) > 0) {
-  tryCatch(
-    {
-      system2("cat", "logs/*.mapping.log | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' >> report/_qc/mapping.txt")
+      system2("cat", "logs/*.mapping.log | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' > report/_qc/mapping.txt")
     },
     error = function(e) warning(e)
   )
@@ -99,7 +102,12 @@ map.data <- read.table("report/_qc/mapping.txt", sep = "$") %>% #  sep char does
   dplyr::group_by(Run, Measure) %>%
   dplyr::slice_tail(n = 1) %>% # if a sample has been mapped more than once, take only the most recent
   tidyr::pivot_wider(id_cols = Run, names_from = Measure, values_from = c(Reads, Pct)) %>% # make new columns
-  dplyr::mutate(Reads_Overall_alignment_rate = rowSums(across(dplyr::starts_with("Reads_")), na.rm = TRUE)) %>%
+  dplyr::mutate(
+    Reads_Overall_alignment_rate = rowSums(across(dplyr::starts_with("Reads_")), na.rm = TRUE),
+    Single_mapped_pct = sum(Pct_Aligned_1_time, Pct_Aligned_concordantly_1_time),
+    Multi_mapped_pct = sum(`Pct_Aligned_>1_times`, `Pct_Aligned_concordantly_>1_times`),
+    Unmapped_pct = sum(Pct_Aligned_0_time, `Pct_Aligned_concordantly_or_discordantly_0_time`)
+  ) %>%
   merge(., SELECTED.SAMPLES, by = "Run") # Merge in the sample info
 
 create.xlsx(map.data, "report/_qc/mapping.xlsx")
@@ -108,11 +116,11 @@ if (any(map.data$Pct_Overall_alignment_rate < 80)) cat("QC check: Some samples h
 
 # Plot the mapping efficiencies
 
-plot.single.end.mapping <- function(map.data) {
-  ggplot(map.data |> dplyr::filter(map.data$LibraryLayout == "SINGLE"), aes(x = Run)) +
-    geom_col(aes(y = Pct_Aligned_0_time), fill = "salmon", position = "stack") +
-    geom_col(aes(y = Pct_Aligned_1_time), fill = "lightgreen", position = "stack") +
-    geom_col(aes(y = `Pct_Aligned_>1_times`), fill = "orange", position = "stack") +
+plot.mapping.rates <- function(map.data) {
+  ggplot(map.data, aes(x = Run)) +
+    geom_col(aes(y = Unmapped_pct), fill = "salmon", position = "stack") +
+    geom_col(aes(y = Single_mapped_pct), fill = "lightgreen", position = "stack") +
+    geom_col(aes(y = Multi_mapped_pct), fill = "orange", position = "stack") +
     labs(y = "Percentage of reads (%)", title = "Mapping groups: Single mapped, multimapped, unmapped") +
     coord_cartesian(ylim = c(0, 100)) +
     facet_wrap(Organism_part ~ CommonName, scales = "free_x") +
@@ -123,10 +131,9 @@ plot.single.end.mapping <- function(map.data) {
     )
 
   ggsave(
-    plot = last_plot(), filename = "report/_qc/mapping.qc.pct.se.png", dpi = 300, units = "mm",
-    width = 200, height = 170
+    plot = last_plot(), filename = "report/_qc/mapping.qc.pct.png", dpi = 300, units = "mm",
+    width = 200, height = 230
   )
-
 
   p1 <- ggplot(map.data, aes(x = CommonName, y = Pct_Overall_alignment_rate, col = Pct_Overall_alignment_rate > 80)) +
     geom_beeswarm(size = 1) +
@@ -141,64 +148,15 @@ plot.single.end.mapping <- function(map.data) {
     )
 
   ggsave(
-    plot = last_plot(), filename = "report/_qc/mapping.qc.total.se.png", dpi = 300, units = "mm",
+    plot = last_plot(), filename = "report/_qc/mapping.qc.total.png", dpi = 300, units = "mm",
     width = 200, height = 170
   )
 }
 
-plot.paired.end.mapping <- function(map.data) {
-  ggplot(map.data |> dplyr::filter(map.data$LibraryLayout == "PAIRED"), aes(x = Run)) +
-    geom_col(aes(y = Pct_Aligned_concordantly_or_discordantly_0_time), fill = "salmon", position = "stack") +
-    geom_col(aes(y = Pct_Aligned_concordantly_1_time), fill = "lightgreen", position = "stack") +
-    geom_col(aes(y = `Pct_Aligned_concordantly_>1_times`), fill = "orange", position = "stack") +
-    labs(y = "Percentage of reads (%)", title = "Mapping groups: Single mapped, multimapped, unmapped") +
-    coord_cartesian(ylim = c(0, 100)) +
-    facet_wrap(Organism_part ~ CommonName, scales = "free_x") +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-      axis.title.x = element_blank()
-    )
-
-  ggsave(
-    plot = last_plot(), filename = "report/_qc/mapping.qc.pct.pe.png", dpi = 300, units = "mm",
-    width = 200, height = 170
-  )
-
-  p1 <- ggplot(map.data, aes(x = CommonName, y = Pct_Overall_alignment_rate, col = `Pct_Overall_alignment_rate` > 80)) +
-    geom_beeswarm(size = 1) +
-    labs(y = "Overall mapping (%)", col = "OK", title = "Overall mapping") +
-    scale_color_manual(values = c(`FALSE` = "salmon", `TRUE` = "lightgreen")) +
-    theme_bw() +
-    facet_wrap(~Organism_part) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-      axis.title.x = element_blank()
-    )
-
-  ggsave(
-    plot = last_plot(), filename = "report/_qc/mapping.qc.total.pe.png", dpi = 300, units = "mm",
-    width = 200, height = 170
-  )
-
-
-  # p1 + p5 + patchwork::plot_layout(guides = "collect") & theme(legend.position = "bottom")
-}
 tryCatch(
   {
-    cat("QC check: Making single end mapping plots\n")
-    se.data <- map.data[map.data$LibraryLayout == "SINGLE", ]
-    plot.single.end.mapping(se.data)
-  },
-  error = \(e) warning(e)
-)
-
-tryCatch(
-  {
-    cat("QC check: Making paired end mapping plots\n")
-    pe.data <- map.data[map.data$LibraryLayout == "PAIRED", ]
-    plot.paired.end.mapping(pe.data)
+    cat("QC check: Making mapping plots\n")
+    plot.mapping.rates(map.data)
   },
   error = \(e) warning(e)
 )
