@@ -35,7 +35,7 @@ for (i in 1:nrow(bam.files)) {
   final.out.file <- paste0("report/raw_sashimi/", species, ".", tissue, ".", timepoint, ".", gene_id, ".", gene_name, ".expanded.png")
   if (file.exists(final.out.file)) next
 
-  cat("Detecting splice junctions for", species, tissue, timepoint, gene_id, "\n")
+  cat("Detecting splice junctions for", i, ": ", species, tissue, timepoint, gene_id, "\n")
 
   gene.data <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene_id & GENE.LOCATIONS$CommonName == species, ] # filter on species too - some genomes do not have an accession for geneid
   coords <- parse_coordinates(gene.data$Location)

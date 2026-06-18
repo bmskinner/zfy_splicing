@@ -219,15 +219,17 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
   }
   bam.data <- scanBam(bam.conn)[[1]]
 
-  if (length(bam.data$qname) == 0) {
+  total.reads <- length(bam.data$qname)
+
+  if (total.reads == 0) {
     stop("There are no reads in bam file", bam.file)
   } else {
-    cat("There are", length(bam.data$qname), "reads in the bam file\n")
+    cat("There are", total.reads, "reads in the bam file\n")
   }
 
   # Go read by read
-  for (i in 1:length(bam.data$qname)) {
-    if (i %% 500 == 0) cat(sprintf("Processed %.2f%% of %s reads\n", i / length(bam.data$qname) * 100, length(bam.data$qname)))
+  for (i in 1:total.reads) {
+    if (i %% 500 == 0) cat(sprintf("Processed %.2f%% of %s reads\n", i / total.reads * 100, total.reads))
     read.data <- lapply(bam.data, function(xx) xx[i])
     # Skip if read is unmapped
     if (has_sam_flag(read.data$flag, SAM.FLAG.READ.UNMAPPED) |
@@ -311,6 +313,7 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
     dplyr::mutate(position = as.integer(position))
 
   return(list(
+    total.reads = total.reads,
     coverage = coverage,
     junctions = junction.map$values,
     reference.strand = strand.string,
@@ -687,7 +690,9 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
       strand = c(),
       count = c(),
       junction.strand = c(),
-      type = c()
+      type = c(),
+      Pct_junction_reads = c(),
+      Pct_total_reads = c()
     )
 
     # With no junctions, just use coverage. The strand with the max coverage
@@ -740,7 +745,12 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
       count = sum(count),
       .groups = "drop_last"
     ) |>
-    dplyr::rename(strand = corrected.strand)
+    dplyr::rename(strand = corrected.strand) |>
+    dplyr::ungroup() |>
+    dplyr::mutate(
+      Pct_junction_reads = count / sum(count) * 100,
+      Pct_total_reads = count / bam.data$total.reads * 100
+    )
 
   # Do we need to reverse the coverage values? Check if the reference transcript reads
   # are on the expected strand.
@@ -750,39 +760,6 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
       reference.strand = ifelse(sashimi.data$reference.read.strand == "FORWARD", forward.strand, reverse.strand),
       non.reference.strand = ifelse(sashimi.data$reference.read.strand == "FORWARD", reverse.strand, forward.strand),
     )
-
-  # sashimi.data$junctions <- bam.data$junctions
-  # sashimi.data$junctions.reference.strand <- bam.data$reference.strand
-
-
-  # junctions <- get_transcript_junctions(transcript.id, gtf.data)
-  # any(junctions$j1 == junction.start & junctions$j2 == junction.end)
-  # sashimi.data$junctions$matches.reference.splice.junction <- mapply(junction_is_in_GTF,
-  #   junction.start = bam.data$junctions$start,
-  #   junction.end = bam.data$junctions$end,
-  #   MoreArgs = list(
-  #     transcript.id = reference.transcript.id,
-  #     gtf.data = sashimi.data$reference.gtf.region
-  #   )
-  # )
-  # If we have junctions that match know exon boundaries, but are on the
-  # wrong strand, this is usually because the library was not stranded.
-  # Combine onto the correct strand.
-  #
-  #   junctions.grouped <- sashimi.data$junctions |>
-  #     dplyr::group_by(start, end) |>
-  #     dplyr::filter(matches.reference.splice.junction) |> # reference transcript only
-  #     dplyr::summarise(
-  #       strand = "SENSE",
-  #       count = sum(count),
-  #       matches.reference.splice.junction = TRUE,
-  #       .groups = "drop_last"
-  #     )
-  #
-  #   sashimi.data$junctions <- sashimi.data$junctions |>
-  #     dplyr::filter(!matches.reference.splice.junction) |>
-  #     rbind(junctions.grouped)
-
 
   return(sashimi.data)
 }
@@ -1120,7 +1097,7 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
 
   # Add the sashimi splines. Each sashimi arc is made of two splines that can be
   # above or below the transcript
-  add.junction <- function(splot, xmin, xmax, is.lower, ymin, ymax, count, junction.type) {
+  add.junction <- function(splot, xmin, xmax, is.lower, ymin, ymax, count, pct.junction.reads, junction.type) {
     # Define the spline line styles that make the junction lines
     SPLINE.COLOURS <- c(
       "reference_transcript_full_junction" = "blue",
@@ -1142,7 +1119,7 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
     r.spline.btm <- grid::xsplineGrob(x = c(1, 1, 0, 0), y = c(1, 0, 0, 0), shape = 1, gp = gpar(lwd = spline.size, col = spline.color, alpha = spline.alpha))
     r.spline.top <- grid::xsplineGrob(x = c(1, 1, 0, 0), y = c(0, 1, 1, 1), shape = 1, gp = gpar(lwd = spline.size, col = spline.color, alpha = spline.alpha))
 
-    label.y.offset <- 0.4 # separation between spline and label
+    label.y.offset <- 0.0 # separation between spline and label
 
     # Determine which splines to use for minus strand versus plus strand transcripts
     l.grob.btm <- l.spline.btm
@@ -1197,10 +1174,11 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
       )
     }
 
+    # Junction count label
     splot <- splot + annotate("label",
       x = xmid,
       y = ifelse(is.lower, 0 - ymax - label.y.offset, ymax + label.y.offset),
-      label = as.character(count),
+      label = sprintf("%s\n%.1f%%", as.character(count), pct.junction.reads),
       size = 2, col = spline.color, fill = NA
     )
 
@@ -1239,6 +1217,7 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
         is.lower = jrow$strand != sashimi.data$reference.transcript.strand,
         ymin = 2, ymax = 2.5 + jrow$y.offset,
         count = jrow$count,
+        pct.junction.reads = jrow$Pct_junction_reads,
         junction.type = jrow$type
       )
     }
