@@ -66,27 +66,11 @@ extract.val <- function(x) {
 fs::file_delete("report/_qc/mapping.txt")
 
 # Extract the mapping summary from stdout files directed to logs
-# if (length(list.files(path = "logs", pattern = "bash.o.*")) > 0) {
-#   tryCatch(
-#     {
-#       system2("cat", "logs/bash.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' >> report/_qc/mapping.txt")
-#     },
-#     error = function(e) warning(e)
-#   )
-# }
-# if (length(list.files(path = "logs", pattern = "mapSamples.sh.o.*")) > 0) {
-#   tryCatch(
-#     {
-#       system2("cat", "logs/mapSamples.sh.o* | grep -w -e 'mapping' -e 'Aligned' -e 'rate' | tr -d '\t' >> report/_qc/mapping.txt")
-#     },
-#     error = function(e) warning(e)
-#   )
-# }
-
 if (length(list.files(path = "logs", pattern = "*.mapping.log")) > 0) {
   tryCatch(
     {
-      system2("for", "f in logs/*.mapping.log; do  grep -w -e 'Aligned' -e 'rate' $f | echo $f `tr --delete '\t'`  >> report/_qc/mapping.txt; done")
+      # Combine all mapping outputs into one file, with one line per sample
+      system("for f in logs/*.mapping.log; do  grep -w -e 'Aligned' -e 'rate' $f | echo $f `tr --delete '\t'`  >> report/_qc/mapping.txt; done")
     },
     error = function(e) warning(e)
   )
