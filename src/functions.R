@@ -31,6 +31,13 @@ create.xlsx <- function(data, file.name) {
   wb <- xlsx::createWorkbook(type = "xlsx")
   sh <- xlsx::createSheet(wb)
   xlsx::addDataFrame(data, sh, row.names = F)
+
+  # How many columns in the data frame? Convert to letters in base 26
+  endColPart1 <- LETTERS[ncol(data) / 26]
+  endColPart2 <- LETTERS[ncol(data) %% 26]
+  endCol <- paste0(endColPart1, endColPart2)
+
+  xlsx::addAutoFilter(sh, paste0("A1:", endCol, "1"))
   xlsx::createFreezePane(sh, 2, 2, 2, 2) # freeze top row and first column
   xlsx::autoSizeColumn(sh, 1:ncol(data))
   xlsx::saveWorkbook(wb, file = file.name)

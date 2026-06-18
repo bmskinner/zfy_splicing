@@ -131,21 +131,16 @@ has_sam_flag <- function(sam.flag, property) {
 #'
 #' @examples
 #' parse_coordinates("Y:1234-5678")
+#' parse_coordinates("NC1234.5:-1234-5678")
 parse_coordinates <- function(coordinate.string) {
   coordinate.string <- stringr::str_remove_all(coordinate.string, ",")
-
-  coordinate.elements <- stringr::str_split(coordinate.string, ":")
-
-  coord.chr <- coordinate.elements[[1]][1]
-
-  coord.locations <- stringr::str_split(coordinate.elements[[1]][2], "-")
-  coord.start <- as.integer(coord.locations[[1]][1])
-  coord.end <- as.integer(coord.locations[[1]][2])
+  # Ensure we can also handle a coordinate that is negative e.g. treeshrew ZFX
+  parsed <- stringr::str_extract(coordinate.string, "^([\\.A-Za-z\\d]+):(-?\\d+)-(-?\\d+)$", group = 1:3)
 
   list(
-    coord.chr = coord.chr,
-    coord.start = coord.start,
-    coord.end = coord.end
+    coord.chr = parsed[1],
+    coord.start = as.integer(parsed[2]),
+    coord.end = as.integer(parsed[3])
   )
 }
 
