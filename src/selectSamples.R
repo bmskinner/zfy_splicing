@@ -253,7 +253,7 @@ read.csv("metadata/mouse.testis.csv") %>%
   dplyr::filter(str_detect(genotype, "[W|w]ild[ |-][T|t]ype") | str_detect(source_name, "[W|w]ild[ |-][T|t]ype") | str_detect(genotype, "[W|w][T|t]")) %>%
   dplyr::mutate(
     Timepoint = case_when(AgeDays < 7 ~ "Day_00-06",
-      AgeDays < 15 ~ "Day_07-13",
+      AgeDays < 14 ~ "Day_07-13",
       AgeDays < 21 ~ "Day_14-20",
       AgeDays < 28 ~ "Day_21-27",
       .default = "Other"
@@ -263,7 +263,7 @@ read.csv("metadata/mouse.testis.csv") %>%
   # do we need all of them? Just take the 10 smallest runs in each age group
   dplyr::group_by(Timepoint) %>%
   dplyr::arrange(Bases) %>%
-  dplyr::slice_head(n = 10) %>%
+  dplyr::slice_head(n = 15) %>%
   dplyr::mutate(
     Organism_part = "testis",
     sex = "male",
@@ -609,7 +609,7 @@ create.xlsx(SELECTED.SAMPLES, "report/analysed.samples.xlsx")
 create.xlsx(sample.groups, "report/sample.groups.xlsx")
 
 # Make summary plot of total bases
-ggplot(
+sample.plot <- ggplot(
   sample.groups %>% dplyr::filter(MappedTimepoint %in% c("adult", "mid-meiosis", "birth")),
   aes(x = CommonName, y = TotalBases / 1e9, fill = BaseSizeGroup)
 ) +
@@ -627,6 +627,41 @@ ggplot(
     axis.title.x = element_blank(),
     legend.position = "none"
   )
+save.double.width("report/read.depths.png", sample.plot, height = 230)
 
-save.double.width("report/read.depths.png", last_plot(), height = 230)
+# And the mouse specific timepoints
+mouse.samples <- SELECTED.SAMPLES |>
+  dplyr::filter(CommonName == "mouse" & str_starts(Timepoint, "Day")) |>
+  dplyr::group_by(CommonName, Timepoint, Organism_part) %>%
+  dplyr::summarise(
+    count = n(), TotalBases = sum(Bases),
+    .groups = "drop_last"
+  ) %>%
+  dplyr::mutate(BaseSizeGroup = case_when(TotalBases < 1e10 ~ "Poor",
+    TotalBases < 5e10 ~ "OK",
+    .default = "Good"
+  )) %>%
+  dplyr::arrange(CommonName) %>%
+  dplyr::ungroup()
+
+mouse.plot <- ggplot(
+  mouse.samples,
+  aes(x = Timepoint, y = TotalBases / 1e9, fill = BaseSizeGroup)
+) +
+  geom_hline(yintercept = 10, col = "lightgreen") +
+  geom_hline(yintercept = 50, col = "darkgreen") +
+  geom_col() +
+  scale_y_log10() +
+  scale_size_manual(values = c(1, 3), guide = "none") +
+  scale_fill_manual(values = c("Poor" = "salmon", "OK" = "lightgreen", "Good" = "darkgreen")) +
+  labs(y = "Total bases (Gb)") +
+  facet_wrap(~Organism_part) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+    axis.title.x = element_blank(),
+    legend.position = "none"
+  )
+save.double.width("report/read.depths.mouse.png", mouse.plot, height = 230)
+
 cat("Sample selection: Done!\n")
