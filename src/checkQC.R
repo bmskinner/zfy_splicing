@@ -141,7 +141,7 @@ map.data <- read.table("report/_qc/mapping.txt", sep = "$") |> #  sep char does 
     )
   ) |>
   dplyr::select(-V1) |>
-  merge(SELECTED.SAMPLES, by = "Run") # Merge in the sample info
+  merge(SELECTED.SAMPLES, by = "Run", all.y = TRUE) # Merge in the sample info
 
 create.xlsx(map.data, "report/_qc/mapping.xlsx")
 
