@@ -57,6 +57,7 @@ read.csv("metadata/duck.csv") %>%
 
 # Chicken E-MTAB-6769
 read.csv("metadata/chicken.csv") %>%
+  dplyr::filter(sex == "male") %>%
   dplyr::rename(
     DevStage = Experimental_Factor._developmental_stage..exp.,
     OrganismPart = Experimental_Factor._organism_part..exp.
@@ -82,6 +83,7 @@ read.csv("metadata/chicken.csv") %>%
 
 # Opossum E-MTAB-6833
 read.csv("metadata/opossum.csv") %>%
+  dplyr::filter(sex == "male") %>%
   dplyr::rename(
     DevStage = Experimental_Factor._developmental_stage..exp.,
     OrganismPart = Experimental_Factor._organism_part..exp.
@@ -106,6 +108,7 @@ read.csv("metadata/opossum.csv") %>%
 
 # Mouse E-MTAB-6798
 read.csv("metadata/mouse.csv") %>%
+  dplyr::filter(sex == "male") %>%
   dplyr::rename(
     DevStage = Experimental_Factor._developmental_stage..exp.,
     OrganismPart = Experimental_Factor._organism_part..exp.
@@ -133,6 +136,7 @@ read.csv("metadata/human.csv") %>%
     DevStage = Experimental_Factor._developmental_stage..exp.,
     OrganismPart = Experimental_Factor._organism_part..exp.
   ) %>%
+  dplyr::filter(sex == "male") %>%
   dplyr::mutate(
     Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
       DevStage == "neonate" ~ "birth",
@@ -153,6 +157,7 @@ read.csv("metadata/human.csv") %>%
 
 # Rat E-MTAB-6811
 read.csv("metadata/rat.csv") %>%
+  dplyr::filter(sex == "male") %>%
   dplyr::rename(
     DevStage = Experimental_Factor._developmental_stage..exp.,
     OrganismPart = Experimental_Factor._organism_part..exp.
@@ -177,6 +182,7 @@ read.csv("metadata/rat.csv") %>%
 # Rhesus macacque E-MTAB-6813
 # Lifespan can reach up to 40 in captivity, median age 25
 read.csv("metadata/macaque.csv") %>%
+  dplyr::filter(sex == "male") %>%
   dplyr::rename(
     DevStage = Experimental_Factor._developmental_stage..exp.,
     OrganismPart = Experimental_Factor._organism_part..exp.
@@ -277,6 +283,7 @@ platypus.1 <- read.csv("metadata/platypus.csv") %>%
     OrganismPart = Experimental_Factor._organism_part..exp.,
     Species = Experimental_Factor._organism..exp.
   ) %>%
+  dplyr::filter(sex == "male") %>%
   dplyr::filter(
     Assay.Type == "RNA-Seq",
     LibrarySelection != "size fractionation"
@@ -303,6 +310,7 @@ platypus.1 <- read.csv("metadata/platypus.csv") %>%
   )
 
 platypus.2 <- read.csv("metadata/platypus_testis.csv") %>%
+  dplyr::filter(sex == "male") %>%
   dplyr::filter(
     Assay.Type == "RNA-Seq", Organism_part %in% c("testis", ""),
     Experimental_Factor._protocol..exp. != "Ribo-seq",
