@@ -222,7 +222,14 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
   total.reads <- length(bam.data$qname)
 
   if (total.reads == 0) {
-    stop("There are no reads in bam file", bam.file)
+    cat("There are no reads in bam file", bam.file, "\n")
+    return(list(
+      total.reads = 0,
+      coverage = data.frame(),
+      junctions = data.frame(),
+      reference.strand = strand.string,
+      reference.location = coordinate.string
+    ))
   } else {
     cat("There are", total.reads, "reads in the bam file\n")
   }
@@ -619,6 +626,10 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
   sashimi.data <- list()
   sashimi.data$input.file <- bam.file
   bam.data <- read_bam(bam.file, paste0(chr, ":", start, "-", end), "SENSE")
+  sashimi.data$total.reads <- bam.data$total.reads
+  if (bam.data$total.reads == 0) {
+    return(sashimi.data)
+  }
 
   sashimi.data$reference.gtf.region <- gtf.data[gtf.data$seqnames == chr &
     gtf.data$start >= start &
@@ -1225,5 +1236,3 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
 
   list(plot = splot, sashimi.data = sashimi.data)
 }
-# TODO - chicken has an issue - the antisense transcript is on the wrong strand.
-# Check for other anomalies before finalising the junction merging.

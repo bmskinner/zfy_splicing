@@ -48,6 +48,8 @@ for (i in 1:nrow(bam.files)) {
     reference.transcript.id = gene.data$CanonicalTranscriptId
   )
 
+  if (sashimi.data$total.reads == 0) next
+
   # Create plot with collapsed introns
   sashimi.plot.collapsed <- make_sashimi_coverage_plot(sashimi.data,
     is.collapse.introns = TRUE, show.x.axis = FALSE,
