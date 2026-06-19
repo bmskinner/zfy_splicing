@@ -63,7 +63,7 @@ extract.val <- function(x) {
   as.numeric(stringr::str_replace(x, " \\(.*\\)", ""))
 }
 
-fs::file_delete("report/_qc/mapping.txt")
+file.remove("report/_qc/mapping.txt")
 
 # Extract the mapping summary from stdout files directed to logs
 if (length(list.files(path = "logs", pattern = "*.mapping.log")) > 0) {
