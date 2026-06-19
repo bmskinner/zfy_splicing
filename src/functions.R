@@ -18,6 +18,10 @@ TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13"
 
 #### Common functions ####
 
+save.plot <- function(filename, plot, ...) {
+  ggsave(filename, plot, units = "mm", dpi = 300, ...)
+}
+
 save.double.width <- function(filename, plot, width = 170, height = 170) {
   ggsave(filename, plot, units = "mm", height = height, width = width, dpi = 300)
 }
@@ -182,7 +186,8 @@ make.sample.groups <- function() {
 
 cat("Setup: Defining global variables\n")
 
-GENOME.DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE)
+GENOME.DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE) |>
+  dplyr::mutate(Clade = as.factor(Clade))
 # |>
 # dplyr::mutate(
 #   # Keep .gz extension for FASTA file - only used once uncompressed

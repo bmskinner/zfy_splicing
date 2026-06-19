@@ -53,6 +53,25 @@ read.csv("metadata/duck.csv") %>%
   write.csv(., file = "metadata/duck.filt.csv", row.names = FALSE, quote = TRUE)
 
 
+#### Turkey testis ####
+# From PRJNA597008, 38 weeks
+
+read.csv("metadata/turkey.csv") %>%
+  dplyr::mutate(
+    DevStage = "adult",
+    Organism_part = "testis",
+    Timepoint = "adult",
+    CommonName = "turkey",
+  ) %>%
+  merge(., GENOME.DATA, by = "CommonName") %>%
+  dplyr::select(
+    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) %>%
+  write.csv(., file = "metadata/turkey.filt.csv", row.names = FALSE, quote = TRUE)
+
+
+
 #### Samples from PRJEB26695 ####
 
 # Chicken E-MTAB-6769
