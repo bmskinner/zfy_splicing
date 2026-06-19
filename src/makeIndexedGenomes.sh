@@ -54,9 +54,15 @@ build_genome_index () {
 		# Make the genome index - note we can't use fa.gz file in hisat2-build
 		# so rezip once complete and move to final name
 		hisat2-build --ss ${SSFILE} --exon ${EXONFILE} ${FASTA_RAW_FILE} ${GENOME}
-		gzip ${FASTA_RAW_FILE}
-		echo "${GENOME}: Moving FASTA file from ${FASTA_GZ_FILE} to ${FASTA_FILE}"
-		mv ${FASTA_GZ_FILE} ${FASTA_FILE}
+		gzip -c ${FASTA_RAW_FILE} > ${FASTA_FILE}
+		rm  ${FASTA_RAW_FILE}
+		
+		# If we got the genome from Ensembl, everything is the correct name.
+		# Otherwise, rename the freshly zipped file for consistency
+		# if [ ${FASTA_GZ_FILE} != 	${FASTA_FILE}	]; then
+		#   echo "${GENOME}: Moving FASTA file from ${FASTA_GZ_FILE} to ${FASTA_FILE}"
+		#   mv ${FASTA_GZ_FILE} ${FASTA_FILE}
+		# fi
 	fi
 	
 }

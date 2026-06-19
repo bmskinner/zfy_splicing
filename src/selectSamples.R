@@ -279,10 +279,10 @@ read.csv("metadata/mouse.testis.csv") %>%
     ),
     CommonName = "mouse"
   ) %>%
-  # do we need all of them? Just take the 10 smallest runs in each age group
+  # do we need all of them? Just take the 20 smallest runs in each age group
   dplyr::group_by(Timepoint) %>%
   dplyr::arrange(Bases) %>%
-  dplyr::slice_head(n = 15) %>%
+  dplyr::slice_head(n = 20) %>%
   dplyr::mutate(
     Organism_part = "testis",
     sex = "male",

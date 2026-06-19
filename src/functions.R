@@ -129,13 +129,14 @@ get.gene.locations <- function(genome.data) {
   }
 
   # Bind each gene into a data frame
-  locations <- do.call(rbind, mapply(get.gene.coordinates,
+  locations <- do.call(rbind, parallel::mcmapply(get.gene.coordinates,
     common.name = genome.data$CommonName,
     gtf.file = genome.data$GTF_FILE,
     MoreArgs = list(
       size = 1000
     ), # ensure flanking lncRNAs will be detected
-    SIMPLIFY = FALSE
+    SIMPLIFY = FALSE,
+    mc.cores = ifelse(installr::is.windows(), 1, 6)
   ))
   readr::write_csv(locations, file = "./data/gene_coordinates.csv")
 
