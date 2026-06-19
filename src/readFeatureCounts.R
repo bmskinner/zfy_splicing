@@ -39,22 +39,50 @@ feature.values <- do.call(rbind, parallel::mclapply(feature.files,
 write_csv(feature.values, "report/tpm.csv", quote = "needed")
 create.xlsx(feature.values, "report/tpm.xlsx")
 
+feature.values <- read_csv("report/tpm.csv", show_col_types = FALSE)
+
 feature.values <- feature.values |>
   merge(SELECTED.SAMPLES, by = "Run") |>
   merge(GENE.LOCATIONS, by = c("GeneId", "CommonName", "GTF_FILE")) |>
+  merge(GENOME.DATA, by = c("CommonName", "Genome", "GTF_FILE")) |>
+  dplyr::mutate(
+    Clade = fct_relevel(Clade, "Outgroup", "Birds", "Monotremes", "Marsupials", "Artiodactyls", "Primates", "Rodents"),
+    Timepoint = fct_relevel(as.factor(Timepoint), "birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
+  ) |>
   dplyr::mutate(Group = case_when(str_detect(Gene, "Z[Ff][Xx]") ~ "ZFX",
-    str_detect(Gene, "Z[Ff][Xy]") ~ "ZFY",
+    str_detect(Gene, "Z[Ff][Yy]") ~ "ZFY",
     str_detect(Gene, "R[Bb][Mm][Yy]") ~ "RBMY",
     .default = "NA"
   )) |>
   dplyr::group_by(Organism_part, Timepoint, CommonName, Group) |>
-  dplyr::mutate(MedianTPM = median(TPM))
+  dplyr::mutate(MedianTPM = median(TPM), nSamples = n())
 
 
-plt <- ggplot(feature.values, aes(x = Organism_part, y = TPM, fill = Group)) +
+# Standard timepoints
+plt <- ggplot(feature.values |> dplyr::filter(Timepoint %in% c("adult", "mid-meiosis", "birth"), nSamples > 1), aes(x = TPM, y = interaction(Gene, CommonName), , fill = Group)) +
   geom_boxplot() +
-  geom_beeswarm() +
-  facet_wrap(~CommonName) +
+  facet_wrap(Organism_part ~ Timepoint, scales = "free_y") +
   theme_bw()
 
-save.double.width("report/tpm", plt)
+
+plt <- ggplot(feature.values, aes(x = TPM, y = interaction(CommonName, Gene), , fill = Group)) +
+  geom_boxplot() +
+  facet_wrap(~Timepoint, scales = "free_y") +
+  theme_bw()
+
+
+save.double.width("report/tpm.png", plt)
+
+plt <- ggplot(feature.values |> dplyr::filter(Group != "RBMY"), aes(x = Organism_part, y = interaction(Timepoint, CommonName, Gene), fill = MedianTPM)) +
+  geom_tile() +
+  # scale_y_reverse()+
+  labs(x = "Tissue", y = "Gene", fill = "Median TPM") +
+  facet_wrap(~Clade, scales = "free_y", ncol = 2) +
+  scale_fill_viridis_c() +
+  theme_bw() +
+  theme(
+    legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+save.plot("report/tpm_clade.png", plt, width = 170, height = 250)
