@@ -1,6 +1,6 @@
 cat("Setup: Loading packages\n")
 packages <- c(
-  "parallel", "xlsx", "tidyverse", "GenomicRanges",
+  "parallel", "installr", "xlsx", "tidyverse", "GenomicRanges",
   "fs", "data.table", "patchwork", "grid", "scales", "ggbeeswarm",
   "rtracklayer", "Rsamtools", "bitops", "rlang", "R.utils"
 )
