@@ -532,25 +532,25 @@ cattle <- read.csv("metadata/cattle.csv") %>%
 # reproductive organs of tree shrews and the regulatory network of sRNA-key
 # genes through RNA-seq and sRNA-seq.
 
-tree.shrew <- read.csv("metadata/treeshrew.csv") %>%
-  dplyr::filter(
-    Organism == "Tupaia chinensis",
-    Assay.Type == "RNA-Seq",
-    sex == "male"
-  ) %>%
-  dplyr::mutate(
-    Organism_part = "testis",
-    Timepoint = dev_stage,
-    DevStage = Timepoint,
-    CommonName = "treeshrew"
-  ) %>%
-  merge(., GENOME.DATA, by = "CommonName") %>%
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) %>%
-  write.table(., file = "metadata/treeshrew.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
-
+# tree.shrew <- read.csv("metadata/treeshrew.csv") %>%
+#   dplyr::filter(
+#     Organism == "Tupaia chinensis",
+#     Assay.Type == "RNA-Seq",
+#     sex == "male"
+#   ) %>%
+#   dplyr::mutate(
+#     Organism_part = "testis",
+#     Timepoint = dev_stage,
+#     DevStage = Timepoint,
+#     CommonName = "treeshrew"
+#   ) %>%
+#   merge(., GENOME.DATA, by = "CommonName") %>%
+#   dplyr::select(
+#     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+#     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+#   ) %>%
+#   write.table(., file = "metadata/treeshrew.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+#
 
 
 #### Samples from wallaby ####
@@ -660,6 +660,28 @@ tasmaniandevil <- read.csv("metadata/PRJEB28680.csv") |>
   ) |>
   write.table(
     file = "metadata/tasmaniandevil.filt.csv", row.names = FALSE, quote = TRUE,
+    append = FALSE, sep = ",", col.names = TRUE
+  )
+
+
+#### Ryukyu spiny rat Tokudaia osimensis  ####
+
+# Zfy1&2 moved, RBMY lost.
+
+spinyrat <- read.csv("metadata/PRJDB5072.csv") |>
+  dplyr::mutate(
+    Organism_part = tissue,
+    Timepoint = "adult", # assumed, age not given in paper
+    DevStage = Timepoint,
+    CommonName = "spinyrat"
+  ) |>
+  merge(GENOME.DATA, by = "CommonName") |>
+  dplyr::select(
+    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) |>
+  write.table(
+    file = "metadata/spinyrat.filt.csv", row.names = FALSE, quote = TRUE,
     append = FALSE, sep = ",", col.names = TRUE
   )
 
