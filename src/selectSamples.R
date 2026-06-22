@@ -668,22 +668,22 @@ tasmaniandevil <- read.csv("metadata/PRJEB28680.csv") |>
 
 # Zfy1&2 moved, RBMY lost.
 
-spinyrat <- read.csv("metadata/PRJDB5072.csv") |>
-  dplyr::mutate(
-    Organism_part = tissue,
-    Timepoint = "adult", # assumed, age not given in paper
-    DevStage = Timepoint,
-    CommonName = "spinyrat"
-  ) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(
-    file = "metadata/spinyrat.filt.csv", row.names = FALSE, quote = TRUE,
-    append = FALSE, sep = ",", col.names = TRUE
-  )
+# spinyrat <- read.csv("metadata/PRJDB5072.csv") |>
+#   dplyr::mutate(
+#     Organism_part = tissue,
+#     Timepoint = "adult", # assumed, age not given in paper
+#     DevStage = Timepoint,
+#     CommonName = "spinyrat"
+#   ) |>
+#   merge(GENOME.DATA, by = "CommonName") |>
+#   dplyr::select(
+#     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+#     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+#   ) |>
+#   write.table(
+#     file = "metadata/spinyrat.filt.csv", row.names = FALSE, quote = TRUE,
+#     append = FALSE, sep = ",", col.names = TRUE
+#   )
 
 #### Make summary tables ####
 
