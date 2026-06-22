@@ -432,6 +432,13 @@ anole <- read.csv("metadata/anole.csv") %>%
   write.table(., file = "metadata/anole.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
 
+#### Samples from other koala tissues in PRJNA230900 ####
+
+# Note that the male samples are a general mixed pool. Only female has the
+# tissues explicit. Skip this one.
+
+# koala <- read.csv("metadata/PRJNA230900.csv")
+
 #### Samples from Koala testis ####
 # PRJNA1158232 and PRJNA1187226 is a study of miRNA, but performed standard RNA-seq some samples
 # Their own mapping efficiencies were similar (Table S7, Yu et al 10.21203/rs.3.rs-5671983/v1)
@@ -548,27 +555,45 @@ tree.shrew <- read.csv("metadata/treeshrew.csv") %>%
 
 #### Samples from wallaby ####
 
+# From PRJNA1218892
+
 # From PRJDB1934
 
-wallaby <- read.csv("metadata/wallaby.csv") %>%
-  dplyr::filter(
-    Organism == "Notamacropus eugenii",
-    BioProject == "PRJDB1934"
-  ) %>%
+# Note - tissue is mislabelled. Actual tissue is in the library name
+wallaby <- read.csv("metadata/PRJNA1218892.csv") |>
   dplyr::mutate(
-    Organism_part = "testis",
+    Organism_part = stringr::str_extract(Library.Name, ".*_(\\w+)$", group = 1),
+    Organism_part = stringr::str_replace(Organism_part, "testes", "testis"),
     Timepoint = "adult", # assumed - no publication for this!
     DevStage = Timepoint,
     CommonName = "wallaby",
     sex = "male"
-  ) %>%
-  merge(., GENOME.DATA, by = "CommonName") %>%
+  ) |>
+  merge(GENOME.DATA, by = "CommonName") %>%
   dplyr::select(
     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) |>
+  rbind(
+    read.csv("metadata/wallaby.csv") %>%
+      dplyr::filter(
+        Organism == "Notamacropus eugenii",
+        BioProject == "PRJDB1934"
+      ) %>%
+      dplyr::mutate(
+        Organism_part = "testis",
+        Timepoint = "adult", # assumed - no publication for this!
+        DevStage = Timepoint,
+        CommonName = "wallaby",
+        sex = "male"
+      ) %>%
+      merge(., GENOME.DATA, by = "CommonName") %>%
+      dplyr::select(
+        Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+        Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+      )
   ) %>%
   write.table(., file = "metadata/wallaby.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
-
 
 #### Samples from tasmanian devil ####
 
