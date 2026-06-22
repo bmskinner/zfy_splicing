@@ -165,7 +165,7 @@ read.selected.samples <- function() {
 make.sample.groups <- function() {
   # Create command to merge bams in groups
   SELECTED.SAMPLES %>%
-    dplyr::group_by(Organism, Organism_part, Timepoint, CommonName) %>% # not by sex - no difference seen in first pass
+    dplyr::group_by(Organism, Organism_part, Timepoint, sex, CommonName) %>%
     dplyr::mutate(bam.file = paste0("data/", CommonName, "/", Run, ".bam")) %>%
     dplyr::summarise(
       bams = paste(bam.file, collapse = " "),

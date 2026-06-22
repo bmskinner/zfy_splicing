@@ -610,7 +610,7 @@ tasmaniandevil <- read.csv("metadata/PRJEB28680.csv") |>
     Timepoint = "adult", # assumed, age not given in paper
     DevStage = Timepoint,
     CommonName = "tasmaniandevil",
-    sex = ""
+    sex = ifelse(Organism_part == "testis", "male", "unknown")
   ) |>
   merge(GENOME.DATA, by = "CommonName") |>
   dplyr::select(
@@ -698,7 +698,7 @@ sample.groups <- SELECTED.SAMPLES %>%
     OriginalTimepoint = DevStage,
     MappedTimepoint = Timepoint
   ) %>%
-  dplyr::group_by(Organism, CommonName, MappedTimepoint, Organism_part) %>%
+  dplyr::group_by(Organism, CommonName, MappedTimepoint, Organism_part, sex) %>%
   dplyr::summarise(
     count = n(), TotalBases = sum(Bases),
     .groups = "drop_last"
@@ -718,7 +718,7 @@ create.xlsx(sample.groups, "report/sample.groups.xlsx")
 # Make summary plot of total bases
 sample.plot <- ggplot(
   sample.groups %>% dplyr::filter(MappedTimepoint %in% c("adult", "mid-meiosis", "birth")),
-  aes(x = CommonName, y = TotalBases / 1e9, fill = BaseSizeGroup)
+  aes(x = interaction(CommonName, sex), y = TotalBases / 1e9, fill = BaseSizeGroup)
 ) +
   geom_hline(yintercept = 10, col = "lightgreen") +
   geom_hline(yintercept = 50, col = "darkgreen") +

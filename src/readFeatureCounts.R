@@ -73,9 +73,9 @@ plt <- ggplot(feature.values, aes(x = TPM, y = interaction(CommonName, Gene), , 
 
 save.double.width("report/tpm.png", plt)
 
+#### Look at ZFX / ZFY ####
 plt <- ggplot(feature.values |> dplyr::filter(Group != "RBMY"), aes(x = Organism_part, y = interaction(Timepoint, CommonName, Gene), fill = MedianTPM)) +
   geom_tile() +
-  # scale_y_reverse()+
   labs(x = "Tissue", y = "Gene", fill = "Median TPM") +
   facet_wrap(~Clade, scales = "free_y", ncol = 2) +
   scale_fill_viridis_c() +
@@ -86,3 +86,18 @@ plt <- ggplot(feature.values |> dplyr::filter(Group != "RBMY"), aes(x = Organism
   )
 
 save.plot("report/tpm_clade.png", plt, width = 170, height = 250)
+
+#### Look at RBMY ####
+
+plt <- ggplot(feature.values |> dplyr::filter(Group == "RBMY"), aes(x = Organism_part, y = interaction(Timepoint, CommonName, Gene), fill = MedianTPM)) +
+  geom_tile() +
+  labs(x = "Tissue", y = "Gene", fill = "Median TPM") +
+  facet_wrap(~Clade, scales = "free_y", ncol = 2) +
+  scale_fill_viridis_c() +
+  theme_bw() +
+  theme(
+    legend.position = "top",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+save.plot("report/tpm_rbmy_clade.png", plt, width = 170, height = 250)

@@ -13,10 +13,10 @@ sample.groups <- merge(make.sample.groups(), GENE.LOCATIONS, by = "CommonName")
 #### "Assemble transcripts ####
 
 
-assemble.transcript <- function(common.name, tissue, timepoint, gene.id, gene, coordinates, full.bam.file, full.gtf.file) {
+assemble.transcript <- function(common.name, tissue, timepoint, sex, gene.id, gene, coordinates, full.bam.file, full.gtf.file) {
   cat("Assemble transcripts: Running Stringtie on", common.name, tissue, timepoint, gene.id, "\n")
 
-  gene.bam.file <- paste0("data/stringtie/", common.name, ".", tissue, ".", timepoint, ".", gene.id, ".", gene, ".bam")
+  gene.bam.file <- paste0("data/stringtie/", common.name, ".", tissue, ".", timepoint, ".", sex, ".", gene.id, ".", gene, ".bam")
 
   if (!file.exists(gene.bam.file)) {
     # Write the reads covering the gene
@@ -29,7 +29,7 @@ assemble.transcript <- function(common.name, tissue, timepoint, gene.id, gene, c
   # Count the reads on sense and antisense strands
   system2("bash", paste("src/countStrandRatio.sh", gene.bam.file))
 
-  gtf.out.file <- paste0("data/stringtie/", common.name, ".", tissue, ".", timepoint, ".", gene.id, ".", gene, ".gtf")
+  gtf.out.file <- paste0("data/stringtie/", common.name, ".", tissue, ".", timepoint, ".", sex, ".", gene.id, ".", gene, ".gtf")
 
   if (!file.exists(gtf.out.file)) {
     # Run stringtie using the reference genome to guide assembly
@@ -41,7 +41,7 @@ assemble.transcript <- function(common.name, tissue, timepoint, gene.id, gene, c
       gene.bam.file
     )) # input file to analyse
   } else {
-    cat("Assemble transcripts: Stringtie gtf already exists for", common.name, tissue, timepoint, gene.id, "\n")
+    cat("Assemble transcripts: Stringtie gtf already exists for", common.name, tissue, timepoint, sex, gene.id, "\n")
   }
 }
 
@@ -51,6 +51,7 @@ invisible(mapply(
   sample.groups$CommonName,
   sample.groups$Organism_part,
   sample.groups$Timepoint,
+  sample.groups$sex,
   sample.groups$GeneId,
   sample.groups$Gene,
   sample.groups$Location,
