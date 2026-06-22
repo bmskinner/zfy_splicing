@@ -571,26 +571,67 @@ wallaby <- read.csv("metadata/wallaby.csv") %>%
 
 
 #### Samples from tasmanian devil ####
-# SRA run selector down, so manually write equivalent table from ENA
 
-data.frame(
-  Run = c("ERR3568424", "ERR3568434"),
-  BioProject = "PRJEB34650",
-  LibraryLayout = "PAIRED",
-  CommonName = "tasmaniandevil",
-  DevStage = "adult",
-  sex = "male",
-  Timepoint = "adult",
-  Organism_part = "testis",
-  Organism = "Sarcophilus harrisii",
-  LibrarySelection = "cDNA",
-  LibrarySource = "TRANSCRIPTOMIC",
-  Bases = c(16643508000, 18824106750)
-) |>
+# Brain samples for tasmanian devil. Mix of male and female
+
+# PRJEB28680 samples are from healthy tissue
+
+tasmaniandevil <- read.csv("metadata/PRJEB28680.csv") |>
+  dplyr::filter(
+    !(tissue_type %in% c("DFT1", "DFT2"))
+  ) |>
+  dplyr::mutate(
+    Organism_part = tissue_type,
+    Timepoint = "adult", # assumed, age not given in paper
+    DevStage = Timepoint,
+    CommonName = "tasmaniandevil",
+    sex = ""
+  ) |>
   merge(GENOME.DATA, by = "CommonName") |>
   dplyr::select(
     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) |>
+  rbind(
+    # Other brain samples - most likely other tissue to have splicing if present
+    read.csv("metadata/tasmanian_devil_brain.csv") |>
+      dplyr::filter(
+        LibrarySelection != "size fractionation",
+        BioProject != "PRJEB28680"
+      ) |>
+      dplyr::mutate(
+        Organism_part = "brain",
+        Timepoint = "adult", # assumed - no publication for this!
+        DevStage = Timepoint,
+        CommonName = "tasmaniandevil"
+      ) |>
+      merge(GENOME.DATA, by = "CommonName") |>
+      dplyr::select(
+        Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+        Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+      )
+  ) |>
+  rbind(
+    # SRA run selector down, so manually write equivalent table from ENA
+    data.frame(
+      Run = c("ERR3568424", "ERR3568434"),
+      BioProject = "PRJEB34650",
+      LibraryLayout = "PAIRED",
+      CommonName = "tasmaniandevil",
+      DevStage = "adult",
+      sex = "male",
+      Timepoint = "adult",
+      Organism_part = "testis",
+      Organism = "Sarcophilus harrisii",
+      LibrarySelection = "cDNA",
+      LibrarySource = "TRANSCRIPTOMIC",
+      Bases = c(16643508000, 18824106750)
+    ) |>
+      merge(GENOME.DATA, by = "CommonName") |>
+      dplyr::select(
+        Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+        Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+      )
   ) |>
   write.table(
     file = "metadata/tasmaniandevil.filt.csv", row.names = FALSE, quote = TRUE,
