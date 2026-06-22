@@ -2,11 +2,6 @@
 
 mkdir -p report/FASTQC
 
-# Remap samples and generate bam files for splice junction detection
-# Select the Run, Library type, species and genome columns
-SE_SAMPLES=$(cat metadata/*.filt.csv | cut -f 1,3,4,5,6 -d , | grep -e '[S|E|D]RR' | grep -e 'SINGLE')
-PE_SAMPLES=$(cat metadata/*.filt.csv | cut -f 1,3,4,5,6 -d , | grep -e '[S|E|D]RR' | grep -e 'PAIRED')
-
 # Map a single end sample
 # $1 species e.g chicken - should match a folder name in ./data
 # $2 ERR id e.g ERR2576379
@@ -184,6 +179,11 @@ else
 		sleep 30
 	done
 fi
+
+# Remap samples and generate bam files for splice junction detection
+# Select the Run, Library type, species and genome columns
+SE_SAMPLES=$(cat metadata/*.filt.csv | cut -f 1,3,4,5,6 -d , | grep -e '[S|E|D]RR' | grep -e 'SINGLE')
+PE_SAMPLES=$(cat metadata/*.filt.csv | cut -f 1,3,4,5,6 -d , | grep -e '[S|E|D]RR' | grep -e 'PAIRED')
 
 echo "Processing single end samples" >> logs/mapping.log 2>&1
 for LINE in ${SE_SAMPLES}; do
