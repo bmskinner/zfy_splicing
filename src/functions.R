@@ -1,6 +1,6 @@
 cat("Setup: Loading packages\n")
 packages <- c(
-  "parallel", "installr", "xlsx", "tidyverse", "GenomicRanges",
+  "parallel", "installr", "openxlsx2", "tidyverse", "GenomicRanges",
   "fs", "data.table", "patchwork", "grid", "scales", "ggbeeswarm",
   "rtracklayer", "Rsamtools", "bitops", "rlang", "R.utils"
 )
@@ -31,20 +31,17 @@ create.xlsx <- function(data, file.name) {
   data <- as.data.frame(data) # ensure not a tibble
 
   oldOpt <- options()
-  options(xlsx.date.format = "yyyy-mm-dd") # change date format
-  wb <- xlsx::createWorkbook(type = "xlsx")
-  sh <- xlsx::createSheet(wb)
-  xlsx::addDataFrame(data, sh, row.names = F)
+  options("openxlsx2.dateFormat" = "yyyy-mm-dd")
+  options("openxlsx2.datetimeFormat" = "yyyy-mm-dd hh:mm:ss")
 
-  # How many columns in the data frame? Convert to letters in base 26
-  endColPart1 <- LETTERS[ncol(data) / 26]
-  endColPart2 <- LETTERS[ncol(data) %% 26]
-  endCol <- paste0(endColPart1, endColPart2)
+  wb <- openxlsx2::wb_workbook() |>
+    openxlsx2::wb_add_worksheet("Sheet 1") |>
+    openxlsx2::wb_add_data("Sheet 1", data, row_names = FALSE) |>
+    openxlsx2::wb_freeze_pane(first_row = TRUE, first_col = TRUE) |>
+    openxlsx2::wb_add_filter(rows = 1, cols = 1:ncol(data)) |>
+    openxlsx2::wb_set_col_widths(cols = 1:ncol(data), widths = "auto")
 
-  xlsx::addAutoFilter(sh, paste0("A1:", endCol, "1"))
-  xlsx::createFreezePane(sh, 2, 2, 2, 2) # freeze top row and first column
-  xlsx::autoSizeColumn(sh, 1:ncol(data))
-  xlsx::saveWorkbook(wb, file = file.name)
+  openxlsx2::wb_save(wb, file = file.name)
   options(oldOpt)
 }
 
