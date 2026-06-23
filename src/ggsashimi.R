@@ -30,18 +30,29 @@ SAM.FLAG.SECOND.IN.PAIR <- 0x80
 #'
 #' @examples
 make_coverage_map <- function(start, end) {
+  # Fastest hash access in R is via environment name lookup.
+  # Make an environment for read counts
+
   coverage.array <- new.env()
+  coverage.array$forward <- new.env()
+  coverage.array$reverse <- new.env()
 
   n.indexes <- end - start + 1
 
-  coverage.array$"FORWARD" <- rep(0, n.indexes)
-  names(coverage.array$FORWARD) <- start:end
-
-  coverage.array$"REVERSE" <- rep(0, n.indexes)
-  names(coverage.array$REVERSE) <- start:end
+  for (i in as.character(start:end)) {
+    env_poke(coverage.array$forward, i, 0)
+    env_poke(coverage.array$reverse, i, 0)
+  }
 
   coverage.array$add <- function(pos, strand, value) {
-    coverage.array[[strand]][as.character(pos)] <- coverage.array[[strand]][as.character(pos)] + value
+    pos <- as.character(pos)
+    if (strand == "FORWARD") {
+      curr <- env_get(coverage.array$forward, pos)
+      env_poke(coverage.array$forward, pos, curr + value)
+    } else {
+      curr <- env_get(coverage.array$reverse, pos)
+      env_poke(coverage.array$reverse, pos, curr + value)
+    }
   }
 
   coverage.array$increment <- function(pos, strand) {
@@ -50,21 +61,20 @@ make_coverage_map <- function(start, end) {
 
   coverage.array$incrementRange <- function(start, end, strand) {
     base.range <- as.character(start:end)
-    coverage.array[[strand]][base.range] <- coverage.array[[strand]][base.range] + 1
+
+    for (i in base.range) {
+      coverage.array$increment(i, strand)
+    }
   }
 
-  coverage.array$get <- function(strand) {
-    pos <- data.frame(
-      position = names(coverage.array[["FORWARD"]]),
-      forward.strand = coverage.array[["FORWARD"]]
-    )
+  coverage.array$get <- function() {
+    fwd <- env_get_list(coverage.array$forward, nms = as.character(start:end))
+    rev <- env_get_list(coverage.array$reverse, nms = as.character(start:end))
 
-    neg <- data.frame(
-      position = names(coverage.array[["REVERSE"]]),
-      reverse.strand = coverage.array[["REVERSE"]]
-    )
-
-    merge(pos, neg, by = "position", all = TRUE) |>
+    merge(data.frame(position = names(fwd), forward.strand = unlist(fwd)),
+      data.frame(position = names(rev), reverse.strand = unlist(rev)),
+      by = "position", all = TRUE
+    ) |>
       dplyr::mutate(coverage = forward.strand + reverse.strand)
   }
   coverage.array
@@ -207,19 +217,26 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
   coverage.array <- make_coverage_map(coordinates$coord.start, coordinates$coord.end)
   junction.map <- make_junction_map()
 
-  # Use an index if available - otherwise read directly but slower
-  bai.index.file <- paste0(bam.file, ".bai")
-  csi.index.file <- paste0(bam.file, ".csi")
-  if (file.exists(bai.index.file)) {
-    bam.conn <- Rsamtools::BamFile(bam.file, bai.index.file)
-  } else if (file.exists(csi.index.file)) {
-    bam.conn <- Rsamtools::BamFile(bam.file, csi.index.file)
-  } else {
-    bam.conn <- Rsamtools::BamFile(bam.file)
-  }
-  bam.data <- scanBam(bam.conn)[[1]]
+  # scanBam will automatically use a bai index if available
+  bam.data <- Rsamtools::scanBam(bam.file)[[1]]
 
-  total.reads <- length(bam.data$qname)
+  bam.data <- data.frame(
+    flag = bam.data$flag,
+    cigar = bam.data$cigar,
+    pos = bam.data$pos
+  ) |>
+    dplyr::mutate(
+      # Determine the strand of each read in the genome
+      read.strand = sapply(flag, find_read_strand, strand.string = strand.string),
+      # Skip if read or mate is unmapped
+      is.unmapped = sapply(flag, has_sam_flag, property = SAM.FLAG.READ.UNMAPPED),
+      is.mate.unmapped = sapply(flag, has_sam_flag, property = SAM.FLAG.MATE.UNMAPPED),
+      # Ignore reads with more exotic CIGAR operators
+      is.nonstandard.read = sapply(cigar, \(x) any(stringr::str_detect(x, c("H", "P", "X", "="))))
+    ) |>
+    dplyr::filter(!is.unmapped, !is.mate.unmapped, !is.nonstandard.read)
+
+  total.reads <- nrow(bam.data)
 
   if (total.reads == 0) {
     cat("There are no reads in bam file", bam.file, "\n")
@@ -231,84 +248,74 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
       reference.location = coordinate.string
     ))
   } else {
-    cat("There are", total.reads, "reads in the bam file\n")
+    cat("There are", total.reads, "valid reads in the bam file\n")
   }
+
+  #' Count coverage and splice junctions from a cigar string
+  #'
+  #' @param op the cigar op code
+  #' @param len the cigar length
+  #' @param pos the position of the pointer in the genome
+  #' @param strand the read strand
+  #'
+  #' @returns
+  #' @export
+  #'
+  #' @examples
+  count.operator <- function(op, len, pos, strand) {
+    # Insertion or Soft-clip
+    # we do not change position
+    if (op == "I" | op == "S") {
+      return(pos)
+    }
+
+    # Match - increase coverage across the range
+    if (op == "M") {
+      pos.range <- pos:(pos + len - 1)
+      pos.range <- pos.range[pos.range >= coordinates$coord.start & pos.range < coordinates$coord.end]
+      if (length(pos.range) > 0) {
+        coverage.array$incrementRange(pos.range[1], pos.range[length(pos.range)], strand)
+      }
+    }
+
+    # Deletion
+    # if (op == "D") {
+    #   # no action
+    # }
+
+    # Junction
+    if (op == "N") {
+      don <- pos - 1 # splice donor TODO
+      acc <- pos + len # splice acceptor - somewhere downstream
+      if (don >= coordinates$coord.start & acc <= coordinates$coord.end) {
+        junction.map$add(don, acc, strand, 1)
+      }
+    }
+
+    pos <- pos + len
+
+    return(pos)
+  }
+
 
   # Go read by read
   for (i in 1:total.reads) {
     if (i %% 500 == 0) cat(sprintf("Processed %.2f%% of %s reads\n", i / total.reads * 100, total.reads))
-    read.data <- lapply(bam.data, function(xx) xx[i])
-    # Skip if read is unmapped
-    if (has_sam_flag(read.data$flag, SAM.FLAG.READ.UNMAPPED) |
-      has_sam_flag(read.data$flag, SAM.FLAG.MATE.UNMAPPED)) {
-      next
-    }
-
-    # Ignore reads with more exotic CIGAR operators
-    # print(read.data$cigar)
-    if (any(stringr::str_detect(read.data$cigar, c("H", "P", "X", "=")))) next
-
-    # Determine the strand of this read in the genome
-    read.strand <- find_read_strand(strand.string, read.data$flag)
+    flag <- bam.data$flag[i]
+    cigar <- bam.data$cigar[i]
+    pos <- bam.data$pos[i]
+    read.strand <- bam.data$read.strand[i]
 
     # Parse the cigar string
-    # Will be e.g. 10M3I21D would parse into 10, 3, 21 and M, I, D
-    cigar.lengths <- stringr::str_extract_all(read.data$cigar, "\\d+")[[1]]
-    cigar.ops <- stringr::str_extract_all(read.data$cigar, "[MIDNS]")[[1]]
+    # e.g. 10M3I21D would parse into 10, 3, 21 and M, I, D
+    cigar.lengths <- as.integer(stringr::str_extract_all(cigar, "\\d+")[[1]])
+    cigar.ops <- stringr::str_extract_all(cigar, "[MIDNS]")[[1]]
 
-    current.position <- read.data$pos
-
-
-
-    #' Count coverage and splice junctions from a cigar string
-    #'
-    #' @param op the cigar op code
-    #' @param len the cigar length
-    #' @param pos the position of the pointer in the genome
-    #' @param strand the read strand
-    #'
-    #' @returns
-    #' @export
-    #'
-    #' @examples
-    count.operator <- function(op, len, pos, strand) {
-      # Match - increase coverage across the range
-      if (op == "M") {
-        pos.range <- pos:(pos + len - 1)
-        pos.range <- pos.range[pos.range >= coordinates$coord.start & pos.range < coordinates$coord.end]
-        if (length(pos.range) > 0) {
-          coverage.array$incrementRange(pos.range[1], pos.range[length(pos.range)], strand)
-        }
-      }
-
-      # Insertion or Soft-clip
-      # we do not change position
-      if (op == "I" | op == "S") {
-        return(pos)
-      }
-
-      # Deletion
-      if (op == "D") {
-        # no action
-      }
-
-      # Junction
-      if (op == "N") {
-        don <- pos - 1 # splice donor TODO
-        acc <- pos + len # splice acceptor - somewhere downstream
-        if (don >= coordinates$coord.start & acc <= coordinates$coord.end) {
-          junction.map$add(don, acc, strand, 1)
-        }
-      }
-
-      pos <- pos + len
-
-      return(pos)
-    }
+    current.position <- pos
 
     # Check all cigar ops for this read.
     for (i in 1:length(cigar.ops)) {
-      curr.cigar.length <- as.integer(cigar.lengths[i])
+      curr.cigar.length <- cigar.lengths[i]
       curr.cigar.op <- cigar.ops[i]
       current.position <- count.operator(
         curr.cigar.op, curr.cigar.length, current.position, read.strand
@@ -956,7 +963,8 @@ collapse_introns <- function(sashimi.data, exon.data, intron.data) {
 #'
 #' @examples
 make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, label = "label",
-                                       show.x.axis = TRUE, is.collapse.introns = FALSE) {
+                                       show.x.axis = TRUE, is.collapse.introns = FALSE,
+                                       is.show.junction.percent = FALSE) {
   if (is.collapse.introns) {
     sashimi.data <- collapse_introns(
       sashimi.data,
@@ -1185,11 +1193,20 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
       )
     }
 
+    # We may want to show the percentage of junction spanning reads
+    # If so, the label offset will change.
+    junction.label <- ifelse(is.show.junction.percent,
+      sprintf("%s\n%.1f%%", as.character(count), pct.junction.reads),
+      sprintf("%s", as.character(count))
+    )
+
+    junction.label.y.offset <- ifelse(is.show.junction.percent, 0.0, 0.4) # separation between spline and label
+
     # Junction count label
     splot <- splot + annotate("label",
       x = xmid,
-      y = ifelse(is.lower, 0 - ymax - label.y.offset, ymax + label.y.offset),
-      label = sprintf("%s\n%.1f%%", as.character(count), pct.junction.reads),
+      y = ifelse(is.lower, 0 - ymax - junction.label.y.offset, ymax + junction.label.y.offset),
+      label = junction.label,
       size = 2, col = spline.color, fill = NA
     )
 

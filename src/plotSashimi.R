@@ -16,20 +16,38 @@ GTF.DATA <- read_gtf_data(GENOME.DATA$GTF_FILE, GENOME.DATA$CommonName)
 
 cat("Plot sashimi: Making figures\n")
 
-bam.files <- data.frame(path = list.files(path = "data/stringtie", pattern = ".*.bam", full.names = TRUE)) |>
+bam.files <- data.frame(path = list.files(path = "data/stringtie", pattern = ".*.bam$", full.names = TRUE)) |>
   dplyr::mutate(file = basename(path)) |>
   tidyr::separate_wider_delim(file,
-    delim = ".", names = c("species", "tissue", "timepoint", "gene_id", "gene_name", "ext"),
+    delim = ".", names = c("species", "tissue", "timepoint", "sex", "gene_id", "gene_name", "ext"),
     too_few = "debug", too_many = "debug"
   )
+
+species.aggregate <- list()
+tissue.aggregate <- list()
+timepoint.aggregate <- list()
 
 for (i in 1:nrow(bam.files)) {
   bam.row <- bam.files[i, ]
   species <- bam.row$species
   tissue <- bam.row$tissue
   timepoint <- bam.row$timepoint
+  sex <- bam.row$sex
   gene_id <- bam.row$gene_id
   gene_name <- bam.row$gene_name
+
+  # Create aggregates of all plots generated for later combination
+  if (is.null(species.aggregate[[species]])) {
+    species.aggregate[[species]] <- list()
+  }
+
+  if (is.null(tissue.aggregate[[tissue]])) {
+    tissue.aggregate[[tissue]] <- list()
+  }
+
+  if (is.null(timepoint.aggregate[[timepoint]])) {
+    timepoint.aggregate[[timepoint]] <- list()
+  }
 
   # Skip completed files for testing
   final.out.file <- paste0("report/raw_sashimi/", species, ".", tissue, ".", timepoint, ".", gene_id, ".", gene_name, ".expanded.png")
@@ -53,23 +71,46 @@ for (i in 1:nrow(bam.files)) {
   # Create plot with collapsed introns
   sashimi.plot.collapsed <- make_sashimi_coverage_plot(sashimi.data,
     is.collapse.introns = TRUE, show.x.axis = FALSE,
-    min.spanning.reads = 2, label = paste0(species, "\n", tissue, "\n", timepoint, "\n", gene_name)
+    min.spanning.reads = 2, label = paste0(species, "\n", sex, "\n", tissue, "\n", timepoint, "\n", gene_name)
   )
 
-  save.double.width(paste0("report/raw_sashimi/", species, ".", tissue, ".", timepoint, ".", gene_id, ".", gene_name, ".condensed.png"),
+  append(species.aggregate[[species]], sashimi.plot.collapsed)
+  append(tissue.aggregate[[tissue]], sashimi.plot.collapsed)
+  append(timepoint.aggregate[[timepoint]], sashimi.plot.collapsed)
+
+  save.double.width(
+    paste0(
+      "report/raw_sashimi/",
+      paste(species, sex, tissue, timepoint, gene_id, gene_name, collapse = "."),
+      ".condensed.png"
+    ),
     sashimi.plot.collapsed$plot,
     height = 50
   )
   # Create plot with expanded introns
   sashimi.plot.expanded <- make_sashimi_coverage_plot(sashimi.data,
     is.collapse.introns = FALSE,
-    min.spanning.reads = 2, label = paste0(species, "\n", tissue, "\n", timepoint, "\n", gene_name)
+    min.spanning.reads = 2, paste0(species, "\n", sex, "\n", tissue, "\n", timepoint, "\n", gene_name)
   )
 
-  save.double.width(paste0("report/raw_sashimi/", species, ".", tissue, ".", timepoint, ".", gene_id, ".", gene_name, ".expanded.png"),
+  save.double.width(
+    paste0(
+      "report/raw_sashimi/",
+      paste(species, sex, tissue, timepoint, gene_id, gene_name, collapse = "."),
+      ".expanded.png"
+    ),
     sashimi.plot.expanded$plot,
     height = 50
   )
 }
+
+lapply(species.aggregate, \(x) {
+  plots <- patchwork::wrap_plots(x)
+  save.double.width(
+    paste0("report/species/", species, ".png"),
+    plots,
+    height = 50 * length(plots)
+  )
+})
 
 cat("Plot sashimi: Done!\n")

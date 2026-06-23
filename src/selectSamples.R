@@ -445,7 +445,7 @@ anole <- read.csv("metadata/anole.csv") %>%
 # The koala ids are given in supplementary table S1 from Y et al Cell. 2025 Mar 7;188(8):2081–2093.e16. doi: 10.1016/j.cell.2025.02.006
 PRJNA1158232 <- read.csv("metadata/PRJNA1158232.csv") |>
   dplyr::mutate(
-    Organism_part = tissue,
+    Organism_part = stringr::str_to_lower(tissue),
     DevStage = "adult",
     Timepoint = "adult",
     CommonName = "koala",
