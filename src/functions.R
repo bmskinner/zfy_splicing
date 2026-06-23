@@ -213,7 +213,8 @@ invisible(mapply(download.gtf, GENOME.DATA$GTF_FILE, GENOME.DATA$GTF_URL))
 # Match the gene ids to coordinates in the genome version downloaded
 GENE.LOCATIONS <- get.gene.locations(GENOME.DATA)
 
-# Read the filtered SRR samples and merge the genome and gene metadata
+# Filtered SRR samples and merge the genome and gene metadata
+source("src/selectSamples.R")
 SELECTED.SAMPLES <- read.selected.samples()
 
 cat("Setup: Common functions and global variables loaded\n")

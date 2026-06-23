@@ -1,8 +1,10 @@
-#!/bin/Rscript
-source("src/functions.R")
 # Filter metadata from SRA searches to get samples of interest
 
 cat("Sample selection: Reading and filtering sample data\n")
+
+# These are the filtered files used for sample selection
+filt.files <- list.files("metadata", pattern = "*.filt.csv", full.names = TRUE)
+file.remove(filt.files)
 
 #### Samples from human not from PRJEB26695 ####
 # None of the reads from SRR6253462 - SRR6253470 mapped successfully.
@@ -443,7 +445,7 @@ anole <- read.csv("metadata/anole.csv") %>%
 # PRJNA1158232 and PRJNA1187226 is a study of miRNA, but performed standard RNA-seq some samples
 # Their own mapping efficiencies were similar (Table S7, Yu et al 10.21203/rs.3.rs-5671983/v1)
 # The koala ids are given in supplementary table S1 from Y et al Cell. 2025 Mar 7;188(8):2081–2093.e16. doi: 10.1016/j.cell.2025.02.006
-PRJNA1158232 <- read.csv("metadata/PRJNA1158232.csv") |>
+koala <- read.csv("metadata/PRJNA1158232.csv") |>
   dplyr::mutate(
     Organism_part = stringr::str_to_lower(tissue),
     DevStage = "adult",
@@ -463,31 +465,31 @@ PRJNA1158232 <- read.csv("metadata/PRJNA1158232.csv") |>
     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
   ) |>
-  write.table(file = "metadata/PRJNA1158232.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
-
-
-# Other testis samples in SRA
-koala <- read.csv("metadata/koala.csv") %>%
-  dplyr::rename(dev_stage = Developmental_Stage) %>%
-  dplyr::filter(
-    Organism == "Phascolarctos cinereus",
-    Assay.Type == "RNA-Seq", str_detect(tissue, "[T|t]estis"),
-    str_detect(Stage, "[A|a]dult") | str_detect(dev_stage, "[A|a]dult"),
-    !(Run %in% PRJNA1158232$Run)
-  ) %>%
-  dplyr::mutate(
-    Organism_part = "testis",
-    DevStage = "adult",
-    Timepoint = "adult",
-    sex = "male",
-    CommonName = "koala"
-  ) %>%
-  merge(., GENOME.DATA, by = "CommonName") %>%
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) %>%
-  write.table(., file = "metadata/koala.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+  rbind(
+    # Other testis samples in SRA
+    read.csv("metadata/koala.csv") %>%
+      dplyr::rename(dev_stage = Developmental_Stage) %>%
+      dplyr::filter(
+        Organism == "Phascolarctos cinereus",
+        Assay.Type == "RNA-Seq", str_detect(tissue, "[T|t]estis"),
+        str_detect(Stage, "[A|a]dult") | str_detect(dev_stage, "[A|a]dult"),
+        !(Run %in% PRJNA1158232$Run)
+      ) %>%
+      dplyr::mutate(
+        Organism_part = "testis",
+        DevStage = "adult",
+        Timepoint = "adult",
+        sex = "male",
+        CommonName = "koala"
+      ) %>%
+      merge(., GENOME.DATA, by = "CommonName") %>%
+      dplyr::select(
+        Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+        Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+      )
+  ) |>
+  dplyr::distinct() |> # have PRJNA1158232 samples in the wider testis search
+  write.table(file = "metadata/koala.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
 
 #### Samples from Echidna testis ####
@@ -709,91 +711,3 @@ tasmaniandevil <- read.csv("metadata/PRJEB28680.csv") |>
 #     file = "metadata/spinyrat.filt.csv", row.names = FALSE, quote = TRUE,
 #     append = FALSE, sep = ",", col.names = TRUE
 #   )
-
-#### Make summary tables ####
-
-cat("Making sample summary tables\n")
-
-# Read the filtered samples, match folder names
-SELECTED.SAMPLES <- read.selected.samples()
-
-# What are the timepoints, tissues and species we can look at?
-sample.groups <- SELECTED.SAMPLES %>%
-  dplyr::rename(
-    OriginalTimepoint = DevStage,
-    MappedTimepoint = Timepoint
-  ) %>%
-  dplyr::group_by(Organism, CommonName, MappedTimepoint, Organism_part, sex) %>%
-  dplyr::summarise(
-    count = n(), TotalBases = sum(Bases),
-    .groups = "drop_last"
-  ) %>%
-  dplyr::mutate(BaseSizeGroup = case_when(TotalBases < 1e10 ~ "Poor",
-    TotalBases < 5e10 ~ "OK",
-    .default = "Good"
-  )) %>%
-  dplyr::arrange(CommonName) %>%
-  dplyr::ungroup()
-
-# Export summary tables
-fs::dir_create("report")
-create.xlsx(SELECTED.SAMPLES, "report/analysed.samples.xlsx")
-create.xlsx(sample.groups, "report/sample.groups.xlsx")
-
-# Make summary plot of total bases
-sample.plot <- ggplot(
-  sample.groups %>% dplyr::filter(MappedTimepoint %in% c("adult", "mid-meiosis", "birth")),
-  aes(x = interaction(CommonName, sex), y = TotalBases / 1e9, fill = BaseSizeGroup)
-) +
-  geom_hline(yintercept = 10, col = "lightgreen") +
-  geom_hline(yintercept = 50, col = "darkgreen") +
-  geom_col() +
-  scale_y_log10() +
-  scale_size_manual(values = c(1, 3), guide = "none") +
-  scale_fill_manual(values = c("Poor" = "salmon", "OK" = "lightgreen", "Good" = "darkgreen")) +
-  labs(y = "Total bases (Gb)") +
-  facet_grid(Organism_part ~ MappedTimepoint) +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
-    axis.title.x = element_blank(),
-    legend.position = "none"
-  )
-save.double.width("report/read.depths.png", sample.plot, height = 230)
-
-# And the mouse specific timepoints
-mouse.samples <- SELECTED.SAMPLES |>
-  dplyr::filter(CommonName == "mouse" & str_starts(Timepoint, "Day")) |>
-  dplyr::group_by(CommonName, Timepoint, Organism_part) %>%
-  dplyr::summarise(
-    count = n(), TotalBases = sum(Bases),
-    .groups = "drop_last"
-  ) %>%
-  dplyr::mutate(BaseSizeGroup = case_when(TotalBases < 1e10 ~ "Poor",
-    TotalBases < 5e10 ~ "OK",
-    .default = "Good"
-  )) %>%
-  dplyr::arrange(CommonName) %>%
-  dplyr::ungroup()
-
-mouse.plot <- ggplot(
-  mouse.samples,
-  aes(x = Timepoint, y = TotalBases / 1e9, fill = BaseSizeGroup)
-) +
-  geom_hline(yintercept = 10, col = "lightgreen") +
-  geom_hline(yintercept = 50, col = "darkgreen") +
-  geom_col() +
-  scale_y_log10() +
-  scale_size_manual(values = c(1, 3), guide = "none") +
-  scale_fill_manual(values = c("Poor" = "salmon", "OK" = "lightgreen", "Good" = "darkgreen")) +
-  labs(y = "Total bases (Gb)") +
-  facet_wrap(~Organism_part) +
-  theme_bw() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
-    axis.title.x = element_blank(),
-    legend.position = "none"
-  )
-save.double.width("report/read.depths.mouse.png", mouse.plot, height = 230)
-
-cat("Sample selection: Done!\n")
