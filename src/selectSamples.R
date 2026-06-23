@@ -442,13 +442,38 @@ anole <- read.csv("metadata/anole.csv") %>%
 #### Samples from Koala testis ####
 # PRJNA1158232 and PRJNA1187226 is a study of miRNA, but performed standard RNA-seq some samples
 # Their own mapping efficiencies were similar (Table S7, Yu et al 10.21203/rs.3.rs-5671983/v1)
+# The koala ids are given in supplementary table S1 from Y et al Cell. 2025 Mar 7;188(8):2081–2093.e16. doi: 10.1016/j.cell.2025.02.006
+PRJNA1158232 <- read.csv("metadata/PRJNA1158232.csv") |>
+  dplyr::mutate(
+    Organism_part = tissue,
+    DevStage = "adult",
+    Timepoint = "adult",
+    CommonName = "koala",
+    sex = case_when(koala_id %in% c("K94283", "K98214") ~ "female",
+      koala_id %in% c(
+        "K94276", "K71362", "K98314", "K98224", "K63464",
+        "K63855", "Cove", "Mario", "K98494", "Andy",
+        "Burke", "Poppy"
+      ) ~ "male",
+      .default = "unknown"
+    )
+  ) |>
+  merge(GENOME.DATA, by = "CommonName") %>%
+  dplyr::select(
+    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) |>
+  write.table(file = "metadata/PRJNA1158232.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
+
+# Other testis samples in SRA
 koala <- read.csv("metadata/koala.csv") %>%
   dplyr::rename(dev_stage = Developmental_Stage) %>%
   dplyr::filter(
     Organism == "Phascolarctos cinereus",
     Assay.Type == "RNA-Seq", str_detect(tissue, "[T|t]estis"),
-    str_detect(Stage, "[A|a]dult") | str_detect(dev_stage, "[A|a]dult")
+    str_detect(Stage, "[A|a]dult") | str_detect(dev_stage, "[A|a]dult"),
+    !(Run %in% PRJNA1158232$Run)
   ) %>%
   dplyr::mutate(
     Organism_part = "testis",
