@@ -299,7 +299,7 @@ read.csv("metadata/mouse.testis.csv") %>%
 
 #### Samples from generic search for platypus RNA-seq and specific testis search ####
 
-platypus.1 <- read.csv("metadata/platypus.csv") %>%
+read.csv("metadata/platypus.csv") %>%
   dplyr::rename(
     OrganismPart = Experimental_Factor._organism_part..exp.,
     Species = Experimental_Factor._organism..exp.
@@ -328,33 +328,33 @@ platypus.1 <- read.csv("metadata/platypus.csv") %>%
   dplyr::select(
     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  )
-
-platypus.2 <- read.csv("metadata/platypus_testis.csv") %>%
-  dplyr::filter(sex == "male") %>%
-  dplyr::filter(
-    Assay.Type == "RNA-Seq", Organism_part %in% c("testis", ""),
-    Experimental_Factor._protocol..exp. != "Ribo-seq",
-    LibrarySelection != "size fractionation"
-  ) %>%
-  dplyr::mutate(
-    Organism_part = "testis",
-    DevStage = "adult",
-    Timepoint = "adult",
-    CommonName = "platypus"
-  ) %>%
-  merge(., GENOME.DATA, by = "CommonName") %>%
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  )
-rbind(platypus.1, platypus.2) %>%
-  dplyr::distinct() %>%
-  write.table(., file = "metadata/platypus.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+  ) |>
+  rbind(
+    read.csv("metadata/platypus_testis.csv") %>%
+      dplyr::filter(sex == "male") %>%
+      dplyr::filter(
+        Assay.Type == "RNA-Seq", Organism_part %in% c("testis", ""),
+        Experimental_Factor._protocol..exp. != "Ribo-seq",
+        LibrarySelection != "size fractionation"
+      ) %>%
+      dplyr::mutate(
+        Organism_part = "testis",
+        DevStage = "adult",
+        Timepoint = "adult",
+        CommonName = "platypus"
+      ) %>%
+      merge(., GENOME.DATA, by = "CommonName") %>%
+      dplyr::select(
+        Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+        Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+      )
+  ) |>
+  dplyr::distinct() |>
+  write.table(file = "metadata/platypus.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
 #### Samples from generic search for zebrafinch testis RNAseq ####
 
-zebrafinch <- read.csv("metadata/zebrafinch.csv") %>%
+read.csv("metadata/zebrafinch.csv") %>%
   dplyr::filter(
     Assay.Type == "RNA-Seq",
     str_detect(tissue, "[T|t]estis") | str_detect(tissue_type, "[T|t]estis")
@@ -376,7 +376,7 @@ zebrafinch <- read.csv("metadata/zebrafinch.csv") %>%
 
 #### Samples from generic search Xenopus tropicalis testis ####
 
-xenopus <- read.csv("metadata/xenopus.csv") %>%
+read.csv("metadata/xenopus.csv") %>%
   dplyr::filter(Assay.Type == "RNA-Seq", tissue == "testis") %>%
   dplyr::mutate(
     Organism_part = str_to_lower(tissue),
@@ -394,7 +394,7 @@ xenopus <- read.csv("metadata/xenopus.csv") %>%
 #### Samples from generic search Zebrafish testis ####
 
 # Mature at ~3 months
-zebrafish <- read.csv("metadata/zebrafish.csv") %>%
+read.csv("metadata/zebrafish.csv") %>%
   dplyr::filter(
     Assay.Type == "RNA-Seq", tissue == "testis", genotype == "wild type"
   ) %>%
@@ -415,7 +415,7 @@ zebrafish <- read.csv("metadata/zebrafish.csv") %>%
 
 #### Samples from generic search Anole testis ####
 
-anole <- read.csv("metadata/anole.csv") %>%
+read.csv("metadata/anole.csv") %>%
   dplyr::filter(
     Assay.Type == "RNA-Seq", str_detect(tissue, "[T|t]estis"),
     str_detect(Stage, "[A|a]dult") | str_detect(dev_stage, "[A|a]dult")
@@ -445,7 +445,7 @@ anole <- read.csv("metadata/anole.csv") %>%
 # PRJNA1158232 and PRJNA1187226 is a study of miRNA, but performed standard RNA-seq some samples
 # Their own mapping efficiencies were similar (Table S7, Yu et al 10.21203/rs.3.rs-5671983/v1)
 # The koala ids are given in supplementary table S1 from Y et al Cell. 2025 Mar 7;188(8):2081–2093.e16. doi: 10.1016/j.cell.2025.02.006
-koala <- read.csv("metadata/PRJNA1158232.csv") |>
+read.csv("metadata/PRJNA1158232.csv") |>
   dplyr::mutate(
     Organism_part = stringr::str_to_lower(tissue),
     DevStage = "adult",
@@ -472,8 +472,7 @@ koala <- read.csv("metadata/PRJNA1158232.csv") |>
       dplyr::filter(
         Organism == "Phascolarctos cinereus",
         Assay.Type == "RNA-Seq", str_detect(tissue, "[T|t]estis"),
-        str_detect(Stage, "[A|a]dult") | str_detect(dev_stage, "[A|a]dult"),
-        !(Run %in% PRJNA1158232$Run)
+        str_detect(Stage, "[A|a]dult") | str_detect(dev_stage, "[A|a]dult")
       ) %>%
       dplyr::mutate(
         Organism_part = "testis",
@@ -494,7 +493,7 @@ koala <- read.csv("metadata/PRJNA1158232.csv") |>
 
 #### Samples from Echidna testis ####
 
-echidna <- read.csv("metadata/echidna.csv") %>%
+read.csv("metadata/echidna.csv") %>%
   dplyr::filter(
     Organism == "Tachyglossus aculeatus",
     Assay.Type == "RNA-Seq", str_detect(tissue, "[T|t]estis"),
@@ -527,7 +526,7 @@ echidna <- read.csv("metadata/echidna.csv") %>%
 # time, n = 23), and the last group represents the bulls are postpuberty (about
 # 2 years of age, n = 23).
 
-cattle <- read.csv("metadata/cattle.csv") %>%
+read.csv("metadata/cattle.csv") %>%
   dplyr::filter(
     Organism == "Bos taurus",
     Assay.Type == "RNA-Seq",
@@ -587,7 +586,7 @@ cattle <- read.csv("metadata/cattle.csv") %>%
 # From PRJDB1934
 
 # Note - tissue is mislabelled. Actual tissue is in the library name
-wallaby <- read.csv("metadata/PRJNA1218892.csv") |>
+read.csv("metadata/PRJNA1218892.csv") |>
   dplyr::mutate(
     Organism_part = stringr::str_extract(Library.Name, ".*_(\\w+)$", group = 1),
     Organism_part = stringr::str_replace(Organism_part, "testes", "testis"),
@@ -628,7 +627,7 @@ wallaby <- read.csv("metadata/PRJNA1218892.csv") |>
 
 # PRJEB28680 samples are from healthy tissue
 
-tasmaniandevil <- read.csv("metadata/PRJEB28680.csv") |>
+read.csv("metadata/PRJEB28680.csv") |>
   dplyr::filter(
     !(tissue_type %in% c("DFT1", "DFT2"))
   ) |>
