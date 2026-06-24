@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # Scripts to run after parallel mapping scripts are completed
+echo "Beginning post mapping" > logs/postMapping.log 2>&1
 
 # Details of the read depths and samples analysed
-Rscript src/plotSamplesummary.R >> logs/postMapping.log 2>&1
+Rscript src/plotSampleSummary.R >> logs/postMapping.log 2>&1
 
 # Make trimming and mapping QC plots
 Rscript src/checkQC.R >> logs/postMapping.log 2>&1

@@ -14,7 +14,7 @@ sample.groups <- merge(make.sample.groups(), GENE.LOCATIONS, by = "CommonName")
 
 
 assemble.transcript <- function(common.name, tissue, timepoint, sex, gene.id, gene, coordinates, full.bam.file, full.gtf.file) {
-  cat("Assemble transcripts: Running Stringtie on", common.name, tissue, timepoint, gene.id, "\n")
+  cat("Assemble transcripts: Running Stringtie on", common.name, tissue, timepoint, sex, gene.id, "\n")
 
   gene.bam.file <- paste0("data/stringtie/", common.name, ".", tissue, ".", timepoint, ".", sex, ".", gene.id, ".", gene, ".bam")
 
@@ -72,7 +72,7 @@ colnames(read.ratios) <- c("sample", "forward", "reverse", "total")
 cat("Assemble transcripts: Parsing strand ratios\n")
 read.ratios <- tidyr::separate_wider_delim(read.ratios, sample,
   delim = ".",
-  names = c("species", "tissue", "timepoint", "gene.id", "gene"),
+  names = c("species", "tissue", "timepoint", "sex", "gene.id", "gene"),
   too_many = "debug"
 ) %>%
   dplyr::mutate(

@@ -171,7 +171,7 @@ make.sample.groups <- function() {
       .groups = "drop_last"
     ) %>%
     dplyr::mutate(
-      merged.bam = paste0("data/merged/", CommonName, ".", Organism_part, ".", Timepoint, ".bam"),
+      merged.bam = paste0("data/merged/", CommonName, ".", Organism_part, ".", Timepoint, ".", sex, ".bam"),
       samtools.merge.arguments = paste("merge -@ 7 -r -o", merged.bam, bams)
     ) %>%
     dplyr::mutate(

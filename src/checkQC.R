@@ -45,7 +45,7 @@ fastqc.check <- fastqc.data %>%
   dplyr::filter(Measure %in% c("Basic Statistics", "Adapter Content", "Per base sequence quality")) %>%
   tidyr::pivot_wider(id_cols = Sample, names_from = Measure, values_from = Outcome) |>
   dplyr::mutate(Run = stringr::str_extract(Sample, "^([A-Z\\d]+)_", group = 1)) |>
-  merge(SELECTED.SAMPLES, by = "Run")
+  merge(SELECTED.SAMPLES, by = "Run", all.y = TRUE)
 
 create.xlsx(fastqc.check, file.name = "report/_qc/FASTQC_report.xlsx")
 
@@ -187,8 +187,11 @@ plot.mapping.rates <- function(map.data) {
 
   total.mapped.bases <- map.data |>
     dplyr::filter(Timepoint %in% c("birth", "mid-meiosis", "adult")) |>
-    dplyr::group_by(CommonName, Organism_part, Timepoint) |>
-    dplyr::summarise(TotalMappedReads = sum(Single_mapped)) |>
+    dplyr::group_by(CommonName, Organism_part, Timepoint, sex) |>
+    dplyr::summarise(
+      TotalMappedReads = sum(Single_mapped),
+      .groups = "drop_last"
+    ) |>
     dplyr::mutate(BaseSizeGroup = case_when(TotalMappedReads < 1e8 ~ "Low",
       TotalMappedReads < 4e8 ~ "Mid",
       .default = "High"

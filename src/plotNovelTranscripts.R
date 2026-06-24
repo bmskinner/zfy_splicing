@@ -141,7 +141,7 @@ plot.novel.transcripts <- function(novel.gtf.file) {
     )
 
   save.plot(paste0("data/stringtie/", paste(gene.names, collapse = "."), ".transcripts.png"), transcript.plot,
-    width = 170, height = 170
+    width = 170, height = nrow(novel.gtf) * 50
   )
 
   transcript.plot
