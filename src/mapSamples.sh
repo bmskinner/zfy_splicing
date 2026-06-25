@@ -165,8 +165,8 @@ if [ ! -e data/preMapping.lck ]; then
 		rm data/preMapping.lck
 		exit 1
 	fi
-	# Select samples to map from metadata
-	Rscript src/selectSamples.R >> logs/preMapping.log 2>&1
+	# Select samples to map from metadata by loading all functions and data
+	Rscript src/functions.R >> logs/preMapping.log 2>&1
 	if [ $? -ne 0 ]; then
 		echo "Error running sample selection, exiting" >> logs/preMapping.log 2>&1
 		rm data/preMapping.lck
