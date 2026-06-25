@@ -254,6 +254,28 @@ read.csv("metadata/PRJEB33381.csv") |>
   ) |>
   write.table(file = "metadata/PRJEB33381.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
+#### Samples from PRJNA238328 (rat tissues) ####
+
+read.csv("metadata/PRJNA238328.csv") |>
+  dplyr::filter(tissue %in% c("Brain", "Heart", "Kidney", "Lung", "Liver", "Muscle", "Spleen", "Testes")) |>
+  dplyr::mutate(
+    Organism_part = stringr::str_to_lower(tissue),
+    Organism_part = stringr::str_replace(Organism_part, "testes", "testis"),
+    DevStage = "adult",
+    Timepoint = "adult",
+    CommonName = "rat",
+  ) |>
+  dplyr::group_by(Organism_part, sex) |>
+  dplyr::arrange(desc(Bases)) |>
+  dplyr::slice_head(n = 10) |> # we don't need all of them
+  merge(GENOME.DATA, by = "CommonName") |>
+  dplyr::select(
+    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) |>
+  write.table(file = "metadata/PRJNA238328.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+
+
 #### Samples from generic search mouse testis ####
 
 # Goal here is to find non-adult WT mice with known age in days
