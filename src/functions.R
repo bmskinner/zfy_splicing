@@ -12,6 +12,8 @@ suppressPackageStartupMessages({
 
 cat("Setup: Defining global functions\n")
 
+DEFAULT.MC.CORES <- ifelse(installr::is.windows(), 1, 6)
+
 TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27"),
   levels = c("birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
 )
@@ -48,12 +50,14 @@ create.xlsx <- function(data, file.name) {
 #### Reading metadata files ####
 
 
-# Get the identifiers for genes of interest
+# Read the file of gene and transcript ids we want to study.
+# Find their location in the appropriate genome GTF.
+# Allows us to update genome assembly version without manually updating coordinates.
 get.gene.locations <- function(genome.data) {
   # We don't want to constantly reload the GTFs if they have not changed.
   # But, if a GTF is updated, redo everything from scratch and write a new data
-  # file
-  gene.locations <- readr::read_csv("metadata/gene_locations.csv", show_col_types = FALSE)
+  # file.
+  gene.ids <- readr::read_csv("metadata/gene_ids.csv", show_col_types = FALSE)
 
   if (file.exists("./data/gene_coordinates.csv")) {
     cat("Setup: An existing gene coordinate file was found\n")
@@ -61,8 +65,8 @@ get.gene.locations <- function(genome.data) {
 
     has.raw.gtfs <- all(genome.data$GTF_FILE %in% existing.coordinates$GTF_FILE)
     has.saved.gtfs <- all(existing.coordinates$GTF_FILE %in% genome.data$GTF_FILE)
-    has.raw.genes <- all(gene.locations$GeneId %in% existing.coordinates$GeneId)
-    has.saved.genes <- all(existing.coordinates$GeneId %in% gene.locations$GeneId)
+    has.raw.genes <- all(gene.ids$GeneId %in% existing.coordinates$GeneId)
+    has.saved.genes <- all(existing.coordinates$GeneId %in% gene.ids$GeneId)
 
     if (!has.raw.gtfs) {
       cat(
@@ -81,7 +85,7 @@ get.gene.locations <- function(genome.data) {
     if (!has.raw.genes) {
       cat(
         "Setup: Missing coordinates from a gene in metadata/gene_locations.csv : ",
-        paste(gene.locations$GeneId[!gene.locations$GeneId %in% existing.coordinates$GeneId], collapse = ", "),
+        paste(gene.ids$GeneId[!gene.ids$GeneId %in% existing.coordinates$GeneId], collapse = ", "),
         "\n"
       )
     }
@@ -89,7 +93,7 @@ get.gene.locations <- function(genome.data) {
       cat("Setup: Saved coordinates from a gene are not found in in metadata/gene_locations.csv\n")
       cat(
         "Setup: Saved coordinates from a gene are not found in in metadata/gene_locations.csv : ",
-        paste(existing.coordinates$GeneId[!existing.coordinates$GeneId %in% gene.locations$GeneId], collapse = ", "),
+        paste(existing.coordinates$GeneId[!existing.coordinates$GeneId %in% gene.ids$GeneId], collapse = ", "),
         "\n"
       )
     }
@@ -107,10 +111,31 @@ get.gene.locations <- function(genome.data) {
     gtf.data <- rtracklayer::import(gtf.file)
 
     # Get all genes for this gtf file
-    species.zfxy.location.data <- gene.locations[gene.locations$CommonName == common.name, ]
-    species.zfxy.location.data$GTF_FILE <- gtf.file
-    species.zfxy.location.data$Location <- sapply(species.zfxy.location.data$GeneId, \(gene.id){
+    species.ids <- gene.ids[gene.ids$CommonName == common.name, ]
+    species.ids$GTF_FILE <- gtf.file
+
+
+    species.ids$Location <- sapply(species.ids$GeneId, \(gene.id){
+      # The transcript ids in the GTF
       filt.data <- gtf.data[gtf.data$gene_id == gene.id]
+      filt.transcripts <- unique(filt.data[filt.data$type == "transcript", ])
+
+      # The reference transcript id for the gene we are checking
+      transcript.id <- species.ids |>
+        dplyr::filter(GeneId == gene.id) |>
+        dplyr::select(CanonicalTranscriptId) |>
+        dplyr::pull()
+
+
+      # Sanity check that the transcript id is in the GTF
+      if (!any((transcript.id %in% filt.transcripts$transcript_id))) {
+        stop(
+          "Unable to find a transcript with id ", transcript.id, " for gene ",
+          gene.id, " in ", common.name, ". The found transcripts were: ",
+          paste(filt.transcripts$transcript_id, collapse = ", ")
+        )
+      }
+
       # Expand on each flank
       # Return a location string
       location.string <- paste0(
@@ -122,7 +147,7 @@ get.gene.locations <- function(genome.data) {
       location.string
     })
 
-    species.zfxy.location.data
+    species.ids
   }
 
   # Bind each gene into a data frame
@@ -133,7 +158,7 @@ get.gene.locations <- function(genome.data) {
       size = 1000
     ), # ensure flanking lncRNAs will be detected
     SIMPLIFY = FALSE,
-    mc.cores = ifelse(installr::is.windows(), 1, 6)
+    mc.cores = DEFAULT.MC.CORES
   ))
   readr::write_csv(locations, file = "./data/gene_coordinates.csv")
 
@@ -198,7 +223,10 @@ GENOME.DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE) |
 #   )
 # )
 
-# Download GTF files if missing
+# Filter SRR samples and merge the genome metadata
+source("src/selectSamples.R")
+
+# Download GTF files if missing so we can find gene coordinates
 download.gtf <- function(file, url) {
   if (!file.exists(file)) {
     gz.file <- paste0(file, ".gz")
@@ -213,8 +241,7 @@ invisible(mapply(download.gtf, GENOME.DATA$GTF_FILE, GENOME.DATA$GTF_URL))
 # Match the gene ids to coordinates in the genome version downloaded
 GENE.LOCATIONS <- get.gene.locations(GENOME.DATA)
 
-# Filtered SRR samples and merge the genome and gene metadata
-source("src/selectSamples.R")
+# Global object with samples being analysed
 SELECTED.SAMPLES <- read.selected.samples()
 
 cat("Setup: Common functions and global variables loaded\n")
