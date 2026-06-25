@@ -6,7 +6,7 @@ source("src/ggsashimi.R")
 
 cat("Plot sashimi: running shashimi plotting\n")
 
-#### Main script ####
+#### Create individual plots  ####
 
 # Ensure output dirs exist
 fs::dir_create(c("report/species", "report/timepoints", "report/tissues", "report/raw_sashimi"))
@@ -50,7 +50,7 @@ for (i in 1:nrow(bam.files)) {
   }
 
   # Skip completed files for testing
-  final.out.file <- paste0("report/raw_sashimi/", species, ".", tissue, ".", timepoint, ".", gene_id, ".", gene_name, ".expanded.png")
+  final.out.file <- paste0("report/raw_sashimi/", paste(c(species, sex, tissue, timepoint, gene_id, gene_name), collapse = "."), ".expanded.png")
   if (file.exists(final.out.file)) next
 
   cat("Detecting splice junctions for", i, ": ", species, tissue, timepoint, gene_id, "\n")
@@ -74,14 +74,14 @@ for (i in 1:nrow(bam.files)) {
     min.spanning.reads = 2, label = paste0(species, "\n", sex, "\n", tissue, "\n", timepoint, "\n", gene_name)
   )
 
-  append(species.aggregate[[species]], sashimi.plot.collapsed)
-  append(tissue.aggregate[[tissue]], sashimi.plot.collapsed)
-  append(timepoint.aggregate[[timepoint]], sashimi.plot.collapsed)
+  species.aggregate[[species]] <- append(species.aggregate[[species]], sashimi.plot.collapsed$plot)
+  tissue.aggregate[[tissue]] <- append(tissue.aggregate[[tissue]], sashimi.plot.collapsed$plot)
+  timepoint.aggregate[[timepoint]] <- append(timepoint.aggregate[[timepoint]], sashimi.plot.collapsed$plot)
 
   save.double.width(
     paste0(
       "report/raw_sashimi/",
-      paste(species, sex, tissue, timepoint, gene_id, gene_name, collapse = "."),
+      paste(c(species, sex, tissue, timepoint, gene_id, gene_name), collapse = "."),
       ".condensed.png"
     ),
     sashimi.plot.collapsed$plot,
@@ -96,7 +96,7 @@ for (i in 1:nrow(bam.files)) {
   save.double.width(
     paste0(
       "report/raw_sashimi/",
-      paste(species, sex, tissue, timepoint, gene_id, gene_name, collapse = "."),
+      paste(c(species, sex, tissue, timepoint, gene_id, gene_name), collapse = "."),
       ".expanded.png"
     ),
     sashimi.plot.expanded$plot,
@@ -104,13 +104,19 @@ for (i in 1:nrow(bam.files)) {
   )
 }
 
-lapply(species.aggregate, \(x) {
-  plots <- patchwork::wrap_plots(x)
+#### Create combined plots ####
+
+# Combine plots for each species, developmental stage and timepoint
+mapply(\(species, plot.list){
+  cat("Plots for", species, "\n")
+  # cat("There are ", length(plot.list), "plots\n")
+
+  plots <- patchwork::wrap_plots(plot.list, ncol = 1)
   save.double.width(
     paste0("report/species/", species, ".png"),
     plots,
     height = 50 * length(plots)
   )
-})
+}, names(species.aggregate), species.aggregate)
 
 cat("Plot sashimi: Done!\n")

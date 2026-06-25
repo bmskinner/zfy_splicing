@@ -131,7 +131,6 @@ has_sam_flag <- function(sam.flag, property) {
   as.integer(sam.flag) %&% property == property
 }
 
-
 #' Parse a genomic coordinate string. The string should have the format
 #' "chr:start-end"
 #'
@@ -145,7 +144,7 @@ has_sam_flag <- function(sam.flag, property) {
 parse_coordinates <- function(coordinate.string) {
   coordinate.string <- stringr::str_remove_all(coordinate.string, ",")
   # Ensure we can also handle a coordinate that is negative e.g. treeshrew ZFX
-  parsed <- stringr::str_extract(coordinate.string, "^([\\.A-Za-z\\d]+):(-?\\d+)-(-?\\d+)$", group = 1:3)
+  parsed <- stringr::str_extract(coordinate.string, "^([\\._A-Za-z\\d]+):(-?\\d+)-(-?\\d+)$", group = 1:3)
 
   list(
     coord.chr = parsed[1],
@@ -527,7 +526,7 @@ read_gtf_data <- function(gtf.files, gtf.names) {
     cat("Plot sashimi: Read ", x, "\n")
     df
   },
-  mc.cores = ifelse(installr::is.windows(), 1, 6)
+  mc.cores = DEFAULT.MC.CORES
   )
   names(gtf.data) <- gtf.names
   cat("Plot sashimi: Read full genome GTF files\n")
@@ -659,8 +658,8 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
   sashimi.data$reference.transcript.id <- reference.transcript.id
   cat("Reference transcript is", reference.transcript.id, "\n")
 
-  if (nrow(sashimi.data$reference.gtf.region[sashimi.data$reference.gtf.region$gene_id == sashimi.data$reference.gene.id, ]) == 0) {
-    stop("Unable to detect reference gene id in genome region GTF\n")
+  if (nrow(sashimi.data$reference.gtf.region[sashimi.data$reference.gtf.region$transcript_id == sashimi.data$reference.transcript.id, ]) == 0) {
+    stop("Cannot detect a reference transcript with id", reference.transcript.id, " in genome region GTF\n")
   }
 
   # Is the gene on the forward or reverse strand? Note - this is the gene, not the junctions or reads
@@ -677,6 +676,7 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
   sashimi.data$non.reference.transcript.strand <- ifelse(sashimi.data$reference.transcript.strand == "+", "-", "+")
 
   cat("Reference transcript is on strand '", paste(sashimi.data$reference.transcript.strand, collapse = ","), "'\n")
+  if (is.null(sashimi.data$reference.transcript.strand)) stop("Unable to find reference strand for", sashimi.data$reference.transcript.id)
 
   sashimi.data$reference.transcript.boundaries <- get_exon_boundaries(sashimi.data$reference.gtf.region, chr, start, end)
 
@@ -733,7 +733,7 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
   # Check the strand the reference transcript is on, and swap forward and reverse
   # strands of coverage and junctions if needed
   sashimi.data$reference.read.strand <- sashimi.data$junctions.all |>
-    dplyr::filter(type == "reference_transcript_full_junction") |>
+    dplyr::filter(type == "reference_transcript_full_junction" | type == "reference_gene_alternative_transcript_full_junction") |>
     dplyr::group_by(junction.strand) |>
     dplyr::summarise(count = sum(count)) |>
     dplyr::arrange(count) |>
@@ -741,8 +741,17 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
     dplyr::select(junction.strand) |>
     dplyr::pull()
 
+  cat("Reference read strand is '", sashimi.data$reference.read.strand, "'\n")
+
+  # What if there were no reference transcript junctions? Not going to use the
+  # plot, so just default to forward strand.
+  if (is.empty(sashimi.data$reference.read.strand)) {
+    print(sashimi.data$junctions.all)
+    sashimi.data$reference.read.strand <- "+"
+  }
+
   # Now we know the reference strand, we can map the forward and reverse reads here
-  # to the genome + or - strand confidently
+  # to the genome + or - strand confidently.
   sashimi.data$junctions.all <- sashimi.data$junctions.all |>
     dplyr::mutate(corrected.strand = ifelse(junction.strand == sashimi.data$reference.read.strand,
       sashimi.data$reference.transcript.strand,
