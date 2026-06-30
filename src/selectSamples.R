@@ -74,7 +74,7 @@ read.csv("metadata/turkey.csv") |>
 
 
 
-#### Samples from PRJEB26695 ####
+#### Samples from PRJEB26695 - chicken ####
 
 # Chicken E-MTAB-6769
 read.csv("metadata/chicken.csv") |>
@@ -228,7 +228,7 @@ read.csv("metadata/macaque.csv") |>
   write.table(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append = TRUE, sep = ",", col.names = FALSE)
 
 
-#### Samples from PRJEB33381 ####
+#### Samples from PRJEB33381 - multispecies ####
 
 read.csv("metadata/PRJEB33381.csv") |>
   dplyr::rename(
@@ -274,6 +274,29 @@ read.csv("metadata/PRJNA238328.csv") |>
     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
   ) |>
   write.table(file = "metadata/PRJNA238328.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+
+
+#### Samples from PRJNA889410 - Arvicanthis tissues ####
+
+read.csv("metadata/PRJNA889410.csv") |>
+  dplyr::filter(tissue %in% c("Brain", "Heart", "Kidney", "Lung", "Liver", "Muscle", "Spleen", "Testis", "Ovary")) |>
+  dplyr::mutate(
+    Organism_part = stringr::str_to_lower(tissue),
+    sex = case_when(Organism_part == "testis" ~ "male",
+      Organism_part == "ovary" ~ "female",
+      .default = "unknown"
+    ),
+    DevStage = "adult",
+    Timepoint = "adult",
+    CommonName = "nilerat",
+  ) |>
+  merge(GENOME.DATA, by = "CommonName") |>
+  dplyr::select(
+    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) |>
+  write.table(file = "metadata/PRJNA889410.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+
 
 
 #### Samples from generic search mouse testis ####

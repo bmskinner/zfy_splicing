@@ -35,6 +35,7 @@ create.xlsx <- function(data, file.name) {
   oldOpt <- options()
   options("openxlsx2.dateFormat" = "yyyy-mm-dd")
   options("openxlsx2.datetimeFormat" = "yyyy-mm-dd hh:mm:ss")
+  options("openxlsx2.na" = "_openxlsx_NULL")
 
   wb <- openxlsx2::wb_workbook() |>
     openxlsx2::wb_add_worksheet("Sheet 1") |>
@@ -243,5 +244,6 @@ GENE.LOCATIONS <- get.gene.locations(GENOME.DATA)
 
 # Global object with samples being analysed
 SELECTED.SAMPLES <- read.selected.samples()
+
 
 cat("Setup: Common functions and global variables loaded\n")
