@@ -74,7 +74,7 @@ read.csv("metadata/turkey.csv") |>
 
 
 
-#### Samples from PRJEB26695 - chicken ####
+#### Samples from PRJEB26695 - chicken E-MTAB-6769 ####
 
 # Chicken E-MTAB-6769
 read.csv("metadata/chicken.csv") |>
@@ -101,7 +101,7 @@ read.csv("metadata/chicken.csv") |>
   ) |>
   write.csv(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE)
 
-
+#### Samples from PRJEB26695 - opossum E-MTAB-6833 ####
 # Opossum E-MTAB-6833
 read.csv("metadata/opossum.csv") |>
   dplyr::filter(sex == "male") |>
@@ -127,6 +127,7 @@ read.csv("metadata/opossum.csv") |>
   ) |>
   write.table(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append = TRUE, sep = ",", col.names = FALSE)
 
+#### Samples from PRJEB26695 - mouse E-MTAB-6798 ####
 # Mouse E-MTAB-6798
 read.csv("metadata/mouse.csv") |>
   dplyr::filter(sex == "male") |>
@@ -151,6 +152,7 @@ read.csv("metadata/mouse.csv") |>
   ) |>
   write.table(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append = TRUE, sep = ",", col.names = FALSE)
 
+#### Samples from PRJEB26695 - human E-MTAB-6814 ####
 # Human E-MTAB-6814
 read.csv("metadata/human.csv") |>
   dplyr::rename(
@@ -176,30 +178,32 @@ read.csv("metadata/human.csv") |>
   ) |>
   write.table(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append = TRUE, sep = ",", col.names = FALSE)
 
+#### Samples from PRJEB26889 - rat   E-MTAB-6811 ####
 # Rat E-MTAB-6811
-read.csv("metadata/rat.csv") |>
-  dplyr::filter(sex == "male") |>
-  dplyr::rename(
-    DevStage = Experimental_Factor._developmental_stage..exp.,
-    OrganismPart = Experimental_Factor._organism_part..exp.
-  ) |>
-  dplyr::mutate(
-    Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
-      DevStage == "postnatal day 0" ~ "birth",
-      DevStage == "postnatal day 14" ~ "mid-meiosis",
-      DevStage == "postnatal day 112" ~ "adult",
-      .default = "other"
-    ),
-    CommonName = "rat"
-  ) |>
-  dplyr::filter(Timepoint != "other" & Timepoint != "embryo") |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append = TRUE, sep = ",", col.names = FALSE)
+# read.csv("metadata/rat.csv") |>
+#   dplyr::filter(sex == "male") |>
+#   dplyr::rename(
+#     DevStage = Experimental_Factor._developmental_stage..exp.,
+#     OrganismPart = Experimental_Factor._organism_part..exp.
+#   ) |>
+#   dplyr::mutate(
+#     Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
+#       DevStage == "postnatal day 0" ~ "birth",
+#       DevStage == "postnatal day 14" ~ "mid-meiosis",
+#       DevStage == "postnatal day 112" ~ "adult",
+#       .default = "other"
+#     ),
+#     CommonName = "rat"
+#   ) |>
+#   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") |>
+#   merge(GENOME.DATA, by = "CommonName") |>
+#   dplyr::select(
+#     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+#     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+#   ) |>
+#   write.table(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append = TRUE, sep = ",", col.names = FALSE)
 
+#### Samples from PRJEB26695 - macaque ####
 # Rhesus macacque E-MTAB-6813
 # Lifespan can reach up to 40 in captivity, median age 25
 read.csv("metadata/macaque.csv") |>
@@ -256,16 +260,27 @@ read.csv("metadata/PRJEB33381.csv") |>
 
 #### Samples from PRJNA238328 (rat tissues) ####
 
-read.csv("metadata/PRJNA238328.csv") |>
+PRJNA238328.geo.to.sample <- read_tsv("metadata/PRJNA238328.GEO_to_sample.tsv", show_col_types = FALSE) |>
+  dplyr::mutate(Sample_Name = stringr::str_remove(Sample_Name, "SEQC_"))
+PRJNA238328.sample.sheet <- read_csv("metadata/PRJNA238328.sample.sheet.csv", show_col_types = FALSE)
+
+PRJNA238328 <- read.csv("metadata/PRJNA238328.csv") |>
+  merge(PRJNA238328.geo.to.sample, by.x = "GEO_Accession..exp.", by.y = "GEO_Accession", all.x = TRUE) |>
+  merge(PRJNA238328.sample.sheet, by.x = "Sample_Name", by.y = "Sample_ID", all.x = TRUE) |>
   dplyr::filter(tissue %in% c("Brain", "Heart", "Kidney", "Lung", "Liver", "Muscle", "Spleen", "Testes")) |>
   dplyr::mutate(
     Organism_part = stringr::str_to_lower(tissue),
     Organism_part = stringr::str_replace(Organism_part, "testes", "testis"),
-    DevStage = "adult",
-    Timepoint = "adult",
+    DevStage = Age_Week,
+    Timepoint = case_when(Age_Week == 2 ~ "mid-meiosis",
+      Age_Week == 6 ~ "adult",
+      Age_Week == 21 ~ "adult",
+      Age_Week == 104 ~ "adult",
+      .default = "unknown"
+    ),
     CommonName = "rat",
   ) |>
-  dplyr::group_by(Organism_part, sex) |>
+  dplyr::group_by(Organism_part, sex, Timepoint) |>
   dplyr::arrange(desc(Bases)) |>
   dplyr::slice_head(n = 10) |> # we don't need all of them
   merge(GENOME.DATA, by = "CommonName") |>
@@ -274,6 +289,34 @@ read.csv("metadata/PRJNA238328.csv") |>
     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
   ) |>
   write.table(file = "metadata/PRJNA238328.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+
+#### Samples from PRJEB26889 - E-MTAB-6811 rat ####
+# Cardoso Moreira 2019
+# Puberty in rats is ~6 weeks. Meiosis genes peak expression  ~P14
+
+read.csv("metadata/PRJEB26889.csv") |>
+  dplyr::filter(Developmental_Stage != "embryo") |>
+  dplyr::filter(Organism_part %in% c("brain", "heart", "kidney", "lung", "liver", "muscle", "spleen", "testis", "ovary")) |>
+  dplyr::mutate(
+    DevStage = Experimental_Factor._developmental_stage..exp.,
+    Timepoint = case_when(DevStage == "postnatal day 0" ~ "birth",
+      DevStage == "postnatal day 3" ~ "birth",
+      DevStage == "postnatal day 7" ~ "mid-meiosis",
+      DevStage == "postnatal day 14" ~ "mid-meiosis",
+      DevStage == "postnatal day 42" ~ "adult",
+      DevStage == "postnatal day 112" ~ "adult",
+      .default = "other"
+    ),
+    CommonName = "rat",
+  ) |>
+  dplyr::filter(Timepoint != "other") |>
+  merge(GENOME.DATA, by = "CommonName") |>
+  dplyr::select(
+    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) |>
+  write.table(file = "metadata/PRJEB26889.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+
 
 
 #### Samples from PRJNA889410 - Arvicanthis tissues ####
@@ -596,39 +639,9 @@ read.csv("metadata/cattle.csv") |>
   ) |>
   write.table(file = "metadata/cattle.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
 
-
-#### Samples from tree shrew ####
-
-# PRJNA1396893 - Exploring key genes regulating seasonal changes in the
-# reproductive organs of tree shrews and the regulatory network of sRNA-key
-# genes through RNA-seq and sRNA-seq.
-
-# tree.shrew <- read.csv("metadata/treeshrew.csv") |>
-#   dplyr::filter(
-#     Organism == "Tupaia chinensis",
-#     Assay.Type == "RNA-Seq",
-#     sex == "male"
-#   ) |>
-#   dplyr::mutate(
-#     Organism_part = "testis",
-#     Timepoint = dev_stage,
-#     DevStage = Timepoint,
-#     CommonName = "treeshrew"
-#   ) |>
-#   merge(GENOME.DATA, by = "CommonName") |>
-#   dplyr::select(
-#     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-#     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-#   ) |>
-#   write.table(file = "metadata/treeshrew.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
-#
-
-
 #### Samples from wallaby ####
 
 # From PRJNA1218892
-
-# From PRJDB1934
 
 # Note - tissue is mislabelled. Actual tissue is in the library name
 read.csv("metadata/PRJNA1218892.csv") |>
@@ -733,25 +746,3 @@ read.csv("metadata/PRJEB28680.csv") |>
     file = "metadata/tasmaniandevil.filt.csv", row.names = FALSE, quote = TRUE,
     append = FALSE, sep = ",", col.names = TRUE
   )
-
-
-#### Ryukyu spiny rat Tokudaia osimensis  ####
-
-# Zfy1&2 moved, RBMY lost.
-
-# spinyrat <- read.csv("metadata/PRJDB5072.csv") |>
-#   dplyr::mutate(
-#     Organism_part = tissue,
-#     Timepoint = "adult", # assumed, age not given in paper
-#     DevStage = Timepoint,
-#     CommonName = "spinyrat"
-#   ) |>
-#   merge(GENOME.DATA, by = "CommonName") |>
-#   dplyr::select(
-#     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-#     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-#   ) |>
-#   write.table(
-#     file = "metadata/spinyrat.filt.csv", row.names = FALSE, quote = TRUE,
-#     append = FALSE, sep = ",", col.names = TRUE
-#   )
