@@ -260,6 +260,12 @@ read.csv("metadata/PRJEB33381.csv") |>
 
 #### Samples from PRJNA238328 (rat tissues) ####
 
+# SRA metadata does not contain the ages. We get these from the published study
+# The GEO to sample name is from
+# https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE53960 The sample name to
+# age is in supplementary file 1 in Yu et al 2014:
+# https://pmc.ncbi.nlm.nih.gov/articles/PMC4381750/
+
 PRJNA238328.geo.to.sample <- read_tsv("metadata/PRJNA238328.GEO_to_sample.tsv", show_col_types = FALSE) |>
   dplyr::mutate(Sample_Name = stringr::str_remove(Sample_Name, "SEQC_"))
 PRJNA238328.sample.sheet <- read_csv("metadata/PRJNA238328.sample.sheet.csv", show_col_types = FALSE)
