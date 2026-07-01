@@ -212,17 +212,6 @@ cat("Setup: Defining global variables\n")
 
 GENOME.DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE) |>
   dplyr::mutate(Clade = as.factor(Clade))
-# |>
-# dplyr::mutate(
-#   # Keep .gz extension for FASTA file - only used once uncompressed
-#   FASTA_FILE = case_when(basename(FASTA_URL) == "unmasked.fa.gz" ~ paste0("./genomes/", Genome, ".fa.gz"),
-#     .default = paste0("./genomes/", basename(FASTA_URL))
-#   ),
-#   # Keep GTF uncompressed, used several times in pipeline
-#   GTF_FILE = case_when(basename(GTF_URL) == "genes.gtf.gz" ~ paste0("./genomes/", Genome, ".gtf"),
-#     .default = paste0("./genomes/", stringr::str_remove(basename(GTF_URL), ".gz"))
-#   )
-# )
 
 # Filter SRR samples and merge the genome metadata
 source("src/selectSamples.R")

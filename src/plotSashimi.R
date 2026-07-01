@@ -58,6 +58,8 @@ for (i in 1:nrow(bam.files)) {
   gene.data <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene_id & GENE.LOCATIONS$CommonName == species, ] # filter on species too - some genomes do not have an accession for geneid
   coords <- parse_coordinates(gene.data$Location)
 
+  if (gene.data$Group %in% c("RBMX", "RBMY")) next
+
   sashimi.data <- read_sashimi_data(
     bam.file = bam.row$path,
     gtf.data = GTF.DATA[[species]],
@@ -88,35 +90,35 @@ for (i in 1:nrow(bam.files)) {
     height = 50
   )
   # Create plot with expanded introns
-  sashimi.plot.expanded <- make_sashimi_coverage_plot(sashimi.data,
-    is.collapse.introns = FALSE,
-    min.spanning.reads = 2, paste0(species, "\n", sex, "\n", tissue, "\n", timepoint, "\n", gene_name)
-  )
-
-  save.double.width(
-    paste0(
-      "report/raw_sashimi/",
-      paste(c(species, sex, tissue, timepoint, gene_id, gene_name), collapse = "."),
-      ".expanded.png"
-    ),
-    sashimi.plot.expanded$plot,
-    height = 50
-  )
+  # sashimi.plot.expanded <- make_sashimi_coverage_plot(sashimi.data,
+  #   is.collapse.introns = FALSE,
+  #   min.spanning.reads = 2, paste0(species, "\n", sex, "\n", tissue, "\n", timepoint, "\n", gene_name)
+  # )
+  #
+  # save.double.width(
+  #   paste0(
+  #     "report/raw_sashimi/",
+  #     paste(c(species, sex, tissue, timepoint, gene_id, gene_name), collapse = "."),
+  #     ".expanded.png"
+  #   ),
+  #   sashimi.plot.expanded$plot,
+  #   height = 50
+  # )
 }
 
 #### Create combined plots ####
 
 # Combine plots for each species, developmental stage and timepoint
-mapply(\(species, plot.list){
-  cat("Plots for", species, "\n")
-  # cat("There are ", length(plot.list), "plots\n")
-
-  plots <- patchwork::wrap_plots(plot.list, ncol = 1)
-  save.double.width(
-    paste0("report/species/", species, ".png"),
-    plots,
-    height = 50 * length(plots)
-  )
-}, names(species.aggregate), species.aggregate)
+# mapply(\(species, plot.list){
+#   cat("Plots for", species, "\n")
+#   # cat("There are ", length(plot.list), "plots\n")
+#
+#   plots <- patchwork::wrap_plots(plot.list, ncol = 1)
+#   save.double.width(
+#     paste0("report/species/", species, ".png"),
+#     plots,
+#     height = 50 * length(plots)
+#   )
+# }, names(species.aggregate), species.aggregate)
 
 cat("Plot sashimi: Done!\n")
