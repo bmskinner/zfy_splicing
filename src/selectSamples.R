@@ -326,26 +326,26 @@ read.csv("metadata/PRJEB26889.csv") |>
 
 
 #### Samples from PRJNA889410 - Arvicanthis tissues ####
-
-read.csv("metadata/PRJNA889410.csv") |>
-  dplyr::filter(tissue %in% c("Brain", "Heart", "Kidney", "Lung", "Liver", "Muscle", "Spleen", "Testis", "Ovary")) |>
-  dplyr::mutate(
-    Organism_part = stringr::str_to_lower(tissue),
-    sex = case_when(Organism_part == "testis" ~ "male",
-      Organism_part == "ovary" ~ "female",
-      .default = "unknown"
-    ),
-    DevStage = "adult",
-    Timepoint = "adult",
-    CommonName = "nilerat",
-  ) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/PRJNA889410.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
-
+# Not enough restis coverage - skip these
+# read.csv("metadata/PRJNA889410.csv") |>
+#   dplyr::filter(tissue %in% c("Brain", "Heart", "Kidney", "Lung", "Liver", "Muscle", "Spleen", "Testis", "Ovary")) |>
+#   dplyr::mutate(
+#     Organism_part = stringr::str_to_lower(tissue),
+#     sex = case_when(Organism_part == "testis" ~ "male",
+#       Organism_part == "ovary" ~ "female",
+#       .default = "unknown"
+#     ),
+#     DevStage = "adult",
+#     Timepoint = "adult",
+#     CommonName = "nilerat",
+#   ) |>
+#   merge(GENOME.DATA, by = "CommonName") |>
+#   dplyr::select(
+#     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+#     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+#   ) |>
+#   write.table(file = "metadata/PRJNA889410.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+#
 
 
 #### Samples from generic search mouse testis ####

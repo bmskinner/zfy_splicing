@@ -4,7 +4,7 @@
 packages <- c(
   "parallel", "tidyverse", "GenomicRanges", "grid",
   "fs", "data.table", "rtracklayer", "Rsamtools", "bitops", "rlang",
-  "data.table"
+  "data.table", "installr"
 )
 
 suppressPackageStartupMessages({
@@ -18,6 +18,9 @@ SAM.FLAG.MATE.UNMAPPED <- 0x8
 SAM.FLAG.READ.REVERSE.STRAND <- 0x10
 SAM.FLAG.FIRST.IN.PAIR <- 0x40
 SAM.FLAG.SECOND.IN.PAIR <- 0x80
+
+# Number of parallel cores to use in mclapply - only works on Unix
+DEFAULT.MC.CORES <- ifelse(installr::is.windows(), 1, 6)
 
 #### Objects for storing junction information ####
 
@@ -499,10 +502,12 @@ classify_junction <- function(reference.gene.id, reference.transcript.id, refere
 
 #' Import GTF data from a vector of file paths and store in a named list
 #'
-#' The GTF data is converted to a data frame.
+#' The GTF data is converted to a data frame. Allows GTF data to be loaded for
+#' several species and reused in scripts.
 #'
-#' @param gtf.files the file paths to read
-#' @param gtf.names the names to give the GTF data
+#' @param gtf.files a vector of GTF file paths to read
+#' @param gtf.names the names to give the GTF data. Should have the same number
+#'   of elements as gtf.files
 #'
 #' @returns a list in which [[gtf.names[1]]] contains the data from gtf.files[1]
 #' @export
@@ -606,7 +611,7 @@ get_exon_boundaries <- function(gtf.data, chr, loc.start, loc.end) {
 #' annotations from the GTF data and count known or novel splice junctions.
 #'
 #' @param bam.file the bam file to read
-#' @param gtf.data the full genome annotation
+#' @param gtf.data the full genome annotation. See read_gtf_data()
 #' @param chr the chromosome of the window to report
 #' @param start the start coordinate of the window to report
 #' @param end the end coordinate of the window to report

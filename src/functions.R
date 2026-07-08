@@ -21,11 +21,11 @@ TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13"
 #### Common functions ####
 
 save.plot <- function(filename, plot, ...) {
-  ggsave(filename, plot, units = "mm", dpi = 300, ...)
+  ggsave(filename, plot, units = "mm", dpi = 300, , create.dir = TRUE, ...)
 }
 
 save.double.width <- function(filename, plot, width = 170, height = 170) {
-  ggsave(filename, plot, units = "mm", height = height, width = width, dpi = 300)
+  ggsave(filename, plot, units = "mm", height = height, width = width, dpi = 300, create.dir = TRUE)
 }
 
 # Write the given data frame to an Excel file
