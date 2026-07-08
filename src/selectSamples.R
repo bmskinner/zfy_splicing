@@ -692,9 +692,7 @@ read.csv("metadata/PRJNA1218892.csv") |>
 # PRJEB28680 samples are from healthy tissue
 
 read.csv("metadata/PRJEB28680.csv") |>
-  dplyr::filter(
-    !(tissue_type %in% c("DFT1", "DFT2"))
-  ) |>
+  dplyr::filter(tissue_type %in% c("brain", "heart", "kidney", "lung", "liver", "muscle", "spleen", "testis")) |>
   dplyr::mutate(
     Organism_part = tissue_type,
     Timepoint = "adult", # assumed, age not given in paper

@@ -128,7 +128,7 @@ map_pe_sample () {
 
 			# map
 			if [ ! -e data/${SPECIES}/${ERR}.bam.csi ]; then
-  			echo "${ERR}: mapping" >> logs/${ERR}.mapping.log 2>&1
+  			echo "${ERR}: mapping against ${GENOME}" >> logs/${ERR}.mapping.log 2>&1
   			# -k controls number of multimapping locations (default 5 for linear index)
   			hisat2 -x genomes/${GENOME} -p 8 -1 data/${SPECIES}/${ERR}_1_val_1.fq.gz -2 data/${SPECIES}/${ERR}_2_val_2.fq.gz --new-summary -S data/${SPECIES}/${ERR}.sam >> logs/${ERR}.mapping.log 2>&1
   			samtools sort -T data/${SPECIES}/${ERR} -@ 8 -o data/${SPECIES}/${ERR}.bam data/${SPECIES}/${ERR}.sam
