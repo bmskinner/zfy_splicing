@@ -68,11 +68,14 @@ if (!file.exists("data/stringtie/ratios.txt")) {
 
 read.ratios <- read.delim("data/stringtie/ratios.txt", sep = " ", header = FALSE)
 colnames(read.ratios) <- c("sample", "forward", "reverse", "total")
+read.ratios <- read.ratios |>
+  dplyr::mutate(sample = str_replace(sample, "RBMY.(\\d+)", "RBMY\\1")) |>
+  dplyr::filter(str_detect(sample, ".bam"))
 
 cat("Assemble transcripts: Parsing strand ratios\n")
 read.ratios <- tidyr::separate_wider_delim(read.ratios, sample,
   delim = ".",
-  names = c("species", "tissue", "timepoint", "sex", "gene.id", "gene"),
+  names = c("species", "tissue", "timepoint", "sex", "gene.id", "gene", "bam"),
   too_many = "debug"
 ) %>%
   dplyr::mutate(
