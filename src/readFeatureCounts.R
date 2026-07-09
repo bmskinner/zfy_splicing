@@ -5,7 +5,11 @@ dir.create("report/tpm")
 
 sample.groups <- SELECTED.SAMPLES %>%
   dplyr::group_by(Organism, Organism_part, Timepoint, CommonName, sex) |>
-  dplyr::summarise(Count = n(), .groups = "drop_last")
+  dplyr::summarise(
+    Count = n(),
+    TotalBases = sum(Bases),
+    .groups = "drop_last"
+  )
 
 
 #### Extract TPM values from featureCounts output ####
@@ -59,7 +63,8 @@ feature.values <- feature.values |>
   dplyr::group_by(Organism_part, Timepoint, CommonName, Group, sex, GeneId) |>
   dplyr::mutate(
     MedianTPM = median(TPM, na.rm = TRUE),
-    MeanTPM = mean(TPM, na.rm = TRUE), nSamples = n()
+    MeanTPM = mean(TPM, na.rm = TRUE), nSamples = n(),
+    TotalBases = sum(Bases)
   )
 
 
@@ -281,12 +286,16 @@ junction.data <- readr::read_tsv("report/coding_exon_2_splice_junctions.tsv", sh
   tidyr::pivot_wider(names_from = Group, values_from = Splicing, names_prefix = "Splice_junctions_")
 
 splicing.table <- feature.values |>
-  dplyr::select(CommonName, sex, Timepoint, Organism_part, Group, GeneId, MedianTPM) |>
+  dplyr::select(CommonName, sex, Timepoint, Organism_part, Group, GeneId, MedianTPM, TotalBases) |>
   dplyr::distinct() |>
   dplyr::group_by(CommonName, sex, Timepoint, Organism_part, Group) |>
-  dplyr::summarise(MaxGroupTPM = max(MedianTPM), .groups = "drop_last") |>
+  dplyr::summarise(
+    MaxGroupTPM = max(MedianTPM),
+    TotalBases = unique(TotalBases),
+    .groups = "drop_last"
+  ) |>
   tidyr::pivot_wider(names_from = Group, values_from = MaxGroupTPM) |>
-  dplyr::select(CommonName, sex, Timepoint, Organism_part, Max_RBMX_TPM = RBMX, Max_RBMY_TPM = RBMY, Max_ZFX_TPM = ZFX, Max_ZFY_TPM = ZFY) |>
+  dplyr::select(CommonName, sex, Timepoint, Organism_part, TotalBases, Max_RBMX_TPM = RBMX, Max_RBMY_TPM = RBMY, Max_ZFX_TPM = ZFX, Max_ZFY_TPM = ZFY) |>
   # dplyr::mutate(ZFX_Splice_Junctions = "", ZFY_Splice_Junctions = "")
   merge(junction.data,
     by.x = c("CommonName", "sex", "Timepoint", "Organism_part"),
@@ -294,6 +303,32 @@ splicing.table <- feature.values |>
     all.x = TRUE
   )
 
-create.xlsx(splicing.table, "./report/splicing_table.xlsx")
+info <- data.frame(
+  Column = c("TotalBases", "Max_<gene>_TPM", "Splice_junctions_<gene>"),
+  Contents = c(
+    "The total number of bases in the samples selected for mapping (not the number of mapped reads).",
+    "Gene TPM was calculated for each sample.\nMedian TPM was taken across all samples.\nParalogues were grouped, and max median TPM was selected\ni.e whichever paralogue is most highly expressed",
+    "Shows genes with coding exon 2 spliced out, and the number of junction-spanning reads in parentheses"
+  )
+)
 
-# TODO: fill in the rest of the table manually based on the sashimi data
+
+wb <- openxlsx2::wb_workbook() |>
+  add.and.freeze(info, "Description") |>
+  add.and.freeze(splicing.table, "Splicing summary") |>
+  openxlsx2::wb_add_dxfs_style(
+    name = "zfx_splice", font_color = wb_color("darkgreen"),
+    bg_fill = wb_color("lightgreen")
+  ) |>
+  openxlsx2::wb_add_dxfs_style(
+    name = "zfy_splice", font_color = wb_color("darkblue"),
+    bg_fill = wb_color("lightblue")
+  ) |>
+  openxlsx2::wb_add_conditional_formatting(sheet = "Splicing summary", dims = "$J2:$J200", type = "notContainsBlanks", style = "zfx_splice") |>
+  openxlsx2::wb_add_conditional_formatting(sheet = "Splicing summary", dims = "$K2:$K200", type = "notContainsBlanks", style = "zfy_splice") |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "E1:E200", type = "dataBar", style = c("grey")) |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "F1:F200", type = "dataBar", style = c("#F6BE00")) |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "G1:G200", type = "dataBar", style = c("purple")) |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "H1:H200", type = "dataBar", style = c("darkgreen")) |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "I1:I200", type = "dataBar", style = c("darkblue")) |>
+  openxlsx2::wb_save(file = "./report/splicing_table.xlsx")

@@ -137,9 +137,8 @@ junction.coordinates <- tribble(
   "rat", "ENSRNOG00000005624", 62806207, 62824310,
   "rat", "ENSRNOG00000053042", 156128, 165382,
   "tasmaniandevil", "ENSSHAG00000004983", 269241175, 269277566,
-
-  # "turkey",
-  # "wallaby",
+  "turkey", "ZFX", 116183643, 116192451,
+  "wallaby", "ZFX", 452798276, 452836092,
   "xenopus", "ENSXETG00000007785", 42980939, 42986352,
   "zebrafinch", "ENSTGUG00000007219", 100739793, 100749515,
   "zebrafish", "ENSDARG00000074453", 17007505, 17011774
@@ -149,6 +148,7 @@ junction.coordinates <- tribble(
 junction.data <- do.call(rbind, lapply(list.files(path = "report/junctions", pattern = ".*.csv", full.names = TRUE), read.csv)) |>
   merge(junction.coordinates, by = c("CommonName", "GeneId", "start", "end"))
 
+# Save for combination with gene expression levels in featureCounts analysis
 readr::write_tsv(junction.data, "report/coding_exon_2_splice_junctions.tsv")
 
 #### Create combined plots ####

@@ -28,7 +28,29 @@ save.double.width <- function(filename, plot, width = 170, height = 170) {
   ggsave(filename, plot, units = "mm", height = height, width = width, dpi = 300, create.dir = TRUE)
 }
 
-# Write the given data frame to an Excel file
+
+# add the given data frame to an Excel workbook
+add.and.freeze <- function(workbook, data, sheet.name) {
+  oldOpt <- options()
+  options("openxlsx2.dateFormat" = "yyyy-mm-dd")
+  options("openxlsx2.datetimeFormat" = "yyyy-mm-dd hh:mm:ss")
+  options("openxlsx2.na" = "_openxlsx_NULL")
+  options("openxlsx2.maxWidth" = 50)
+
+  wb <- workbook |>
+    openxlsx2::wb_add_worksheet(sheet.name) |>
+    openxlsx2::wb_add_data(sheet.name, data, row_names = FALSE) |>
+    openxlsx2::wb_freeze_pane(sheet = sheet.name, first_row = TRUE, first_col = TRUE) |>
+    openxlsx2::wb_add_filter(sheet = sheet.name, rows = 1, cols = 1:ncol(data)) |>
+    openxlsx2::wb_set_col_widths(sheet = sheet.name, cols = 1:ncol(data), widths = "auto")
+
+  options(oldOpt)
+  wb
+}
+
+# Create an Excel file with column filtering
+# data - the date frame to export
+# file.name - the name of the file to export to
 create.xlsx <- function(data, file.name) {
   data <- as.data.frame(data) # ensure not a tibble
 
@@ -38,11 +60,12 @@ create.xlsx <- function(data, file.name) {
   options("openxlsx2.na" = "_openxlsx_NULL")
 
   wb <- openxlsx2::wb_workbook() |>
-    openxlsx2::wb_add_worksheet("Sheet 1") |>
-    openxlsx2::wb_add_data("Sheet 1", data, row_names = FALSE) |>
-    openxlsx2::wb_freeze_pane(first_row = TRUE, first_col = TRUE) |>
-    openxlsx2::wb_add_filter(rows = 1, cols = 1:ncol(data)) |>
-    openxlsx2::wb_set_col_widths(cols = 1:ncol(data), widths = "auto")
+    add.and.freeze(data, "Sheet 1")
+  # openxlsx2::wb_add_worksheet("Sheet 1") |>
+  # openxlsx2::wb_add_data("Sheet 1", data, row_names = FALSE) |>
+  # openxlsx2::wb_freeze_pane(first_row = TRUE, first_col = TRUE) |>
+  # openxlsx2::wb_add_filter(rows = 1, cols = 1:ncol(data)) |>
+  # openxlsx2::wb_set_col_widths(cols = 1:ncol(data), widths = "auto")
 
   openxlsx2::wb_save(wb, file = file.name)
   options(oldOpt)
