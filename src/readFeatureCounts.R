@@ -65,7 +65,8 @@ feature.values <- feature.values |>
     MedianTPM = median(TPM, na.rm = TRUE),
     MeanTPM = mean(TPM, na.rm = TRUE), nSamples = n(),
     TotalBases = sum(Bases)
-  )
+  ) |>
+  dplyr::ungroup()
 
 
 ##### Standard timepoints #####
@@ -295,27 +296,54 @@ splicing.table <- feature.values |>
     .groups = "drop_last"
   ) |>
   tidyr::pivot_wider(names_from = Group, values_from = MaxGroupTPM) |>
-  dplyr::select(CommonName, sex, Timepoint, Organism_part, TotalBases, Max_RBMX_TPM = RBMX, Max_RBMY_TPM = RBMY, Max_ZFX_TPM = ZFX, Max_ZFY_TPM = ZFY) |>
-  # dplyr::mutate(ZFX_Splice_Junctions = "", ZFY_Splice_Junctions = "")
   merge(junction.data,
     by.x = c("CommonName", "sex", "Timepoint", "Organism_part"),
     by.y = c("CommonName", "Sex", "Timepoint", "Tissue"),
     all.x = TRUE
-  )
+  ) |>
+  merge(GENOME.DATA, by = c("CommonName"), all.x = TRUE) |>
+  dplyr::select(Clade, CommonName,
+    Sex = sex, Timepoint, Organism_part, TotalBases,
+    Max_RBMX_TPM = RBMX, Max_RBMY_TPM = RBMY, Max_ZFX_TPM = ZFX, Max_ZFY_TPM = ZFY,
+    Splice_junctions_ZFX, Splice_junctions_ZFY
+  ) |>
+  dplyr::mutate(
+    Clade = fct_relevel(Clade, "Outgroup", "Birds", "Monotremes", "Marsupials", "Artiodactyls", "Primates", "Rodents"),
+    Timepoint = fct_relevel(as.factor(Timepoint), "birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
+  ) |>
+  dplyr::arrange(Clade, CommonName, Organism_part)
+
 
 info <- data.frame(
   Column = c("TotalBases", "Max_<gene>_TPM", "Splice_junctions_<gene>"),
   Contents = c(
     "The total number of bases in the samples selected for mapping (not the number of mapped reads).",
-    "Gene TPM was calculated for each sample.\nMedian TPM was taken across all samples.\nParalogues were grouped, and max median TPM was selected\ni.e whichever paralogue is most highly expressed",
+    "Gene TPM was calculated for each sample. Median TPM was taken across all samples. Paralogues were grouped, and max median TPM was selected, i.e whichever paralogue is most highly expressed",
     "Shows genes with coding exon 2 spliced out, and the number of junction-spanning reads in parentheses"
   )
 )
 
+sample.summary <- SELECTED.SAMPLES |>
+  merge(GENOME.DATA, by = c("CommonName", "Genome", "GTF_FILE")) |>
+  dplyr::select(Clade, CommonName, Species, Genome, FASTA_URL, GTF_URL,
+    Sex = sex, Timepoint, Organism_part,
+    Run, DevStage, LibrarySelection, Bases
+  ) |>
+  dplyr::arrange(Clade, CommonName, Organism_part)
+
+
+expression.summary <- feature.values |>
+  dplyr::select(Clade, CommonName,
+    Sex = sex, Timepoint, Organism_part,
+    Run, Gene, CanonicalTranscriptId, Location, TPM, MedianTPM, MeanTPM
+  ) |>
+  dplyr::arrange(Clade, CommonName, Organism_part)
 
 wb <- openxlsx2::wb_workbook() |>
   add.and.freeze(info, "Description") |>
   add.and.freeze(splicing.table, "Splicing summary") |>
+  add.and.freeze(sample.summary, "Samples") |>
+  add.and.freeze(expression.summary, "Gene Expression") |>
   openxlsx2::wb_add_dxfs_style(
     name = "zfx_splice", font_color = wb_color("darkgreen"),
     bg_fill = wb_color("lightgreen")
@@ -324,11 +352,11 @@ wb <- openxlsx2::wb_workbook() |>
     name = "zfy_splice", font_color = wb_color("darkblue"),
     bg_fill = wb_color("lightblue")
   ) |>
-  openxlsx2::wb_add_conditional_formatting(sheet = "Splicing summary", dims = "$J2:$J200", type = "notContainsBlanks", style = "zfx_splice") |>
-  openxlsx2::wb_add_conditional_formatting(sheet = "Splicing summary", dims = "$K2:$K200", type = "notContainsBlanks", style = "zfy_splice") |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "E1:E200", type = "dataBar", style = c("grey")) |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "F1:F200", type = "dataBar", style = c("#F6BE00")) |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "G1:G200", type = "dataBar", style = c("purple")) |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "H1:H200", type = "dataBar", style = c("darkgreen")) |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "I1:I200", type = "dataBar", style = c("darkblue")) |>
-  openxlsx2::wb_save(file = "./report/splicing_table.xlsx")
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "F1:F200", type = "dataBar", style = c("grey")) |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "G1:G200", type = "dataBar", style = c("#F6BE00")) |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "H1:H200", type = "dataBar", style = c("purple")) |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "I1:I200", type = "dataBar", style = c("darkgreen")) |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "J1:J200", type = "dataBar", style = c("darkblue")) |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "K2:K200", type = "notContainsBlanks", style = "zfx_splice") |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "L2:L200", type = "notContainsBlanks", style = "zfy_splice") |>
+  openxlsx2::wb_save(file = "./report/ZFX_ZFY_splicing_summary_tables.xlsx")

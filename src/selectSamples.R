@@ -643,7 +643,66 @@ read.csv("metadata/cattle.csv") |>
     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
   ) |>
+  rbind(
+
+    #### Samples from other cattle Bioprojects ####
+    read.csv("metadata/cattle_other.csv") |>
+      dplyr::filter(Assay.Type == "RNA-Seq") |>
+      dplyr::filter(tissue %in% c("brain", "heart", "kidney", "lung", "liver", "muscle", "spleen", "testis", "ovary")) |>
+      dplyr::filter(
+        # LibrarySelection %in% c("cDNA", "Oligo-dT", "PolyA"),
+        LibraryLayout == "PAIRED",
+        sex %in% c("male", "female"),
+        treatment != "treatment",
+        !(AGE %in% c("", "missing", "Missing")),
+        !(BioProject %in% c(
+          "PRJNA471564", "PRJNA776655", "PRJNA1457669", "PRJNA1100253",
+          "PRJNA1043830", "PRJNA616249"
+        )),
+      ) |>
+      dplyr::mutate(
+        Organism_part = tissue,
+        Timepoint = case_when(
+          str_detect(AGE, "at birth") ~ "birth",
+          str_detect(AGE, "0 days") ~ "birth",
+          str_detect(AGE, "1 week") ~ "birth",
+          str_detect(AGE, "8 week") ~ "birth",
+          str_detect(AGE, "8-10 monthes") ~ "mid-meiosis",
+          str_detect(AGE, "9 months") ~ "mid-meiosis",
+          str_detect(AGE, "9m") ~ "mid-meiosis",
+          str_detect(AGE, "12 month") ~ "mid-meiosis",
+          str_detect(AGE, "12 months") ~ "mid-meiosis",
+          str_detect(AGE, "one year old") ~ "mid-meiosis",
+          str_detect(AGE, "18m") ~ "adult",
+          str_detect(AGE, "23 months old") ~ "adult",
+          str_detect(AGE, "1.25y") ~ "adult",
+          str_detect(AGE, "2 years") ~ "adult",
+          str_detect(AGE, "two year old") ~ "adult",
+          str_detect(AGE, "3 years") ~ "adult",
+          str_detect(AGE, "4 years") ~ "adult",
+          str_detect(AGE, "4.94years") ~ "adult",
+          str_detect(AGE, "4.96years") ~ "adult",
+          str_detect(AGE, "5.73years") ~ "adult",
+          str_detect(AGE, "5.76years") ~ "adult",
+          str_detect(AGE, "6.76years") ~ "adult",
+          .default = "other"
+        ),
+        DevStage = AGE,
+        CommonName = "cattle"
+      ) |>
+      dplyr::filter(Timepoint %in% c("birth", "mid-meiosis", "adult")) |>
+      dplyr::group_by(Organism_part, Timepoint, sex) |>
+      dplyr::arrange(desc(Bases)) |>
+      dplyr::slice_head(n = 10) |>
+      merge(GENOME.DATA, by = "CommonName") |>
+      dplyr::select(
+        Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+        Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+      )
+  ) |>
   write.table(file = "metadata/cattle.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+
+
 
 #### Samples from wallaby ####
 
