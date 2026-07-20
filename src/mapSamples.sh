@@ -7,14 +7,18 @@ mkdir -p report/FASTQC
 # $2 ERR id e.g ERR2576379
 # $3 genome build id e.g. GRCg7b - should match a .ht2 prefix in ./genomes
 # $4 gtf file corresponding to the genome build e.g. ./genomes/example.gtf
+# $5 Gene ID region to be exracted from the GTF e.g. ZFX
+# $6 Location of the gene in the GTF e.g. 1:123-456
 map_se_sample () {
 	SPECIES=$(echo $1 | tr -d '"')
 	ERR=$(echo $2 | tr -d '"')
 	GENOME=$(echo $3 | tr -d '"')
 	GTF_FILE=$(echo $4 | tr -d '"')
+	GENE_ID=$(echo $5 | tr -d '"')
+	LOCATION=$(echo $6 | tr -d '"')
 	
-	echo "${ERR}: beginning mapping to ${SPECIES} against ${GENOME} and ${GTF_FILE}" >> logs/mapping.log 2>&1
-
+	echo "${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
+	
 	mkdir -p data/${SPECIES}
 	
 	if [ ! -e ${GTF_FILE} ]; then
@@ -23,7 +27,7 @@ map_se_sample () {
 	fi
 	
 	# Run if final output is missing
-	if [ ! -e data/${SPECIES}/${ERR}.counts.txt ]; then
+	if [ ! -e data/${SPECIES}/${ERR}.${GENE_ID}.gtf ]; then
 
 		# Don't work on a sample already being processed
 		if [ ! -e data/${SPECIES}/${ERR}.lck ]; then
@@ -67,7 +71,14 @@ map_se_sample () {
 			if [ ! -e data/${SPECIES}/${ERR}.counts.txt ]; then
 		  	featureCounts -t exon -g gene_id -a ${GTF_FILE} -o data/${SPECIES}/${ERR}.counts.txt data/${SPECIES}/${ERR}.bam
 		  fi
-			
+		  
+		  # Extract the region of interest only and index
+		  samtools view -@ 7 -o data/${SPECIES}/${ERR}.${GENE_ID}.bam data/${SPECIES}/${ERR}.bam ${LOCATION}
+		  samtools index -c -@ 7 data/${SPECIES}/${ERR}.${GENE_ID}.bam
+		  
+		  # Assemble transcripts with Stringtie
+		  stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE} -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam
+
 			# Remove original FASTQ, we have the trimmed reads still
 			if [ -e data/${SPECIES}/${ERR}.fastq.gz ]; then
 			  rm data/${SPECIES}/${ERR}.fastq.gz
@@ -85,13 +96,17 @@ map_se_sample () {
 # $2 ERR id e.g ERR2576379
 # $3 genome build id e.g. GRCg7b - should match a .ht2 prefix in ./genomes
 # $4 gtf file corresponding to the genome build e.g. ./genomes/example.gtf
+# $5 Gene ID region to be exracted from the GTF e.g. ZFX
+# $6 Location of the gene in the GTF e.g. 1:123-456
 map_pe_sample () {
 	SPECIES=$(echo $1 | tr -d '"')
 	ERR=$(echo $2 | tr -d '"')
 	GENOME=$(echo $3 | tr -d '"')
 	GTF_FILE=$(echo $4 | tr -d '"')
+	GENE_ID=$(echo $5 | tr -d '"')
+	LOCATION=$(echo $6 | tr -d '"')
 	
-	echo "${ERR}: beginning mapping to ${SPECIES} against ${GENOME} and ${GTF_FILE}" >> logs/mapping.log 2>&1
+	echo "${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
 
 	mkdir -p data/${SPECIES}
 	
@@ -101,7 +116,7 @@ map_pe_sample () {
 	fi
 	
 	# Run if final output is missing
-	if [ ! -e data/${SPECIES}/${ERR}.counts.txt ]; then
+	if [ ! -e data/${SPECIES}/${ERR}.${GENE_ID}.gtf ]; then
 
 		# Don't work on a sample already being processed
 		if [ ! -e data/${SPECIES}/${ERR}.lck ]; then
@@ -140,6 +155,13 @@ map_pe_sample () {
 			if [ ! -e data/${SPECIES}/${ERR}.counts.txt ]; then
 			  featureCounts -p --countReadPairs -t exon -g gene_id -a ${GTF_FILE} -o data/${SPECIES}/${ERR}.counts.txt data/${SPECIES}/${ERR}.bam
 			fi
+			
+			# Extract the region of interest only and index
+		  samtools view -@ 7 -o data/${SPECIES}/${ERR}.${GENE_ID}.bam data/${SPECIES}/${ERR}.bam ${LOCATION}
+		  samtools index -c -@ 7 data/${SPECIES}/${ERR}.${GENE_ID}.bam
+		  
+		  # Assemble transcripts with Stringtie
+		  stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE} -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam
 			
 			# Remove original FASTQ, we have the trimmed reads still
 			if [ -e data/${SPECIES}/${ERR}_2.fastq.gz ]; then
@@ -182,8 +204,8 @@ fi
 
 # Remap samples and generate bam files for splice junction detection
 # Select the Run, Library type, species and genome columns
-SE_SAMPLES=$(cat metadata/*.filt.csv | cut -f 1,3,4,5,6 -d , | grep -e '[S|E|D]RR' | grep -e 'SINGLE')
-PE_SAMPLES=$(cat metadata/*.filt.csv | cut -f 1,3,4,5,6 -d , | grep -e '[S|E|D]RR' | grep -e 'PAIRED')
+SE_SAMPLES=$(cat metadata/mapping.samples.csv | cut -f 1,2,3,4,5,6,7 -d , | grep -e '[S|E|D]RR' | grep -e 'SINGLE')
+PE_SAMPLES=$(cat metadata/mapping.samples.csv | cut -f 1,2,3,4,5,6,7 -d , | grep -e '[S|E|D]RR' | grep -e 'PAIRED')
 
 echo "Processing single end samples" >> logs/mapping.log 2>&1
 for LINE in ${SE_SAMPLES}; do
@@ -191,7 +213,9 @@ for LINE in ${SE_SAMPLES}; do
 	SPECIES=$(echo ${LINE} | cut -f 3 -d , )
 	GENOME=$(echo ${LINE} | cut -f 4 -d , )
 	GTF_FILE=$(echo ${LINE} | cut -f 5 -d , )
-	map_se_sample ${SPECIES} ${ERR} ${GENOME} ${GTF_FILE}
+	GENE_ID=$(echo ${LINE} | cut -f 6 -d , )
+	LOCATION=$(echo ${LINE} | cut -f 7 -d , )
+	map_se_sample ${SPECIES} ${ERR} ${GENOME} ${GTF_FILE} ${GENE_ID} ${LOCATION}
 done
 
 echo "Processing paired end samples" >> logs/mapping.log 2>&1
@@ -200,5 +224,7 @@ for LINE in ${PE_SAMPLES}; do
 	SPECIES=$(echo ${LINE} | cut -f 3 -d , )
 	GENOME=$(echo ${LINE} | cut -f 4 -d , )
 	GTF_FILE=$(echo ${LINE} | cut -f 5 -d , )
-	map_pe_sample ${SPECIES} ${ERR} ${GENOME} ${GTF_FILE}
+	GENE_ID=$(echo ${LINE} | cut -f 6 -d , )
+	LOCATION=$(echo ${LINE} | cut -f 7 -d , )
+	map_pe_sample ${SPECIES} ${ERR} ${GENOME} ${GTF_FILE} ${GENE_ID} ${LOCATION}
 done
