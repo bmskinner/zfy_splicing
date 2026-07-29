@@ -4,13 +4,12 @@ source("src/functions.R")
 dir.create("report/tpm")
 
 sample.groups <- SELECTED.SAMPLES %>%
-  dplyr::group_by(Organism, Organism_part, Timepoint, CommonName, sex) |>
+  dplyr::group_by(Organism, Tissue, Timepoint, CommonName, Sex) |>
   dplyr::summarise(
     Count = n(),
     TotalBases = sum(Bases),
     .groups = "drop_last"
   )
-
 
 #### Extract TPM values from featureCounts output ####
 
@@ -60,7 +59,7 @@ feature.values <- feature.values |>
     Clade = fct_relevel(Clade, "Outgroup", "Birds", "Monotremes", "Marsupials", "Artiodactyls", "Primates", "Rodents"),
     Timepoint = fct_relevel(as.factor(Timepoint), "birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
   ) |>
-  dplyr::group_by(Organism_part, Timepoint, CommonName, Group, sex, GeneId) |>
+  dplyr::group_by(Tissue, Timepoint, CommonName, Group, Sex, GeneId) |>
   dplyr::mutate(
     MedianTPM = median(TPM, na.rm = TRUE),
     MeanTPM = mean(TPM, na.rm = TRUE), nSamples = n(),
@@ -72,8 +71,8 @@ feature.values <- feature.values |>
 ##### Standard timepoints #####
 
 ###### Tissue by tissue ######
-for (tissue in unique(feature.values$Organism_part)) {
-  tissue.data <- feature.values[feature.values$Organism_part == tissue, ]
+for (tissue in unique(feature.values$Tissue)) {
+  tissue.data <- feature.values[feature.values$Tissue == tissue, ]
 
   zfxy.data <- tissue.data |>
     dplyr::filter(
@@ -99,11 +98,11 @@ for (tissue in unique(feature.values$Organism_part)) {
 
   # ZFX/Y plot by clade
   if (nrow(zfxy.data) > 0) {
-    n.rows <- length(unique(interaction(zfxy.data$sex, zfxy.data$CommonName, zfxy.data$Gene)))
+    n.rows <- length(unique(interaction(zfxy.data$Sex, zfxy.data$CommonName, zfxy.data$Gene)))
 
     plt <- ggplot(
       zfxy.data,
-      aes(x = TPM, y = interaction(Gene, sex, CommonName), fill = Group, col = Group)
+      aes(x = TPM, y = interaction(Gene, Sex, CommonName), fill = Group, col = Group)
     ) +
       geom_boxplot() +
       scale_fill_manual(values = c("lightgreen", "lightblue")) +
@@ -122,7 +121,7 @@ for (tissue in unique(feature.values$Organism_part)) {
     n.rows <- length(unique(interaction(zfxy.mouse.data$sex, zfxy.mouse.data$Organism_part, zfxy.mouse.data$Gene)))
     plt <- ggplot(
       zfxy.mouse.data,
-      aes(x = TPM, y = interaction(Gene, sex, CommonName), fill = Group, col = Group)
+      aes(x = TPM, y = interaction(Gene, Sex, CommonName), fill = Group, col = Group)
     ) +
       geom_boxplot() +
       scale_fill_manual(values = c("lightgreen", "lightblue")) +
@@ -138,10 +137,10 @@ for (tissue in unique(feature.values$Organism_part)) {
 
   # RBMX/Y plot by clade
   if (nrow(rbmy.data) > 0) {
-    n.rows <- length(unique(interaction(rbmy.data$sex, rbmy.data$Organism_part, rbmy.data$Gene)))
+    n.rows <- length(unique(interaction(rbmy.data$Sex, rbmy.data$Tissue, rbmy.data$Gene)))
     plt <- ggplot(
       rbmy.data,
-      aes(x = TPM, y = interaction(Gene, sex, CommonName), fill = Group, col = Group)
+      aes(x = TPM, y = interaction(Gene, Sex, CommonName), fill = Group, col = Group)
     ) +
       geom_boxplot() +
       scale_fill_manual(values = c("lightgreen", "lightblue")) +
@@ -157,10 +156,10 @@ for (tissue in unique(feature.values$Organism_part)) {
 
   # Mouse specific timepoints
   if (nrow(rbmy.mouse.data) > 0) {
-    n.rows <- length(unique(interaction(rbmy.mouse.data$sex, rbmy.mouse.data$Organism_part, rbmy.mouse.data$Gene)))
+    n.rows <- length(unique(interaction(rbmy.mouse.data$Sex, rbmy.mouse.data$Tissue, rbmy.mouse.data$Gene)))
     plt <- ggplot(
       rbmy.mouse.data,
-      aes(x = TPM, y = interaction(Gene, sex, CommonName), fill = Group, col = Group)
+      aes(x = TPM, y = interaction(Gene, Sex, CommonName), fill = Group, col = Group)
     ) +
       geom_boxplot() +
       scale_fill_manual(values = c("lightgreen", "lightblue")) +
@@ -194,16 +193,16 @@ for (species in unique(feature.values$CommonName)) {
 
   # ZFX/Y plot by clade
   if (nrow(zfxy.data) > 0) {
-    n.rows <- length(unique(interaction(zfxy.data$sex, zfxy.data$Organism_part, zfxy.data$Gene)))
+    n.rows <- length(unique(interaction(zfxy.data$Sex, zfxy.data$Tissue, zfxy.data$Gene)))
 
     plt <- ggplot(
       zfxy.data,
-      aes(x = TPM, y = interaction(Gene, sex), fill = Group, col = Group)
+      aes(x = TPM, y = interaction(Gene, Sex), fill = Group, col = Group)
     ) +
       geom_boxplot() +
       scale_fill_manual(values = c("ZFX" = "lightgreen", "ZFY" = "lightblue", "RBMX" = "#F4EA56", "RBMY" = "#c8a2c8")) +
       scale_color_manual(values = c("ZFX" = "darkgreen", "ZFY" = "darkblue", "RBMX" = "#F6BE00", "RBMY" = "purple")) +
-      facet_grid(interaction(Organism_part, sep = "\n") ~ Timepoint, scales = "free_y", space = "free_y") +
+      facet_grid(interaction(Tissue, sep = "\n") ~ Timepoint, scales = "free_y", space = "free_y") +
       theme_bw() +
       theme(
         axis.title.y = element_blank(),
@@ -214,15 +213,15 @@ for (species in unique(feature.values$CommonName)) {
 
   # Mouse specific timepoints
   if (nrow(zfxy.mouse.data) > 0) {
-    n.rows <- length(unique(interaction(zfxy.mouse.data$sex, zfxy.mouse.data$Organism_part, zfxy.mouse.data$Gene)))
+    n.rows <- length(unique(interaction(zfxy.mouse.data$Sex, zfxy.mouse.data$Tissue, zfxy.mouse.data$Gene)))
     plt <- ggplot(
       zfxy.mouse.data,
-      aes(x = TPM, y = interaction(Gene, sex), fill = Group, col = Group)
+      aes(x = TPM, y = interaction(Gene, Sex), fill = Group, col = Group)
     ) +
       geom_boxplot() +
       scale_fill_manual(values = c("ZFX" = "lightgreen", "ZFY" = "lightblue", "RBMX" = "#F4EA56", "RBMY" = "#c8a2c8")) +
       scale_color_manual(values = c("ZFX" = "darkgreen", "ZFY" = "darkblue", "RBMX" = "#F6BE00", "RBMY" = "purple")) +
-      facet_grid(interaction(Organism_part, sep = "\n") ~ Timepoint, scales = "free_y", space = "free_y") +
+      facet_grid(interaction(Tissue, sep = "\n") ~ Timepoint, scales = "free_y", space = "free_y") +
       theme_bw() +
       theme(
         axis.title.y = element_blank(),
@@ -232,64 +231,36 @@ for (species in unique(feature.values$CommonName)) {
   }
 }
 
-#### Look at ZFX / ZFY ####
-# plt <- ggplot(
-#   feature.values |> dplyr::filter(Group != "RBMY"),
-#   aes(
-#     x = Organism_part,
-#     y = interaction(Timepoint, CommonName, Gene, sex),
-#     fill = MedianTPM
-#   )
-# ) +
-#   geom_tile() +
-#   labs(x = "Tissue", y = "Gene", fill = "Median TPM") +
-#   facet_wrap(~Clade, scales = "free_y", ncol = 2) +
-#   scale_fill_viridis_c() +
-#   theme_bw() +
-#   theme(
-#     legend.position = "top",
-#     axis.text.x = element_text(angle = 45, hjust = 1)
-#   )
-#
-# save.plot("report/tpm_clade.png", plt, width = 170, height = 250)
-
-#### Look at RBMY ####
-#
-# plt <- ggplot(
-#   feature.values |> dplyr::filter(Group == "RBMY"),
-#   aes(
-#     x = Organism_part, y = interaction(Timepoint, CommonName, Gene),
-#     fill = MedianTPM
-#   )
-# ) +
-#   geom_tile() +
-#   labs(x = "Tissue", y = "Gene", fill = "Median TPM") +
-#   facet_wrap(~Clade, scales = "free_y", ncol = 2) +
-#   scale_fill_viridis_c() +
-#   theme_bw() +
-#   theme(
-#     legend.position = "top",
-#     axis.text.x = element_text(angle = 45, hjust = 1)
-#   )
-#
-# save.plot("report/tpm_rbmy_clade.png", plt, width = 170, height = 250)
-
-#### Manual splicing table ####
+#### Create splicing table ####
 
 # Create an output table for manually filling detected ZFX/Y splicing. Add the
-# median TPM for RBMX and RBMY expressions.
+# median TPM for ZFX and ZFY expression.
 
-junction.data <- readr::read_tsv("report/coding_exon_2_splice_junctions.tsv", show_col_types = FALSE) |>
-  dplyr::select(CommonName, Sex, Tissue, Timepoint, Gene, GeneId, count, type, Group) |>
+junction.data <- readr::read_tsv("report/coding_exon_splice_junctions.tsv", show_col_types = FALSE) |>
+  dplyr::filter(E1E3>0) |>
+  merge(SELECTED.SAMPLES, by=c("CommonName", "Sex", "Tissue", "Timepoint")) |>
+  merge(GENE.LOCATIONS, by=c("CommonName", "GeneId", "GTF_FILE")) |>
+  dplyr::select(CommonName, Sex, Tissue, Timepoint, GeneId, Gene, E1E3, pctE2Spliced, Group) |>
   dplyr::group_by(CommonName, Sex, Tissue, Timepoint, Group) |>
-  dplyr::mutate(Splicing = paste0(Gene, " (", count, ")")) |>
-  dplyr::summarise(Splicing = paste(Splicing, collapse = ", "), .groups = "drop_last") |>
-  tidyr::pivot_wider(names_from = Group, values_from = Splicing, names_prefix = "Splice_junctions_")
+  dplyr::distinct() |>
+  dplyr::mutate(Splicing = paste0(Gene, " (", E1E3, " reads, ", sprintf("%.2f%%)",  pctE2Spliced)),
+                SplicingDetected = case_when( E1E3>=5 & pctE2Spliced>=5 ~ "Clear",
+                                              E1E3>=2 & pctE2Spliced>=10 ~ "Marginal",
+                                              E1E3>=1 & pctE2Spliced>=15 ~ "Marginal",
+                                              E1E3>=5 & pctE2Spliced>=4 ~ "Marginal",
+                                              .default = "")) |>
+  dplyr::summarise(Splice_junctions = paste(Splicing, collapse = ", "),
+                   Splice_detected = case_when( any(str_detect(SplicingDetected, "Clear")) ~"Clear",
+                                                any(str_detect(SplicingDetected, "Marginal")) ~"Marginal",
+                                                .default = ""
+                                                ),
+                   .groups = "drop_last") |>
+  tidyr::pivot_wider(names_from = Group, values_from = c(Splice_junctions, Splice_detected))
 
 splicing.table <- feature.values |>
-  dplyr::select(CommonName, sex, Timepoint, Organism_part, Group, GeneId, MedianTPM, TotalBases) |>
+  dplyr::select(CommonName, Sex, Timepoint, Tissue, Group, GeneId, MedianTPM, TotalBases) |>
   dplyr::distinct() |>
-  dplyr::group_by(CommonName, sex, Timepoint, Organism_part, Group) |>
+  dplyr::group_by(CommonName, Sex, Timepoint, Tissue, Group) |>
   dplyr::summarise(
     MaxGroupTPM = max(MedianTPM),
     TotalBases = unique(TotalBases),
@@ -297,47 +268,51 @@ splicing.table <- feature.values |>
   ) |>
   tidyr::pivot_wider(names_from = Group, values_from = MaxGroupTPM) |>
   merge(junction.data,
-    by.x = c("CommonName", "sex", "Timepoint", "Organism_part"),
-    by.y = c("CommonName", "Sex", "Timepoint", "Tissue"),
+    by = c("CommonName", "Sex", "Timepoint", "Tissue"),
     all.x = TRUE
   ) |>
-  merge(GENOME.DATA, by = c("CommonName"), all.x = TRUE) |>
+  merge(GENOME.DATA, by=c("CommonName")) |>
   dplyr::select(Clade, CommonName,
-    Sex = sex, Timepoint, Organism_part, TotalBases,
-    Max_RBMX_TPM = RBMX, Max_RBMY_TPM = RBMY, Max_ZFX_TPM = ZFX, Max_ZFY_TPM = ZFY,
-    Splice_junctions_ZFX, Splice_junctions_ZFY
+    Sex, Timepoint, Tissue,
+    Max_ZFX_TPM = ZFX, Max_ZFY_TPM = ZFY,
+    Splice_junctions_ZFX, Splice_junctions_ZFY, Splice_detected_ZFX, Splice_detected_ZFY
   ) |>
   dplyr::mutate(
     Clade = fct_relevel(Clade, "Outgroup", "Birds", "Monotremes", "Marsupials", "Artiodactyls", "Primates", "Rodents"),
     Timepoint = fct_relevel(as.factor(Timepoint), "birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
   ) |>
-  dplyr::arrange(Clade, CommonName, Organism_part)
+  dplyr::arrange(Clade, CommonName, Tissue)
 
 
 info <- data.frame(
-  Column = c("TotalBases", "Max_<gene>_TPM", "Splice_junctions_<gene>"),
+  Column = c("TotalBases", "Max_<gene>_TPM", "Splice_junctions_<gene>","","","" ,"",""),
   Contents = c(
     "The total number of bases in the samples selected for mapping (not the number of mapped reads).",
     "Gene TPM was calculated for each sample. Median TPM was taken across all samples. Paralogues were grouped, and max median TPM was selected, i.e whichever paralogue is most highly expressed",
-    "Shows genes with coding exon 2 spliced out, and the number of junction-spanning reads in parentheses"
+    "Shows genes with coding exon 2 spliced out. The number of E1E3 junction-spanning reads is shown in parentheses, plus the percentage of E1E3 reads versus the mean of E1E2 and E2E3 spanning reads.",
+    "Splicing categories:",
+    "Clear: >=5 E1E3 spanning reads and E1E3 reads are >=5% of mean E1E2 + E2E3 spanning reads",
+    "Marginal: >=2 E1E3 spanning reads and E1E3 reads are >=10% of mean E1E2 + E2E3 spanning reads",
+    "OR >=1 E1E3 spanning reads and E1E3 reads are >=15% of mean E1E2 + E2E3 spanning reads",
+    "OR >=5 E1E3 spanning reads and E1E3 reads are >=4% of mean E1E2 + E2E3 spanning reads"
   )
 )
 
 sample.summary <- SELECTED.SAMPLES |>
   merge(GENOME.DATA, by = c("CommonName", "Genome", "GTF_FILE")) |>
   dplyr::select(Clade, CommonName, Species, Genome, FASTA_URL, GTF_URL,
-    Sex = sex, Timepoint, Organism_part,
+    Sex, Timepoint, Tissue,
     Run, DevStage, LibrarySelection, Bases
   ) |>
-  dplyr::arrange(Clade, CommonName, Organism_part)
+  dplyr::arrange(Clade, CommonName, Tissue)
 
 
 expression.summary <- feature.values |>
   dplyr::select(Clade, CommonName,
-    Sex = sex, Timepoint, Organism_part,
+    Sex, Timepoint, Tissue,
     Run, Gene, CanonicalTranscriptId, Location, TPM, MedianTPM, MeanTPM
   ) |>
-  dplyr::arrange(Clade, CommonName, Organism_part)
+  dplyr::arrange(Clade, CommonName, Tissue)
 
 wb <- openxlsx2::wb_workbook() |>
   add.and.freeze(info, "Description") |>
@@ -345,18 +320,60 @@ wb <- openxlsx2::wb_workbook() |>
   add.and.freeze(sample.summary, "Samples") |>
   add.and.freeze(expression.summary, "Gene Expression") |>
   openxlsx2::wb_add_dxfs_style(
-    name = "zfx_splice", font_color = wb_color("darkgreen"),
+    name = "zfx_splice", font_color = wb_color("darkgreen"),  #"#ccffcc" "#ccccff"
     bg_fill = wb_color("lightgreen")
   ) |>
   openxlsx2::wb_add_dxfs_style(
-    name = "zfy_splice", font_color = wb_color("darkblue"),
-    bg_fill = wb_color("lightblue")
+    name = "zfx_maginal_splice", font_color = wb_color("darkgreen"),
+    bg_fill = wb_color("#ccffcc")
   ) |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "F1:F200", type = "dataBar", style = c("grey")) |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "G1:G200", type = "dataBar", style = c("#F6BE00")) |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "H1:H200", type = "dataBar", style = c("purple")) |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "I1:I200", type = "dataBar", style = c("darkgreen")) |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "J1:J200", type = "dataBar", style = c("darkblue")) |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "K2:K200", type = "notContainsBlanks", style = "zfx_splice") |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "L2:L200", type = "notContainsBlanks", style = "zfy_splice") |>
+  openxlsx2::wb_add_dxfs_style(
+    name = "zfy_splice", font_color = wb_color("darkblue"),
+    bg_fill = wb_color("#99bbff")
+  ) |>
+  openxlsx2::wb_add_dxfs_style(
+    name = "zfy_maginal_splice", font_color = wb_color("darkblue"),
+    bg_fill = wb_color("#bbddff")
+  ) |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "F1:F200", type = "dataBar", style = c("darkgreen")) |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "G1:G200", type = "dataBar", style = c("darkblue")) |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "H2:H200", type = "expression",  rule='$J2="Clear"', style = "zfx_splice") |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "I2:I200", type = "expression",  rule='$K2="Clear"', style = "zfy_splice") |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "H2:H200", type = "expression",  rule='$J2="Marginal"', style = "zfx_maginal_splice") |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "I2:I200", type = "expression",  rule='$K2="Marginal"', style = "zfy_maginal_splice") |>
   openxlsx2::wb_save(file = "./report/ZFX_ZFY_splicing_summary_tables.xlsx")
+
+
+#### Tables to get values for presentations ####
+
+zfy.expn.table <- splicing.table |>
+  dplyr::select(Clade:Organism_part, Max_ZFY_TPM) |>
+  dplyr::mutate(Max_ZFY_TPM = round(Max_ZFY_TPM, digits = 2)) |>
+  tidyr::pivot_wider(names_from = Timepoint, values_from = Max_ZFY_TPM) |>
+  dplyr::filter(Sex=="male")|>
+  dplyr::select(Clade, CommonName, Sex, Organism_part, birth, `mid-meiosis`, adult)
+
+zfx.expn.table <- splicing.table |>
+  dplyr::select(Clade:Organism_part, Max_ZFX_TPM) |>
+  dplyr::mutate(Max_ZFX_TPM = round(Max_ZFX_TPM, digits = 2)) |>
+  tidyr::pivot_wider(names_from = Timepoint, values_from = Max_ZFX_TPM) |>
+  dplyr::filter(Sex=="male")|>
+  dplyr::select(Clade, CommonName, Sex, Organism_part, birth, `mid-meiosis`, adult)
+
+
+splicing.zfy.presentation.table <- splicing.table |>
+  dplyr::select(Clade:Organism_part, Splice_junctions_ZFY) |>
+  tidyr::pivot_wider(names_from = Timepoint, values_from = Splice_junctions_ZFY) |>
+  dplyr::filter(Sex=="male")|>
+  dplyr::select(Clade, CommonName, Sex, Organism_part, birth, `mid-meiosis`, adult)
+
+splicing.zfy.presentation.table.mouse <- splicing.table |>
+  dplyr::select(Clade:Organism_part, Splice_junctions_ZFY) |>
+  tidyr::pivot_wider(names_from = Timepoint, values_from = Splice_junctions_ZFY) |>
+  dplyr::filter(Sex=="male", CommonName=="mouse") |>
+  dplyr::select(Clade, CommonName, Sex, Organism_part, `Day_00-06`, `Day_07-13`, `Day_14-20`, `Day_21-27`)
+
+splicing.zfx.presentation.table <- splicing.table |>
+  dplyr::select(Clade:Organism_part, Splice_junctions_ZFX) |>
+  tidyr::pivot_wider(names_from = Timepoint, values_from = Splice_junctions_ZFX) |>
+  dplyr::select(Clade, CommonName, Sex, Organism_part, birth, `mid-meiosis`, adult)

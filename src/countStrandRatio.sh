@@ -10,4 +10,4 @@ REVERSE=$(samtools view --count --tag XS:- $BAMFILE)
 # Count all reads, whether they have strand tags or not
 TOTAL=$(samtools view --count $BAMFILE)
 
-echo "${BAMFILE} ${FORWARD} ${REVERSE} ${TOTAL}" >> data/stringtie/ratios.txt
+echo "${BAMFILE} ${FORWARD} ${REVERSE} ${TOTAL}" >> report/strand_ratios.txt

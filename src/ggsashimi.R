@@ -758,6 +758,7 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
   # Now we know the reference strand, we can map the forward and reverse reads here
   # to the genome + or - strand confidently.
   sashimi.data$junctions.all <- sashimi.data$junctions.all |>
+    dplyr::ungroup() |>
     dplyr::mutate(corrected.strand = ifelse(junction.strand == sashimi.data$reference.read.strand,
       sashimi.data$reference.transcript.strand,
       sashimi.data$non.reference.transcript.strand
@@ -787,6 +788,7 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
   # Do we need to reverse the coverage values? Check if the reference transcript reads
   # are on the expected strand.
   sashimi.data$coverage <- bam.data$coverage |>
+    dplyr::ungroup() |>
     dplyr::rowwise() |>
     dplyr::mutate(
       reference.strand = ifelse(sashimi.data$reference.read.strand == "FORWARD", forward.strand, reverse.strand),
@@ -1267,3 +1269,4 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
 
   list(plot = splot, sashimi.data = sashimi.data)
 }
+

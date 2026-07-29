@@ -35,7 +35,7 @@ add.and.freeze <- function(workbook, data, sheet.name) {
   options("openxlsx2.dateFormat" = "yyyy-mm-dd")
   options("openxlsx2.datetimeFormat" = "yyyy-mm-dd hh:mm:ss")
   options("openxlsx2.na" = "_openxlsx_NULL")
-  options("openxlsx2.maxWidth" = 50)
+  options("openxlsx2.maxWidth" = 40)
 
   wb <- workbook |>
     openxlsx2::wb_add_worksheet(sheet.name) |>
@@ -200,8 +200,9 @@ get.annotated.exons <- function() {
 read.selected.samples <- function() {
   cat("Setup: Reading selected samples\n")
   # Make a factor of times to allow ordering of plots
-  do.call(rbind, lapply(list.files(path = "metadata", pattern = "*.filt.csv", full.names = TRUE), read.csv)) %>%
-    dplyr::mutate(Timepoint = factor(Timepoint, levels = TIME.ORDER)) %>%
+  do.call(rbind, lapply(list.files(path = "metadata", pattern = "*.filt.csv", full.names = TRUE), read.csv)) |>
+    dplyr::mutate(Timepoint = factor(Timepoint, levels = TIME.ORDER)) |>
+    dplyr::rename(Tissue = Organism_part, Sex = sex)|>
     dplyr::arrange(CommonName, Run)
 }
 

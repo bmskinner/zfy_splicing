@@ -10,10 +10,14 @@ Rscript src/plotSampleSummary.R >> logs/postMapping.log 2>&1
 Rscript src/checkQC.R >> logs/postMapping.log 2>&1
 
 # combine samples for each tissue
-Rscript src/mergeSamples.R >> logs/postMapping.log 2>&1
+# Rscript src/mergeSamples.R >> logs/postMapping.log 2>&1
 
-# Identify transcripts around ZFY
-Rscript src/assembleTranscripts.R >> logs/postMapping.log 2>&1
+# Count strand ratios across samples
+rm report/strand_ratios.txt
+for f in data/*/[SDR]RR*.*.bam; do
+  src/countStrandRatio.sh ${f}
+done
+
 
 # Plot splice variation
 Rscript src/plotSashimi.R >> logs/postMapping.log 2>&1
