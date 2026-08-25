@@ -125,7 +125,36 @@ read.csv("metadata/opossum.csv") |>
     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
   ) |>
-  write.table(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append = TRUE, sep = ",", col.names = FALSE)
+  write.table(file = "metadata/PRJEB26695.filt.csv", 
+              row.names = FALSE, quote = TRUE, append = TRUE, sep = ",", col.names = FALSE)
+
+#### Female opossum brain samples ####
+
+read.csv("metadata/opossum.csv") |>
+  dplyr::filter(sex == "female") |>
+  dplyr::rename(
+    DevStage = Experimental_Factor._developmental_stage..exp.,
+    OrganismPart = Experimental_Factor._organism_part..exp.
+  ) |>
+  dplyr::mutate(
+    Timepoint = dplyr::case_when(Developmental_stage == "embryo" ~ "embryo",
+                          DevStage == "postnatal day 0" ~ "birth",
+                          DevStage == "postnatal day 60" ~ "mid-meiosis",
+                          DevStage == "postnatal day 180" ~ "adult",
+                          .default = "other"
+    ),
+    CommonName = "opossum"
+  ) |>
+  dplyr::filter(Timepoint != "other" & Timepoint != "embryo") |>
+  merge(GENOME.DATA, by = "CommonName") |>
+  dplyr::select(
+    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) |>
+  write.table(file = "metadata/PRJEB26695.female.filt.csv", row.names = FALSE, 
+              quote = TRUE, append = TRUE, sep = ",", col.names = TRUE)
+
+
 
 #### Samples from PRJEB26695 - mouse E-MTAB-6798 ####
 # Mouse E-MTAB-6798
@@ -150,7 +179,8 @@ read.csv("metadata/mouse.csv") |>
     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
   ) |>
-  write.table(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append = TRUE, sep = ",", col.names = FALSE)
+  write.table(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, 
+              append = TRUE, sep = ",", col.names = FALSE)
 
 #### Samples from PRJEB26695 - human E-MTAB-6814 ####
 # Human E-MTAB-6814
