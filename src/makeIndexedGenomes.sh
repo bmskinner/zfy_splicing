@@ -70,7 +70,7 @@ build_genome_index () {
 	fi
 	
 	# Create index for minimap2 long read mapping
-	if [ ! -e genomes/${GENOME}.mmi ]; then
+	if [ ! -e ${GENOME}.mmi ]; then
 	  echo "${GENOME}: Creating minimap2 genome index"
 	  gunzip -c ${FASTA_FILE} > ${FASTA_RAW_FILE}
 		minimap2 -d ${GENOME}.mmi ${FASTA_RAW_FILE}
