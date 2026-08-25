@@ -174,6 +174,92 @@ map_pe_sample () {
 	fi
 }
 
+# Map a long read sample (PacBio or Nanopore)
+# $1 species e.g chicken - should match a folder name in ./data
+# $2 ERR id e.g ERR2576379
+# $3 genome build id e.g. GRCg7b - should match a .ht2 prefix in ./genomes
+# $4 gtf file corresponding to the genome build e.g. ./genomes/example.gtf
+# $5 Gene ID region to be exracted from the GTF e.g. ZFX
+# $6 Location of the gene in the GTF e.g. 1:123-456
+map_long_read_sample () {
+	SPECIES=$(echo $1 | tr -d '"')
+	ERR=$(echo $2 | tr -d '"')
+	GENOME=$(echo $3 | tr -d '"')
+	GTF_FILE=$(echo $4 | tr -d '"')
+	GENE_ID=$(echo $5 | tr -d '"')
+	LOCATION=$(echo $6 | tr -d '"')
+	
+	
+	echo "${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
+
+	mkdir -p data/${SPECIES}
+	
+	if [ ! -e ${GTF_FILE} ]; then
+	  echo "${ERR}: Could not find GTF file ${GTF_FILE}, skipping" >> logs/mapping.log 2>&1
+	  continue
+	fi
+	
+	# Run if final output is missing
+	if [ ! -e data/${SPECIES}/${ERR}.${GENE_ID}.gtf ]; then
+
+		# Don't work on a sample already being processed
+		if [ ! -e data/${SPECIES}/${ERR}.lck ]; then
+
+			touch data/${SPECIES}/${ERR}.lck
+			echo "${ERR}: bam not found" >> logs/${ERR}.mapping.log 2>&1
+
+			# Check for existing downloads before running fasterq-dump
+			if [ ! -e data/${SPECIES}/${ERR}.fastq.gz ]; then
+				# Fetch data
+				if [ ! -e data/${SPECIES}/${ERR}_2.fastq ]; then
+					echo "${ERR}: downloading fastq" >> logs/${ERR}.mapping.log 2>&1
+					fasterq-dump -O data/${SPECIES}/ ${ERR}
+				fi
+				gzip data/${SPECIES}/${ERR}.fastq
+			fi
+
+				# Trim and QC
+			if [ ! -e data/${SPECIES}/${ERR}_trimmed.fq.gz ]; then
+				echo "${ERR}: QC and trimming" >> logs/${ERR}.mapping.log 2>&1
+				fastplong --in data/${SPECIES}/${ERR}.fastq.gz --out data/${SPECIES}/${ERR}_trimmed.fq.gz --thread 6 --qualified_quality_phred 9 --json report/QC/fastp/${ERR}.json --report_title "${ERR} ${SPECIES}"
+				if [ $? -ne 0 ]; then
+			    echo "Error running fastplong, exiting" >> logs/${ERR}.mapping.log 2>&1
+			    exit 1
+			  fi
+			fi
+
+			# mapping
+			if [ ! -e data/${SPECIES}/${ERR}.bam.csi ]; then
+  			echo "${ERR}: mapping against ${GENOME}" >> logs/${ERR}.mapping.log 2>&1
+  			minimap2 -a genomes/${GENOME}.mmi -x splice:hq -u b -t 7 data/${SPECIES}/${ERR}_trimmed.fq.gz > data/${SPECIES}/${ERR}.sam
+  			samtools sort -T data/${SPECIES}/${ERR} -@ 8 -o data/${SPECIES}/${ERR}.bam data/${SPECIES}/${ERR}.sam
+  			samtools index -c -@ 7 data/${SPECIES}/${ERR}.bam # index with csi incase of long chromosomes
+  			rm data/${SPECIES}/${ERR}.sam
+			fi
+			
+			# Run feature counts for expression quantification
+			if [ ! -e data/${SPECIES}/${ERR}.counts.txt ]; then
+			  featureCounts -p --countReadPairs -t exon -g gene_id -a ${GTF_FILE} -o data/${SPECIES}/${ERR}.counts.txt data/${SPECIES}/${ERR}.bam
+			fi
+			
+			# Extract the region of interest only and index
+		  samtools view -@ 7 -o data/${SPECIES}/${ERR}.${GENE_ID}.bam data/${SPECIES}/${ERR}.bam ${LOCATION}
+		  samtools index -c -@ 7 data/${SPECIES}/${ERR}.${GENE_ID}.bam
+		  
+		  # Assemble transcripts with Stringtie
+		  stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE} -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam
+			
+			# Remove original FASTQ, we have the trimmed reads still
+			if [ -e data/${SPECIES}/${ERR}.fastq.gz ]; then
+			  rm data/${SPECIES}/${ERR}.fastq.gz
+			fi
+
+			# Remove lock file
+			rm data/${SPECIES}/${ERR}.lck
+		fi
+	fi
+}
+
 
 # Ensure samples selected and genome indexes available.
 # We may have parallel scripts running, so ensure only one runs this step

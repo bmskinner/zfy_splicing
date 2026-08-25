@@ -19,31 +19,43 @@ build_genome_index () {
 	FASTA_FILE=$(basename $FASTA_FILE)
 	GTF_FILE=$(echo $5 | tr -d '"') # should not be .gz
 	GTF_FILE=$(basename $GTF_FILE)
-
-	if [ ! -e ${GENOME}.1.ht2 ] && [ ! -e ${GENOME}.1.ht2l ]; then # could be .ht2 or .ht2l for large genomes
-		echo "${GENOME}: Creating genome index"
-		echo "${GENOME}: Downloading FASTA from ${FASTA_URL}"
-		echo "${GENOME}: Downloading GTF from ${GTF_URL}"
-		
-		# Get the annotations and sequence
-		wget --quiet ${FASTA_URL}
-		wget --quiet ${GTF_URL}
 	
-	  # Unzip the gz files
-		FASTA_GZ_FILE=$(basename ${FASTA_URL})
-		GTF_GZ_FILE=$(basename ${GTF_URL})
-
-		gunzip $FASTA_GZ_FILE
+	# The name of the unzipped files - may not be the desired final name
+	# e.g. genes.gtf
+	FASTA_GZ_FILE=$(basename ${FASTA_URL})
+	FASTA_RAW_FILE=$(echo $FASTA_GZ_FILE | sed -e 's/.gz//')
+	
+	GTF_GZ_FILE=$(basename ${GTF_URL})
+	GTF_RAW_FILE=$(echo $GTF_GZ_FILE | sed -e 's/.gz//')
+	
+	# Ensure we have genome GTF
+	if [ ! -e ${GTF_FILE} ]; then
+	  # download and unzip the GTF
+	  echo "${GENOME}: Downloading GTF from ${GTF_URL}"
+		wget --quiet ${GTF_URL}
 		gunzip $GTF_GZ_FILE
-		
-		# The name of the unzipped files - may not be the desired final name
-		# e.g. genes.gtf
-		FASTA_RAW_FILE=$(echo $FASTA_GZ_FILE | sed -e 's/.gz//')
-		GTF_RAW_FILE=$(echo $GTF_GZ_FILE | sed -e 's/.gz//')
-		
-		# Move the GTF file to final name, and create splice site and exon names
+		# Downloaded filename may not match desired name - move. Noop if name matches
 		echo "${GENOME}: Moving GTF file from ${GTF_RAW_FILE} to ${GTF_FILE}"
 		mv ${GTF_RAW_FILE} ${GTF_FILE}
+	fi
+	
+	# Ensure we have a gzipped genome FASTA.
+  if [ ! -e ${FASTA_FILE} ]; then
+	  echo "${GENOME}: Downloading FASTA from ${FASTA_URL}"
+
+	  wget --quiet ${FASTA_URL}
+	  # Ensure gz file is correctly named
+	  mv ${FASTA_GZ_FILE} ${FASTA_FILE}
+  fi
+	 
+	# Create index for histat2
+	if [ ! -e ${GENOME}.1.ht2 ] && [ ! -e ${GENOME}.1.ht2l ]; then # could be .ht2 or .ht2l for large genomes
+		echo "${GENOME}: Creating hisat genome index"
+		
+		# -c keeps original file
+		gunzip -c ${FASTA_FILE} > ${FASTA_RAW_FILE}
+
+		# Create splice site and exon names
 		SSFILE=$(echo ${GTF_FILE} | sed -e 's/gtf/ss/')
 		EXONFILE=$(echo ${GTF_FILE} | sed -e 's/gtf/exons/')
 
@@ -54,17 +66,20 @@ build_genome_index () {
 		# Make the genome index - note we can't use fa.gz file in hisat2-build
 		# so rezip once complete and move to final name
 		hisat2-build --ss ${SSFILE} --exon ${EXONFILE} ${FASTA_RAW_FILE} ${GENOME}
-		gzip -c ${FASTA_RAW_FILE} > ${FASTA_FILE}
-		rm  ${FASTA_RAW_FILE}
-		
-		# If we got the genome from Ensembl, everything is the correct name.
-		# Otherwise, rename the freshly zipped file for consistency
-		# if [ ${FASTA_GZ_FILE} != 	${FASTA_FILE}	]; then
-		#   echo "${GENOME}: Moving FASTA file from ${FASTA_GZ_FILE} to ${FASTA_FILE}"
-		#   mv ${FASTA_GZ_FILE} ${FASTA_FILE}
-		# fi
+	  rm ${FASTA_RAW_FILE}
 	fi
 	
+	# Create index for minimap2 long read mapping
+	if [ ! -e genomes/${GENOME}.mmi ]; then
+	  echo "${GENOME}: Creating minimap2 genome index"
+	  gunzip -c ${FASTA_FILE} > ${FASTA_RAW_FILE}
+		minimap2 -d ${GENOME}.mmi ${FASTA_RAW_FILE}
+		if [ $? -ne 0 ]; then
+		  echo "${GENOME}: Could not run genome indexing, exiting"
+			exit 1
+		fi
+		rm  ${FASTA_RAW_FILE}
+	fi
 }
 
 # Switch working directory for downloads
