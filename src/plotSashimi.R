@@ -8,16 +8,12 @@ library(png)
 library(grid)
 cat("Plot sashimi: running shashimi plotting\n")
 
-junction.coordinates <- read.csv("metadata/exon_junctions.csv")
-
 #### Read the bed files of pair spanning reads ####
-
-
 
 bed.files <- list.files(path = "data", pattern = "[SDE]RR.*.bed$",
                         full.names = TRUE, recursive=TRUE)
 
-# Read the bed file. Keep only reads with pairs on opposite strands and on the
+# Read the bed file. Keep only reads with pairs on opposite strands of the
 # same chromosome.
 read.bed <- function(file){
   if(file.size(file)==0) return()
@@ -36,8 +32,6 @@ read.bed <- function(file){
     dplyr::select(-Seqname2, -File, -Score)
 }
 
-
-
 bed.data <- do.call(dplyr::bind_rows, lapply(bed.files, read.bed) ) |>
   dplyr::rowwise() |>
   dplyr::mutate(
@@ -54,12 +48,13 @@ bed.data <- do.call(dplyr::bind_rows, lapply(bed.files, read.bed) ) |>
 
 
 pair.spanning.data <- bed.data |>
-  dplyr::filter(Group %in% c("ZFX", "ZFY"),
-  ) |>
-  merge(junction.coordinates, by = c("CommonName", "GeneId")) |>
+  dplyr::filter(Group %in% c("ZFX", "ZFY")) |>
+  dplyr::group_by(Run)|>
+  dplyr::mutate(RunMedianInsertSize = median(InsertSize)) |>
+  merge(JUNCTION.COORDINATES, by = c("CommonName", "GeneId")) |>
   dplyr::mutate(SpansExon2 = JunctionStart <= start & JunctionEnd >= end) |>
-  dplyr::group_by(Run, CommonName, GeneId, Gene, Sex, Tissue, Timepoint) |>
-  dplyr::mutate(RunMedianInsertSize = median(InsertSize))
+  dplyr::filter(SpansExon2)
+ 
 
 
 #### Create individual plots  ####
@@ -75,7 +70,7 @@ GTF.DATA <- read_gtf_data(GENOME.DATA$GTF_FILE, GENOME.DATA$CommonName)
 
 cat("Plot sashimi: Making figures\n")
 
-# Read all bam files and bind in the complete metadata
+# Read all single sample bam files and bind in the complete metadata
 bam.files <- data.frame(path = list.files(path = "data", pattern = "[SDE]RR.*.bam$", 
                                           full.names = TRUE, recursive=TRUE)) |>
   dplyr::mutate(file = basename(path)) |>
@@ -84,11 +79,12 @@ bam.files <- data.frame(path = list.files(path = "data", pattern = "[SDE]RR.*.ba
   ) |>
   merge(GENE.LOCATIONS, by = "GeneId") |>
   merge(GENOME.DATA, by=c("CommonName", "GTF_FILE")) |>
-  merge(SELECTED.SAMPLES, by = c("CommonName", "Run",  "Genome", "GTF_FILE"))
+  merge(SELECTED.SAMPLES, by = c("CommonName", "Run",  "Genome", "GTF_FILE")) |>
+  dplyr::filter( !(Group %in% c("RBMX", "RBMY"))) # skip genes we don't need splice data from
 
 for (i in 1:nrow(bam.files)) {
   bam.row <- bam.files[i, ]
-  Run <- bam.row$Run
+  run <- bam.row$Run
   species <- bam.row$CommonName
   tissue <- bam.row$Tissue
   timepoint <- bam.row$Timepoint
@@ -102,31 +98,44 @@ for (i in 1:nrow(bam.files)) {
   
   # Skip missing data or genes we don't need splice data from
   if (length(group) == 0) next
-  if (group %in% c("RBMX", "RBMY")) next
   
+  # Get the pair-spanning reads from this dataset
   pair.spanning.subset <- pair.spanning.data |>
     dplyr::ungroup() |>
-    dplyr::filter(Run == Run, GeneId==gene_id) |>
-    dplyr::mutate(MedianInsertSize = median(InsertSize)) |>
-    dplyr::filter(SpansExon2) |>
-    dplyr::select(Run, GeneId, Gene, Mate1Start, Mate1End, Mate2Start, Mate2End, SpansExon2, InsertSize, MedianInsertSize)
+    dplyr::filter(Run == run, GeneId==gene_id) |>
+    dplyr::select(Run, GeneId, Gene, Mate1Start, Mate1End, Mate2Start, Mate2End, SpansExon2, InsertSize, RunMedianInsertSize)
 
   # Skip completed files for testing
-  final.out.file <- paste0("report/raw_sashimi/", paste(c(Run, gene_id), collapse = "."), ".condensed.png")
+  final.out.file <- paste0("report/raw_sashimi/", paste(c(run, gene_id), collapse = "."), ".condensed.png")
   final.junction.file <- paste0(
     "report/junctions/",
-    paste(c(Run, gene_id), collapse = "."),
+    paste(c(run, gene_id), collapse = "."),
     ".junctions.csv"
   )
   
   final.pair.spanning.file <- paste0("report/junctions/",
-    paste(c(Run, gene_id), collapse = "."),
+    paste(c(run, gene_id), collapse = "."),
     ".pair.spanning.csv"
   )
+  
+  ##### Create a file with the spanning reads #####
+  
+  if(nrow(pair.spanning.subset)>0 & !file.exists(final.pair.spanning.file) ){
+    
+    # Write out the pair spanning coordinates
+    readr::write_csv(pair.spanning.subset,
+                     file = final.pair.spanning.file,
+                     quote = "needed"
+    )
+  } else {
+    fs::file_touch(final.pair.spanning.file)
+  }
 
-  if (file.exists(final.out.file) & file.exists(final.junction.file) & file.exists(final.pair.spanning.file)) next
+  if (file.exists(final.out.file) & file.exists(final.junction.file)) next
+  
+  # Only read the bam file if needed
 
-  cat("Detecting splice junctions for", i, ": ", Run, gene_id, "in group", group, "\n")
+  cat("Detecting splice junctions for", i, ": ", run, gene_id, "in group", group, "\n")
 
   sashimi.data <- read_sashimi_data(
     bam.file = bam.row$path,
@@ -144,45 +153,48 @@ for (i in 1:nrow(bam.files)) {
   } 
 
   junction.data <- sashimi.data$junctions |>
-    dplyr::mutate(Run = Run, GeneId = gene_id)
+    dplyr::mutate(Run = run, GeneId = gene_id)
 
   readr::write_csv(junction.data,
     file = final.junction.file,
     quote = "needed"
   )
   
-  ##### Create plot with collapsed introns #####
+  #### Create plot with collapsed introns ####
   
   if(!file.exists(final.out.file) ){
 
     sashimi.plot.collapsed <- make_sashimi_coverage_plot(sashimi.data,
                                                          is.collapse.introns = TRUE, show.x.axis = FALSE,
-                                                         min.spanning.reads = 1, label = paste0(Run,"\n", species, "\n", sex, "\n", tissue, "\n", timepoint, "\n", gene_name)
+                                                         min.spanning.reads = 1, label = paste0(run,"\n", species, "\n", sex, "\n", tissue, "\n", timepoint, "\n", gene_name)
     )
     
     save.double.width(
       paste0(
         "report/raw_sashimi/",
-        paste(c(Run, gene_id), collapse = "."),
+        paste(c(run, gene_id), collapse = "."),
         ".condensed.png"
       ),
       sashimi.plot.collapsed$plot,
       height = 50
     )
   }
-  
-  ##### Create a plot with the spanning reads #####
+}
 
-  if(nrow(pair.spanning.subset)>0 & !file.exists(final.pair.spanning.file) ){
-    
-    # Write out the pair spanning coordinates
-    readr::write_csv(pair.spanning.subset,
-                     file = final.pair.spanning.file,
-                     quote = "needed"
-    )
-  } else {
-    fs::file_touch(final.pair.spanning.file)
-  }
+#### Create aggregate plots for merged samples ####
+
+merged.bam.files <- data.frame(path = list.files(path = "data/merged", pattern = ".*.bam$", 
+                                          full.names = TRUE, recursive=TRUE)) |>
+  dplyr::mutate(file = basename(path)) |>
+  tidyr::separate_wider_delim(file,
+                              delim = ".", names = c("CommonName", "Tissue", "Timepoint", "Sex",  "Gene", "ext")
+  ) |>
+  merge(GENE.LOCATIONS, by =c("CommonName",  "Gene")) |>
+  merge(GENOME.DATA, by=c("CommonName", "GTF_FILE"))
+
+for (i in 1:nrow(merged.bam.files)) {
+  
+  
 }
 
 #### Match the junction coordinates found with the coding exon 2 splice sites ####
@@ -194,7 +206,7 @@ junction.files <- junction.files[file.size(junction.files)>50] # 50 bytes is the
 
 # Filters all splice junctions to those in e1, e2, e3
 junction.data <- do.call(bind_rows, lapply(junction.files, read.csv)) |>
-  merge(junction.coordinates, by = c("GeneId", "start", "end")) |>
+  merge(JUNCTION.COORDINATES, by = c("GeneId", "start", "end")) |>
   dplyr::select(-type) |>
   tidyr::pivot_wider(id_cols = c(CommonName, Run, GeneId),  
                      names_from = Junction, values_from = count, values_fill = 0) |>

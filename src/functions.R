@@ -258,6 +258,9 @@ GENE.LOCATIONS <- get.gene.locations(GENOME.DATA)
 # Global object with samples being analysed
 SELECTED.SAMPLES <- read.selected.samples()
 
+# Locations of exon junctions for exon 2 splice detection
+JUNCTION.COORDINATES <- read.csv("metadata/exon_junctions.csv")
+
 # Create a final sample file for the revised mapping pipeline
 mapping.samples <- SELECTED.SAMPLES |>
   merge(GENE.LOCATIONS, by = c("CommonName", "GTF_FILE")) |>
