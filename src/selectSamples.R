@@ -154,6 +154,28 @@ read.csv("metadata/opossum.csv") |>
   write.table(file = "metadata/PRJEB26695.female.filt.csv", row.names = FALSE, 
               quote = TRUE, append = TRUE, sep = ",", col.names = TRUE)
 
+#### Other opossum brain samples ####
+
+read.csv("metadata/opossum_brain.csv") |>
+  dplyr::filter(sex == "female" | sex=="male",
+                tissue == "brain" | tissue =="Brain") |>
+  dplyr::rename(
+    OrganismPart = Experimental_Factor._organism_part..exp.,
+    DevStage= Developmental_stage,
+    Organism_part=tissue
+  ) |>
+  dplyr::mutate(
+    Timepoint = "adult", # confirmed from project data
+    CommonName = "opossum"
+  ) |>
+  merge(GENOME.DATA, by = "CommonName") |>
+  dplyr::select(
+    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
+    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  ) |>
+  write.table(file = "metadata/Popossum_brain.filt.csv", row.names = FALSE, 
+              quote = TRUE, append = TRUE, sep = ",", col.names = TRUE)
+
 
 
 #### Samples from PRJEB26695 - mouse E-MTAB-6798 ####
