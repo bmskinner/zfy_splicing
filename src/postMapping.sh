@@ -14,8 +14,15 @@ Rscript src/checkQC.R >> logs/postMapping.log 2>&1
 
 # Count strand ratios across samples
 rm report/strand_ratios.txt
-for f in data/*/[SDR]RR*.*.bam; do
-  src/countStrandRatio.sh ${f}
+for f in data/*/[SDE]RR*.*.bam; do
+  # Get the read counts from the file with strand info
+  FORWARD=$(samtools view --count --tag XS:+ $f)
+  REVERSE=$(samtools view --count --tag XS:- $f)
+  
+  # Count all reads, whether they have strand tags or not
+  TOTAL=$(samtools view --count $f)
+
+  echo "$f ${FORWARD} ${REVERSE} ${TOTAL}" >> report/strand_ratios.txt
 done
 
 
