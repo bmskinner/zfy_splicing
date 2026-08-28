@@ -212,7 +212,7 @@ read.selected.samples <- function() {
 make.sample.groups <- function() {
   # Create command to merge bams in groups
   SELECTED.SAMPLES %>%
-    dplyr::group_by(Organism, Organism_part, Timepoint, sex, CommonName) %>%
+    dplyr::group_by(Organism, Tissue, Timepoint, Sex, CommonName) %>%
     dplyr::mutate(bam.file = paste0("data/", CommonName, "/", Run, ".bam")) %>%
     dplyr::summarise(
       bams = paste(bam.file, collapse = " "),
@@ -221,7 +221,7 @@ make.sample.groups <- function() {
       .groups = "drop_last"
     ) %>%
     dplyr::mutate(
-      merged.bam = paste0("data/merged/", CommonName, ".", Organism_part, ".", Timepoint, ".", sex, ".bam"),
+      merged.bam = paste0("data/merged/", CommonName, ".", Tissue, ".", Timepoint, ".", Sex, ".bam"),
       samtools.merge.arguments = paste("merge -@ 7 -r -o", merged.bam, bams)
     ) %>%
     dplyr::mutate(

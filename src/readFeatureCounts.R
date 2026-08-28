@@ -118,7 +118,7 @@ for (tissue in unique(feature.values$Tissue)) {
 
   # Mouse specific timepoints
   if (nrow(zfxy.mouse.data) > 0) {
-    n.rows <- length(unique(interaction(zfxy.mouse.data$sex, zfxy.mouse.data$Organism_part, zfxy.mouse.data$Gene)))
+    n.rows <- length(unique(interaction(zfxy.mouse.data$Sex, zfxy.mouse.data$Tissue, zfxy.mouse.data$Gene)))
     plt <- ggplot(
       zfxy.mouse.data,
       aes(x = TPM, y = interaction(Gene, Sex, CommonName), fill = Group, col = Group)
@@ -347,31 +347,31 @@ wb <- openxlsx2::wb_workbook() |>
 #### Tables to get values for presentations ####
 
 zfy.expn.table <- splicing.table |>
-  dplyr::select(Clade:Organism_part, Max_ZFY_TPM) |>
+  dplyr::select(Clade:Tissue, Max_ZFY_TPM) |>
   dplyr::mutate(Max_ZFY_TPM = round(Max_ZFY_TPM, digits = 2)) |>
   tidyr::pivot_wider(names_from = Timepoint, values_from = Max_ZFY_TPM) |>
   dplyr::filter(Sex=="male")|>
-  dplyr::select(Clade, CommonName, Sex, Organism_part, birth, `mid-meiosis`, adult)
+  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `mid-meiosis`, adult)
 
 zfx.expn.table <- splicing.table |>
-  dplyr::select(Clade:Organism_part, Max_ZFX_TPM) |>
+  dplyr::select(Clade:Tissue, Max_ZFX_TPM) |>
   dplyr::mutate(Max_ZFX_TPM = round(Max_ZFX_TPM, digits = 2)) |>
   tidyr::pivot_wider(names_from = Timepoint, values_from = Max_ZFX_TPM) |>
   dplyr::filter(Sex=="male")|>
-  dplyr::select(Clade, CommonName, Sex, Organism_part, birth, `mid-meiosis`, adult)
+  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `mid-meiosis`, adult)
 
 
 splicing.zfy.presentation.table <- splicing.table |>
-  dplyr::select(Clade:Organism_part, Splice_junctions_ZFY) |>
+  dplyr::select(Clade:Tissue, Splice_junctions_ZFY) |>
   tidyr::pivot_wider(names_from = Timepoint, values_from = Splice_junctions_ZFY) |>
   dplyr::filter(Sex=="male")|>
-  dplyr::select(Clade, CommonName, Sex, Organism_part, birth, `mid-meiosis`, adult)
+  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `mid-meiosis`, adult)
 
 splicing.zfy.presentation.table.mouse <- splicing.table |>
-  dplyr::select(Clade:Organism_part, Splice_junctions_ZFY) |>
+  dplyr::select(Clade:Tissue, Splice_junctions_ZFY) |>
   tidyr::pivot_wider(names_from = Timepoint, values_from = Splice_junctions_ZFY) |>
   dplyr::filter(Sex=="male", CommonName=="mouse") |>
-  dplyr::select(Clade, CommonName, Sex, Organism_part, `Day_00-06`, `Day_07-13`, `Day_14-20`, `Day_21-27`)
+  dplyr::select(Clade, CommonName, Sex, Tissue, `Day_00-06`, `Day_07-13`, `Day_14-20`, `Day_21-27`)
 
 splicing.zfx.presentation.table <- splicing.table |>
   dplyr::select(Clade:Organism_part, Splice_junctions_ZFX) |>

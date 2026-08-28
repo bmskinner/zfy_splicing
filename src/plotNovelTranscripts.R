@@ -155,7 +155,8 @@ genome.fastas <- lapply(paste0("genomes/", GENOME_DATA$FASTA), read.reference.ge
 names(genome.fastas) <- GENOME_DATA$CommonName
 
 # Find the transcript GTFs
-novel.gtf.files <- list.files(path = "data/stringtie", pattern = "*.gtf$", full.names = TRUE)
+novel.gtf.files <- list.files(path = "data", pattern = "*.gtf$", recursive = TRUE,
+                              full.names = TRUE)
 sapply(novel.gtf.files, \(x) tryCatch(plot.novel.transcripts(x), error = \(e) print(e)))
 # plot.novel.transcripts("data/stringtie/zebrafinch.testis.adult.ENSTGUG00000007219.gtf")
 

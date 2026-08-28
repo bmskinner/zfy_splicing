@@ -48,11 +48,11 @@ splice.data <- bed.data |>
                 ) |>
   merge(junction.coordinates, by = c("CommonName", "GeneId")) |>
   dplyr::mutate(SpansExon2 = JunctionStart <= start & JunctionEnd >= end) |>
-  dplyr::group_by(Run, CommonName, GeneId, Gene, sex, Organism_part, Timepoint) |>
+  dplyr::group_by(Run, CommonName, GeneId, Gene, Sex, Tissue, Timepoint) |>
   dplyr::mutate(RunMedianInsertSize = median(InsertSize))
 
 splice.summ <- splice.data |> 
-  dplyr::group_by(CommonName, GeneId, Gene, sex, Organism_part, Timepoint, SpansExon2) |>
+  dplyr::group_by(CommonName, GeneId, Gene, Sex, Organism_part, Timepoint, SpansExon2) |>
   dplyr::summarise(GroupInsertSize = median(InsertSize))|>
   tidyr::pivot_wider(names_from = SpansExon2, names_prefix = "SpansExon2", values_from = c(GroupInsertSize)) |>
   dplyr::filter(!is.na(SpansExon2TRUE)) |>
@@ -62,14 +62,14 @@ plot.spanning <- function(i){
 
 # for(i in 1:nrow(splice.summ)){
   species <- splice.summ[i, "CommonName"]
-  tissue <- splice.summ[i, "Organism_part"]
+  tissue <- splice.summ[i, "Tissue"]
   timepoint <- splice.summ[i, "Timepoint"]
   gene <- splice.summ[i, "Gene"]
-  s <- splice.summ[i, "sex"]
+  s <- splice.summ[i, "Sex"]
   
   subset.data <- splice.data |>
-    dplyr::filter(CommonName==species, Timepoint==timepoint, Organism_part==tissue, Gene==gene,
-                  sex==s,
+    dplyr::filter(CommonName==species, Timepoint==timepoint, Tissue==tissue, Gene==gene,
+                  Sex==s,
                   SpansExon2) |>
     dplyr::arrange(Mate1Start, Mate2Start)
 

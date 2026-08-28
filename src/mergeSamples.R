@@ -8,7 +8,7 @@ cat("Merge samples: selecting bams for merging\n")
 
 #### Create command to merge bams in groups ####
 groups <- SELECTED.SAMPLES %>%
-  dplyr::group_by(Organism, Organism_part, Timepoint, CommonName, sex) %>%
+  dplyr::group_by(Organism, Tissue, Timepoint, CommonName, Sex) %>%
   dplyr::mutate(
     bam.file = paste0("data/", CommonName, "/", Run, ".bam"),
     lock.file = paste0("data/", CommonName, "/", Run, ".lck")
@@ -21,7 +21,7 @@ groups <- SELECTED.SAMPLES %>%
     .groups = "drop_last"
   ) %>%
   dplyr::mutate(
-    merged.bam = paste0("data/merged/", CommonName, ".", Organism_part, ".", Timepoint, ".", sex, ".bam"),
+    merged.bam = paste0("data/merged/", CommonName, ".", Tissue, ".", Timepoint, ".", Sex, ".bam"),
     samtools.merge.arguments = paste("merge -@ 7 -r -o", merged.bam, bams)
   ) %>%
   dplyr::mutate(
