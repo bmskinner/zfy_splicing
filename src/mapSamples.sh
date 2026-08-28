@@ -122,7 +122,7 @@ map_pe_sample () {
 		if [ ! -e data/${SPECIES}/${ERR}.lck ]; then
 
 			touch data/${SPECIES}/${ERR}.lck
-			echo "${ERR}: bam not found" >> logs/${ERR}.mapping.log 2>&1
+			echo "${ERR}: Stringtie GTF output not found" >> logs/${ERR}.mapping.log 2>&1
 
 			# Check for existing downloads before running fasterq-dump
 			if [ ! -e data/${SPECIES}/${ERR}_2.fastq.gz ] && [ ! -e data/${SPECIES}/${ERR}_2_val_2.fq.gz ]; then
@@ -161,7 +161,17 @@ map_pe_sample () {
 		  samtools index -c -@ 7 data/${SPECIES}/${ERR}.${GENE_ID}.bam
 		  
 		  # Assemble transcripts with Stringtie
-		  stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE} -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam
+		  stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE} -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam >> logs/${ERR}.mapping.log 2>&1
+		  
+		  # If stringtie fails, the usual reason is failure to parse the gtf file
+		  # - most common reason is rows with an empty transcript_id field. Create a
+		  # new GTF if needed and try again.			
+			if [ $? -ne 0 ]; then
+		    if [ ! -e  ${GTF_FILE}.no.gene.gtf ]; then
+		      awk '$3 != "gene" ' ${GTF_FILE} > ${GTF_FILE}.no.gene.gtf
+		    fi
+		    stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE}.no.gene.gtf -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam >> logs/${ERR}.mapping.log 2>&1
+		  fi
 			
 			# Remove original FASTQ, we have the trimmed reads still
 			if [ -e data/${SPECIES}/${ERR}_2.fastq.gz ]; then
@@ -206,7 +216,7 @@ map_long_read_sample () {
 		if [ ! -e data/${SPECIES}/${ERR}.lck ]; then
 
 			touch data/${SPECIES}/${ERR}.lck
-			echo "${ERR}: bam not found" >> logs/${ERR}.mapping.log 2>&1
+			echo "${ERR}: Stringtie GTF output not found" >> logs/${ERR}.mapping.log 2>&1
 
 			# Check for existing downloads before running fasterq-dump
 			if [ ! -e data/${SPECIES}/${ERR}.fastq.gz ]; then
@@ -247,8 +257,18 @@ map_long_read_sample () {
 		  samtools index -c -@ 7 data/${SPECIES}/${ERR}.${GENE_ID}.bam
 		  
 		  # Assemble transcripts with Stringtie
-		  stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE} -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam
-			
+		  stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE} -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam >> logs/${ERR}.mapping.log 2>&1
+		  
+		  # If stringtie fails, the usual reason is failure to parse the gtf file
+		  # - most common reason is rows with an empty transcript_id field. Create a
+		  # new GTF if needed and try again.
+		  if [ $? -ne 0 ]; then
+		    if [ ! -e  ${GTF_FILE}.no.gene.gtf ]; then
+		      awk '$3 != "gene" ' ${GTF_FILE} > ${GTF_FILE}.no.gene.gtf
+		    fi
+		    stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE}.no.gene.gtf -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam >> logs/${ERR}.mapping.log 2>&1
+		  fi
+		  
 			# Remove original FASTQ, we have the trimmed reads still
 			if [ -e data/${SPECIES}/${ERR}.fastq.gz ]; then
 			  rm data/${SPECIES}/${ERR}.fastq.gz
