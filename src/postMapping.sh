@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Scripts to run after parallel mapping scripts are completed
+# Create summary reports and get gene bam files for later visualisation
 echo "Beginning post mapping" > logs/postMapping.log 2>&1
 
 # Details of the read depths and samples analysed
@@ -10,7 +11,7 @@ Rscript src/plotSampleSummary.R >> logs/postMapping.log 2>&1
 Rscript src/checkQC.R >> logs/postMapping.log 2>&1
 
 # combine samples for each tissue
-# Rscript src/mergeSamples.R >> logs/postMapping.log 2>&1
+Rscript src/mergeSamples.R >> logs/postMapping.log 2>&1
 
 # Count strand ratios across samples
 rm report/strand_ratios.txt
@@ -34,7 +35,7 @@ Rscript src/readFeatureCounts.R >> logs/postMapping.log 2>&1
 
 # Tar the figures and output data
 tar czf report.tar.gz report/*
-tar czf stringtie.tar.gz data/stringtie/*
+tar czf reads.tar.gz data/*/*.*.bam* # only those with gene name included
 tar czf featureCounts.tar.gz data/*/*.counts.txt
 
 echo "Post mapping done" >> logs/postMapping.log 2>&1
