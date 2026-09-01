@@ -195,18 +195,6 @@ get.annotated.exons <- function() {
   readr::read_csv("metadata/gene_features.csv", show_col_types = FALSE)
 }
 
-# Read all selected samples from ./metadata
-# i.e. all files with .filt. in the name
-read.selected.samples <- function() {
-  cat("Setup: Reading selected samples\n")
-  # Make a factor of times to allow ordering of plots
-  do.call(rbind, lapply(list.files(path = "metadata", pattern = "*.filt.csv", full.names = TRUE), read.csv)) |>
-    dplyr::mutate(Timepoint = factor(Timepoint, levels = TIME.ORDER)) |>
-    dplyr::rename(Tissue = Organism_part, Sex = sex)|>
-    dplyr::arrange(CommonName, Run)
-}
-
-
 # Read the metadata to find samples. Aggregate to groups based on tissue type
 # and note which samples still need processing
 make.sample.groups <- function() {
@@ -239,9 +227,6 @@ MAPPING.FILE <- "data/mapping.samples.csv"
 GENOME.DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE) |>
   dplyr::mutate(Clade = as.factor(Clade))
 
-# Filter SRR samples and merge the genome metadata
-source("src/selectSamples.R")
-
 # Download GTF files if missing so we can find gene coordinates
 download.gtf <- function(file, url) {
   if (!file.exists(file)) {
@@ -257,8 +242,13 @@ invisible(mapply(download.gtf, GENOME.DATA$GTF_FILE, GENOME.DATA$GTF_URL))
 # Match the gene ids to coordinates in the genome version downloaded
 GENE.LOCATIONS <- get.gene.locations(GENOME.DATA)
 
+# Filter SRR samples and merge the genome metadata
+source("src/selectSamples.R")
+
 # Global object with samples being analysed
-SELECTED.SAMPLES <- read.selected.samples()
+SELECTED.SAMPLES <- read.csv(MAPPING.FILE) |>
+  dplyr::mutate(Timepoint = factor(Timepoint, levels = TIME.ORDER)) |>
+  dplyr::arrange(CommonName, Run)
 
 # Locations of exon junctions for exon 2 splice detection
 JUNCTION.COORDINATES <- read.csv("metadata/exon_junctions.csv")

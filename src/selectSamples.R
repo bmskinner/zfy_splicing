@@ -269,13 +269,13 @@ read.csv("metadata/PRJEB33381.csv") |>
 # age is in supplementary file 1 in Yu et al 2014:
 # https://pmc.ncbi.nlm.nih.gov/articles/PMC4381750/
 
-PRJNA238328.geo.to.sample <- read_tsv("metadata/PRJNA238328.GEO_to_sample.tsv", show_col_types = FALSE) |>
+.PRJNA238328.geo.to.sample <- read_tsv("metadata/PRJNA238328.GEO_to_sample.tsv", show_col_types = FALSE) |>
   dplyr::mutate(Sample_Name = stringr::str_remove(Sample_Name, "SEQC_"))
-PRJNA238328.sample.sheet <- read_csv("metadata/PRJNA238328.sample.sheet.csv", show_col_types = FALSE)
+.PRJNA238328.sample.sheet <- read_csv("metadata/PRJNA238328.sample.sheet.csv", show_col_types = FALSE)
 
-PRJNA238328 <- read.csv("metadata/PRJNA238328.csv") |>
-  merge(PRJNA238328.geo.to.sample, by.x = "GEO_Accession..exp.", by.y = "GEO_Accession", all.x = TRUE) |>
-  merge(PRJNA238328.sample.sheet, by.x = "Sample_Name", by.y = "Sample_ID", all.x = TRUE) |>
+read.csv("metadata/PRJNA238328.csv") |>
+  merge(.PRJNA238328.geo.to.sample, by.x = "GEO_Accession..exp.", by.y = "GEO_Accession", all.x = TRUE) |>
+  merge(.PRJNA238328.sample.sheet, by.x = "Sample_Name", by.y = "Sample_ID", all.x = TRUE) |>
   dplyr::filter(tissue %in% c("Brain", "Heart", "Kidney", "Lung", "Liver", "Muscle", "Spleen", "Testes")) |>
   dplyr::mutate(
     Sex = sex,
