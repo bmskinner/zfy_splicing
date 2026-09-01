@@ -78,6 +78,16 @@ map_se_sample () {
 		  
 		  # Assemble transcripts with Stringtie
 		  stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE} -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam
+		  
+		  # If stringtie fails, the usual reason is failure to parse the gtf file
+		  # - most common reason is rows with an empty transcript_id field. Create a
+		  # new GTF if needed and try again.			
+			if [ $? -ne 0 ]; then
+		    if [ ! -e  ${GTF_FILE}.no.gene.gtf ]; then
+		      awk '$3 != "gene" ' ${GTF_FILE} > ${GTF_FILE}.no.gene.gtf
+		    fi
+		    stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE}.no.gene.gtf -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam >> logs/${ERR}.mapping.log 2>&1
+		  fi
 
 			# Remove original FASTQ, we have the trimmed reads still
 			if [ -e data/${SPECIES}/${ERR}.fastq.gz ]; then
