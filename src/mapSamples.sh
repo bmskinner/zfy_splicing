@@ -312,6 +312,7 @@ fi
 # Select the Run, Library type, species and genome columns
 SE_SAMPLES=$(cat metadata/mapping.samples.csv | cut -f 1,2,3,4,5,6,7 -d , | grep -e '[S|E|D]RR' | grep -e 'SINGLE')
 PE_SAMPLES=$(cat metadata/mapping.samples.csv | cut -f 1,2,3,4,5,6,7 -d , | grep -e '[S|E|D]RR' | grep -e 'PAIRED')
+LR_SAMPLES=$(cat metadata/mapping.samples.csv | cut -f 1,2,3,4,5,6,7 -d , | grep -e '[S|E|D]RR' | grep -e 'LONG_READ')
 
 echo "Processing single end samples" >> logs/mapping.log 2>&1
 for LINE in ${SE_SAMPLES}; do
@@ -333,4 +334,15 @@ for LINE in ${PE_SAMPLES}; do
 	GENE_ID=$(echo ${LINE} | cut -f 6 -d , )
 	LOCATION=$(echo ${LINE} | cut -f 7 -d , )
 	map_pe_sample ${SPECIES} ${ERR} ${GENOME} ${GTF_FILE} ${GENE_ID} ${LOCATION}
+done
+
+echo "Processing long read samples" >> logs/mapping.log 2>&1
+for LINE in ${LR_SAMPLES}; do
+	ERR=$(echo ${LINE} | cut -f 1 -d , )
+	SPECIES=$(echo ${LINE} | cut -f 3 -d , )
+	GENOME=$(echo ${LINE} | cut -f 4 -d , )
+	GTF_FILE=$(echo ${LINE} | cut -f 5 -d , )
+	GENE_ID=$(echo ${LINE} | cut -f 6 -d , )
+	LOCATION=$(echo ${LINE} | cut -f 7 -d , )
+	map_long_read_sample ${SPECIES} ${ERR} ${GENOME} ${GTF_FILE} ${GENE_ID} ${LOCATION}
 done

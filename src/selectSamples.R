@@ -1,6 +1,32 @@
-# Filter metadata from SRA searches to get samples of interest
-
+# This script should never be run directly - it is called from src/functions.R
 cat("Sample selection: Reading and filtering sample data\n")
+
+# Filter metadata from SRA searches to get samples of interest
+fs::dir_create(c("data", "report"))
+# These are the filtered samples used for mapping. Recreate each time.
+if(file.exists(MAPPING.FILE)) file.remove(MAPPING.FILE)
+
+# Merge with genome data and append the given data to the mapping file
+.append.data <- function(data){
+  data <- merge(data, GENOME.DATA, by = "CommonName") |>
+    merge(GENE.LOCATIONS, by = c("CommonName", "GTF_FILE")) |>
+    # Adjust the library field to note long read sequencing distinct from short
+    # read paired
+    dplyr::mutate(,
+                  LibraryLayout = ifelse(Platform %in% c("PACBIO_SMRT"), "LONG_READ", LibraryLayout)) |>
+    dplyr::select(Run, LibraryLayout, CommonName, Genome, GTF_FILE, GeneId, Location,
+                  BioProject, DevStage, Sex, Timepoint, Tissue, Organism, LibrarySelection, 
+                  LibrarySource, Bases
+    )
+  
+  if(file.exists(MAPPING.FILE)){
+    write.table(data, file = MAPPING.FILE, row.names = FALSE, quote = TRUE, 
+                append = TRUE, sep = ",", col.names = FALSE)
+  } else {
+    write.table(data, file = MAPPING.FILE, row.names = FALSE, quote = TRUE, 
+                append = FALSE, sep = ",", col.names = TRUE)
+  }
+}
 
 # These are the filtered files used for sample selection
 filt.files <- list.files("metadata", pattern = "*.filt.csv", full.names = TRUE)
@@ -22,37 +48,28 @@ read.csv("metadata/human_generic.csv") |>
     DevStage = "adult",
     Timepoint = "adult",
     CommonName = "human",
-    Organism_part = "testis",
-    sex = "male"
+    Tissue = "testis",
+    Sex = "male"
   ) |>
   dplyr::slice_head(n = 10) |> # we don't need all of them
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.csv(file = "metadata/human_generic.filt.csv", row.names = FALSE, quote = TRUE)
+  .append.data()
 
 #### Duck testis ####
 
 read.csv("metadata/duck.csv") |>
   dplyr::filter(
     Assay.Type == "RNA-Seq", Organism == "Anas platyrhynchos",
-    str_detect(tissue, "[T|t]estis"), Bases > 5e8
+    stringr::str_detect(tissue, "[T|t]estis"), Bases > 5e8
   ) |>
   dplyr::slice_head(n = 5) |> # we don't need all of them
   dplyr::mutate(
+    Sex = "male",
     DevStage = "adult",
-    Organism_part = "testis",
+    Tissue = "testis",
     Timepoint = "adult",
     CommonName = "duck",
   ) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.csv(file = "metadata/duck.filt.csv", row.names = FALSE, quote = TRUE)
+  .append.data()
 
 
 #### Turkey testis ####
@@ -60,17 +77,13 @@ read.csv("metadata/duck.csv") |>
 
 read.csv("metadata/turkey.csv") |>
   dplyr::mutate(
+    Sex = "male",
     DevStage = "adult",
-    Organism_part = "testis",
+    Tissue = "testis",
     Timepoint = "adult",
     CommonName = "turkey",
   ) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.csv(file = "metadata/turkey.filt.csv", row.names = FALSE, quote = TRUE)
+  .append.data()
 
 
 
@@ -81,7 +94,8 @@ read.csv("metadata/chicken.csv") |>
   dplyr::filter(sex == "male") |>
   dplyr::rename(
     DevStage = Experimental_Factor._developmental_stage..exp.,
-    OrganismPart = Experimental_Factor._organism_part..exp.
+    Tissue = Experimental_Factor._organism_part..exp.,
+    Sex = sex
   ) |>
   dplyr::mutate(
     Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
@@ -94,12 +108,7 @@ read.csv("metadata/chicken.csv") |>
     CommonName = "chicken"
   ) |>
   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.csv(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE)
+  .append.data()
 
 #### Samples from PRJEB26695 - opossum E-MTAB-6833 ####
 # Opossum E-MTAB-6833
@@ -107,7 +116,8 @@ read.csv("metadata/opossum.csv") |>
   dplyr::filter(sex == "male") |>
   dplyr::rename(
     DevStage = Experimental_Factor._developmental_stage..exp.,
-    OrganismPart = Experimental_Factor._organism_part..exp.
+    Tissue = Experimental_Factor._organism_part..exp.,
+    Sex = sex
   ) |>
   dplyr::mutate(
     Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
@@ -120,13 +130,7 @@ read.csv("metadata/opossum.csv") |>
     CommonName = "opossum"
   ) |>
   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/PRJEB26695.filt.csv", 
-              row.names = FALSE, quote = TRUE, append = TRUE, sep = ",", col.names = FALSE)
+  .append.data()
 
 #### Female opossum brain samples ####
 
@@ -134,7 +138,8 @@ read.csv("metadata/opossum.csv") |>
   dplyr::filter(sex == "female") |>
   dplyr::rename(
     DevStage = Experimental_Factor._developmental_stage..exp.,
-    OrganismPart = Experimental_Factor._organism_part..exp.
+    Tissue = Experimental_Factor._organism_part..exp.,
+    Sex = sex
   ) |>
   dplyr::mutate(
     Timepoint = dplyr::case_when(Developmental_stage == "embryo" ~ "embryo",
@@ -146,13 +151,7 @@ read.csv("metadata/opossum.csv") |>
     CommonName = "opossum"
   ) |>
   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/PRJEB26695.female.filt.csv", row.names = FALSE, 
-              quote = TRUE, append = TRUE, sep = ",", col.names = TRUE)
+  .append.data()
 
 #### Other opossum brain samples ####
 
@@ -160,21 +159,16 @@ read.csv("metadata/opossum_brain.csv") |>
   dplyr::filter(sex == "female" | sex=="male",
                 tissue == "brain" | tissue =="Brain") |>
   dplyr::rename(
-    OrganismPart = Experimental_Factor._organism_part..exp.,
     DevStage= Developmental_stage,
-    Organism_part=tissue
+    Tissue=tissue,
+    Sex = sex
   ) |>
   dplyr::mutate(
     Timepoint = "adult", # confirmed from project data
-    CommonName = "opossum"
+    CommonName = "opossum",
+    Tissue = "brain" # consistent capitalisation
   ) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/Popossum_brain.filt.csv", row.names = FALSE, 
-              quote = TRUE, append = TRUE, sep = ",", col.names = TRUE)
+  .append.data()
 
 
 
@@ -184,7 +178,8 @@ read.csv("metadata/mouse.csv") |>
   dplyr::filter(sex == "male") |>
   dplyr::rename(
     DevStage = Experimental_Factor._developmental_stage..exp.,
-    OrganismPart = Experimental_Factor._organism_part..exp.
+    Tissue = Experimental_Factor._organism_part..exp.,
+    Sex = sex
   ) |>
   dplyr::mutate(
     Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
@@ -196,22 +191,17 @@ read.csv("metadata/mouse.csv") |>
     CommonName = "mouse"
   ) |>
   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, 
-              append = TRUE, sep = ",", col.names = FALSE)
+  .append.data()
 
 #### Samples from PRJEB26695 - human E-MTAB-6814 ####
 # Human E-MTAB-6814
 read.csv("metadata/human.csv") |>
   dplyr::rename(
     DevStage = Experimental_Factor._developmental_stage..exp.,
-    OrganismPart = Experimental_Factor._organism_part..exp.
+    Tissue = Experimental_Factor._organism_part..exp.,
+    Sex = sex
   ) |>
-  dplyr::filter(sex == "male") |>
+  dplyr::filter(Sex == "male") |>
   dplyr::mutate(
     Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
       DevStage == "neonate" ~ "birth",
@@ -223,37 +213,7 @@ read.csv("metadata/human.csv") |>
     CommonName = "human"
   ) |>
   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append = TRUE, sep = ",", col.names = FALSE)
-
-#### Samples from PRJEB26889 - rat   E-MTAB-6811 ####
-# Rat E-MTAB-6811
-# read.csv("metadata/rat.csv") |>
-#   dplyr::filter(sex == "male") |>
-#   dplyr::rename(
-#     DevStage = Experimental_Factor._developmental_stage..exp.,
-#     OrganismPart = Experimental_Factor._organism_part..exp.
-#   ) |>
-#   dplyr::mutate(
-#     Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
-#       DevStage == "postnatal day 0" ~ "birth",
-#       DevStage == "postnatal day 14" ~ "mid-meiosis",
-#       DevStage == "postnatal day 112" ~ "adult",
-#       .default = "other"
-#     ),
-#     CommonName = "rat"
-#   ) |>
-#   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") |>
-#   merge(GENOME.DATA, by = "CommonName") |>
-#   dplyr::select(
-#     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-#     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-#   ) |>
-#   write.table(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append = TRUE, sep = ",", col.names = FALSE)
+  .append.data()
 
 #### Samples from PRJEB26695 - macaque ####
 # Rhesus macacque E-MTAB-6813
@@ -262,7 +222,8 @@ read.csv("metadata/macaque.csv") |>
   dplyr::filter(sex == "male") |>
   dplyr::rename(
     DevStage = Experimental_Factor._developmental_stage..exp.,
-    OrganismPart = Experimental_Factor._organism_part..exp.
+    Tissue = Experimental_Factor._organism_part..exp.,
+    Sex = sex
   ) |>
   dplyr::mutate(
     Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
@@ -276,21 +237,16 @@ read.csv("metadata/macaque.csv") |>
     CommonName = "macaque"
   ) |>
   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/PRJEB26695.filt.csv", row.names = FALSE, quote = TRUE, append = TRUE, sep = ",", col.names = FALSE)
-
+  .append.data()
 
 #### Samples from PRJEB33381 - multispecies ####
 
 read.csv("metadata/PRJEB33381.csv") |>
   dplyr::rename(
-    OrganismPart = Experimental_Factor._organism_part..exp.,
+    Tissue = Experimental_Factor._organism_part..exp.,
     Species = Experimental_Factor._organism..exp.,
-    DevStage = Developmental_stage
+    DevStage = Developmental_stage,
+    Sex = sex
   ) |>
   dplyr::filter(Species %in% c("Mus musculus", "Monodelphis domestica", "Macaca mulatta", "Rattus norvegicus", "Sus scrofa")) |>
   dplyr::mutate(
@@ -303,12 +259,7 @@ read.csv("metadata/PRJEB33381.csv") |>
       Organism == "Sus scrofa" ~ "pig"
     )
   ) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/PRJEB33381.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+  .append.data()
 
 #### Samples from PRJNA238328 (rat tissues) ####
 
@@ -327,8 +278,9 @@ PRJNA238328 <- read.csv("metadata/PRJNA238328.csv") |>
   merge(PRJNA238328.sample.sheet, by.x = "Sample_Name", by.y = "Sample_ID", all.x = TRUE) |>
   dplyr::filter(tissue %in% c("Brain", "Heart", "Kidney", "Lung", "Liver", "Muscle", "Spleen", "Testes")) |>
   dplyr::mutate(
-    Organism_part = stringr::str_to_lower(tissue),
-    Organism_part = stringr::str_replace(Organism_part, "testes", "testis"),
+    Sex = sex,
+    Tissue = stringr::str_to_lower(tissue),
+    Tissue = stringr::str_replace(Tissue, "testes", "testis"),
     DevStage = Age_Week,
     Timepoint = case_when(Age_Week == 2 ~ "mid-meiosis",
       Age_Week == 6 ~ "adult",
@@ -338,15 +290,10 @@ PRJNA238328 <- read.csv("metadata/PRJNA238328.csv") |>
     ),
     CommonName = "rat",
   ) |>
-  dplyr::group_by(Organism_part, sex, Timepoint) |>
+  dplyr::group_by(Tissue, Sex, Timepoint) |>
   dplyr::arrange(desc(Bases)) |>
   dplyr::slice_head(n = 10) |> # we don't need all of them
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/PRJNA238328.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+  .append.data()
 
 #### Samples from PRJEB26889 - E-MTAB-6811 rat ####
 # Cardoso Moreira 2019
@@ -354,7 +301,9 @@ PRJNA238328 <- read.csv("metadata/PRJNA238328.csv") |>
 
 read.csv("metadata/PRJEB26889.csv") |>
   dplyr::filter(Developmental_Stage != "embryo") |>
-  dplyr::filter(Organism_part %in% c("brain", "heart", "kidney", "lung", "liver", "muscle", "spleen", "testis", "ovary")) |>
+  dplyr::filter(Organism_part %in% c("brain", "heart", "kidney", "lung", "liver", 
+                                     "muscle", "spleen", "testis", "ovary")) |>
+  dplyr::rename(Tissue = Organism_part, Sex = sex ) |>
   dplyr::mutate(
     DevStage = Experimental_Factor._developmental_stage..exp.,
     Timepoint = case_when(DevStage == "postnatal day 0" ~ "birth",
@@ -368,51 +317,26 @@ read.csv("metadata/PRJEB26889.csv") |>
     CommonName = "rat",
   ) |>
   dplyr::filter(Timepoint != "other") |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/PRJEB26889.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
-
+  .append.data()
 
 
 #### Samples from PRJNA889410 - Arvicanthis tissues ####
 # Not enough restis coverage - skip these
-# read.csv("metadata/PRJNA889410.csv") |>
-#   dplyr::filter(tissue %in% c("Brain", "Heart", "Kidney", "Lung", "Liver", "Muscle", "Spleen", "Testis", "Ovary")) |>
-#   dplyr::mutate(
-#     Organism_part = stringr::str_to_lower(tissue),
-#     sex = case_when(Organism_part == "testis" ~ "male",
-#       Organism_part == "ovary" ~ "female",
-#       .default = "unknown"
-#     ),
-#     DevStage = "adult",
-#     Timepoint = "adult",
-#     CommonName = "nilerat",
-#   ) |>
-#   merge(GENOME.DATA, by = "CommonName") |>
-#   dplyr::select(
-#     Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-#     Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-#   ) |>
-#   write.table(file = "metadata/PRJNA889410.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
-#
-
 
 #### Samples from generic search mouse testis ####
 
 # Goal here is to find non-adult WT mice with known age in days
 read.csv("metadata/mouse.testis.csv") |>
   dplyr::rename(
-    OrganismPart = Experimental_Factor._organism_part..exp.,
+    Tissue = Experimental_Factor._organism_part..exp.,
     Species = Experimental_Factor._organism..exp.,
-    DevStage = Developmental_stage
+    DevStage = Developmental_stage, 
+    Sex = sex
   ) |>
   dplyr::filter(BioProject != "PRJNA630221") |> # project has dsRNA only
   dplyr::filter(Assay.Type == "RNA-Seq" & cell_type == "") |>
   dplyr::filter(!is.na(AGE) & AGE != "" & AGE != "not collected" & !str_starts(AGE, "E") & AGE != "adult") |>
-  dplyr::filter(!str_detect(OrganismPart, "adipose") & !str_detect(OrganismPart, "brain")) |>
+  dplyr::filter(!str_detect(Tissue, "adipose") & !str_detect(Tissue, "brain")) |>
   dplyr::filter(!str_detect(AGE, "month") & !str_detect(AGE, "week") & !str_detect(AGE, "year")) |>
   dplyr::filter(!str_detect(tissue, "spermatid") & !str_detect(tissue, "spermatocyte") & !str_detect(tissue, "soermatid") & !str_detect(source_name, "stem cells")) |>
   dplyr::mutate(AgeDays = as.numeric(str_extract(AGE, "\\d+"))) |>
@@ -432,32 +356,28 @@ read.csv("metadata/mouse.testis.csv") |>
   dplyr::arrange(Bases) |>
   dplyr::slice_head(n = 20) |>
   dplyr::mutate(
-    Organism_part = "testis",
-    sex = "male",
+    Tissue = "testis",
+    Sex = "male",
     DevStage = paste0("d", AgeDays)
-  ) |> # ensure all consistent
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/mouse.testis.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+  ) |> 
+  .append.data()
 
 #### Samples from generic search for platypus RNA-seq and specific testis search ####
 
 read.csv("metadata/platypus.csv") |>
   dplyr::rename(
-    OrganismPart = Experimental_Factor._organism_part..exp.,
-    Species = Experimental_Factor._organism..exp.
+    Tissue = Experimental_Factor._organism_part..exp.,
+    Species = Experimental_Factor._organism..exp., 
+    Sex = sex
   ) |>
-  dplyr::filter(sex == "male") |>
+  dplyr::filter(Sex == "male") |>
   dplyr::filter(
     Assay.Type == "RNA-Seq",
     LibrarySelection != "size fractionation"
   ) |>
   dplyr::mutate(
     Organism_part = str_to_lower(case_when(tissue != "" ~ tissue,
-      OrganismPart != "" ~ OrganismPart,
+                                           Tissue != "" ~ Tissue,
       source_name != "" ~ source_name,
       .default = NA
     )),
@@ -469,123 +389,96 @@ read.csv("metadata/platypus.csv") |>
     CommonName = "platypus"
   ) |>
   dplyr::filter(DevStage != "") |>
-  dplyr::filter(Organism_part != "fibroblast") |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  dplyr::filter(Tissue != "fibroblast") |>
+  .append.data()
+
+
+read.csv("metadata/platypus_testis.csv") |>
+  dplyr::rename(Sex = sex,
+                Tissue = Organism_part)|>
+  dplyr::filter(
+    Sex == "male",
+    Assay.Type == "RNA-Seq", Tissue %in% c("testis", ""),
+    Experimental_Factor._protocol..exp. != "Ribo-seq",
+    LibrarySelection != "size fractionation"
   ) |>
-  rbind(
-    read.csv("metadata/platypus_testis.csv") |>
-      dplyr::filter(sex == "male") |>
-      dplyr::filter(
-        Assay.Type == "RNA-Seq", Organism_part %in% c("testis", ""),
-        Experimental_Factor._protocol..exp. != "Ribo-seq",
-        LibrarySelection != "size fractionation"
-      ) |>
-      dplyr::mutate(
-        Organism_part = "testis",
-        DevStage = "adult",
-        Timepoint = "adult",
-        CommonName = "platypus"
-      ) |>
-      merge(GENOME.DATA, by = "CommonName") |>
-      dplyr::select(
-        Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-        Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-      )
+  dplyr::mutate(
+    Tissue = "testis", # we know from project these are all testis even if ""
+    DevStage = "adult",
+    Timepoint = "adult",
+    CommonName = "platypus"
   ) |>
-  dplyr::distinct() |>
-  write.table(file = "metadata/platypus.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+  .append.data()
 
 #### Samples from generic search for zebrafinch testis RNAseq ####
 
 read.csv("metadata/zebrafinch.csv") |>
+  dplyr::rename(Sex = sex) |>
   dplyr::filter(
     Assay.Type == "RNA-Seq",
     str_detect(tissue, "[T|t]estis") | str_detect(tissue_type, "[T|t]estis")
   ) |>
   dplyr::mutate(
-    Organism_part = "testis",
+    Tissue = "testis",
     DevStage = "adult",
     Timepoint = "adult",
     CommonName = "zebrafinch"
   ) |>
   dplyr::arrange(desc(Bases)) |>
   dplyr::slice_head(n = 5) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/zebrafinch.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+  .append.data()
 
 #### Samples from generic search Xenopus tropicalis testis ####
 
 read.csv("metadata/xenopus.csv") |>
+  dplyr::rename(Sex = sex) |>
   dplyr::filter(Assay.Type == "RNA-Seq", tissue == "testis") |>
   dplyr::mutate(
-    Organism_part = str_to_lower(tissue),
+    Tissue = str_to_lower(tissue),
     DevStage = "adult",
     Timepoint = "adult",
     CommonName = "xenopus"
   ) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/xenopus.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+  .append.data()
 
 #### Samples from generic search Zebrafish testis ####
 
 # Mature at ~3 months
 read.csv("metadata/zebrafish.csv") |>
+  dplyr::rename(Sex = sex) |>
   dplyr::filter(
     Assay.Type == "RNA-Seq", tissue == "testis", genotype == "wild type"
   ) |>
   dplyr::filter(BioProject != "PRJNA540466") |> # skip known single cell
   dplyr::mutate(
-    Organism_part = str_to_lower(tissue),
-    sex = "male",
+    Tissue = str_to_lower(tissue),
+    Sex = "male",
     DevStage = "adult",
     Timepoint = "adult",
     CommonName = "zebrafish"
   ) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/zebrafish.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+  .append.data()
 
 #### Samples from generic search Anole testis ####
 
 read.csv("metadata/anole.csv") |>
+  dplyr::rename(Sex = sex) |>
   dplyr::filter(
     Assay.Type == "RNA-Seq", str_detect(tissue, "[T|t]estis"),
     str_detect(Stage, "[A|a]dult") | str_detect(dev_stage, "[A|a]dult")
   ) |>
   dplyr::mutate(
-    Organism_part = "testis",
+    Tissue = "testis",
     DevStage = "adult",
     Timepoint = "adult",
     CommonName = "anole"
   ) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/anole.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
-
+  .append.data()
 
 #### Samples from other koala tissues in PRJNA230900 ####
 
 # Note that the male samples are a general mixed pool. Only female has the
 # tissues explicit. Skip this one.
-
-# koala <- read.csv("metadata/PRJNA230900.csv")
 
 #### Samples from Koala testis ####
 # PRJNA1158232 and PRJNA1187226 is a study of miRNA, but performed standard RNA-seq some samples
@@ -593,11 +486,11 @@ read.csv("metadata/anole.csv") |>
 # The koala ids are given in supplementary table S1 from Y et al Cell. 2025 Mar 7;188(8):2081–2093.e16. doi: 10.1016/j.cell.2025.02.006
 read.csv("metadata/PRJNA1158232.csv") |>
   dplyr::mutate(
-    Organism_part = stringr::str_to_lower(tissue),
+    Tissue = stringr::str_to_lower(tissue),
     DevStage = "adult",
     Timepoint = "adult",
     CommonName = "koala",
-    sex = case_when(koala_id %in% c("K94283", "K98214") ~ "female",
+    Sex = case_when(koala_id %in% c("K94283", "K98214") ~ "female",
       koala_id %in% c(
         "K94276", "K71362", "K98314", "K98224", "K63464",
         "K63855", "Cove", "Mario", "K98494", "Andy",
@@ -606,37 +499,28 @@ read.csv("metadata/PRJNA1158232.csv") |>
       .default = "unknown"
     )
   ) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  rbind(
-    # Other testis samples in SRA
-    read.csv("metadata/koala.csv") |>
-      dplyr::rename(dev_stage = Developmental_Stage) |>
-      dplyr::filter(
-        Organism == "Phascolarctos cinereus",
-        Assay.Type == "RNA-Seq", str_detect(tissue, "[T|t]estis"),
-        str_detect(Stage, "[A|a]dult") | str_detect(dev_stage, "[A|a]dult")
-      ) |>
-      dplyr::mutate(
-        Organism_part = "testis",
-        DevStage = "adult",
-        Timepoint = "adult",
-        sex = "male",
-        CommonName = "koala"
-      ) |>
-      merge(GENOME.DATA, by = "CommonName") |>
-      dplyr::select(
-        Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-        Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-      )
-  ) |>
-  dplyr::distinct() |> # have PRJNA1158232 samples in the wider testis search
-  write.table(file = "metadata/koala.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+  dplyr::select(-Location) |> # geographic location
+  .append.data()
 
 
+# Other testis samples in SRA
+read.csv("metadata/koala.csv") |>
+  dplyr::rename(dev_stage = Developmental_Stage) |>
+  dplyr::filter(
+    Organism == "Phascolarctos cinereus",
+    Assay.Type == "RNA-Seq", str_detect(tissue, "[T|t]estis"),
+    str_detect(Stage, "[A|a]dult") | str_detect(dev_stage, "[A|a]dult")
+  ) |>
+  dplyr::mutate(
+    Tissue = "testis",
+    DevStage = "adult",
+    Timepoint = "adult",
+    Sex = "male",
+    CommonName = "koala"
+  ) |>
+  dplyr::select(-Location) |>
+  .append.data()
+    
 #### Samples from Echidna testis ####
 
 read.csv("metadata/echidna.csv") |>
@@ -646,19 +530,13 @@ read.csv("metadata/echidna.csv") |>
     str_detect(dev_stage, "[A|a]dult")
   ) |>
   dplyr::mutate(
-    Organism_part = "testis",
+    Tissue = "testis",
     DevStage = "adult",
     Timepoint = "adult",
-    sex = "male",
+    Sex = "male",
     CommonName = "echidna"
   ) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  write.table(file = "metadata/echidna.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
-
+  .append.data()
 
 
 #### Samples from cattle testis ####
@@ -679,7 +557,8 @@ read.csv("metadata/cattle.csv") |>
     BioProject %in% c("PRJNA471564", "PRJNA776655"),
   ) |>
   dplyr::mutate(
-    Organism_part = "testis",
+    Sex = sex,
+    Tissue = "testis",
     Timepoint = case_when(str_detect(Sample.Name, "neonatal") ~ "birth",
       str_detect(Sample.Name, "mature") ~ "adult",
       str_detect(Sample.Name, "TY0") ~ "birth",
@@ -690,69 +569,60 @@ read.csv("metadata/cattle.csv") |>
     DevStage = Timepoint,
     CommonName = "cattle"
   ) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  rbind(
+  .append.data()
 
-    #### Samples from other cattle Bioprojects ####
-    read.csv("metadata/cattle_other.csv") |>
-      dplyr::filter(Assay.Type == "RNA-Seq") |>
-      dplyr::filter(tissue %in% c("brain", "heart", "kidney", "lung", "liver", "muscle", "spleen", "testis", "ovary")) |>
-      dplyr::filter(
-        # LibrarySelection %in% c("cDNA", "Oligo-dT", "PolyA"),
-        LibraryLayout == "PAIRED",
-        sex %in% c("male", "female"),
-        treatment != "treatment",
-        !(AGE %in% c("", "missing", "Missing")),
-        !(BioProject %in% c(
-          "PRJNA471564", "PRJNA776655", "PRJNA1457669", "PRJNA1100253",
-          "PRJNA1043830", "PRJNA616249"
-        )),
-      ) |>
-      dplyr::mutate(
-        Organism_part = tissue,
-        Timepoint = case_when(
-          str_detect(AGE, "at birth") ~ "birth",
-          str_detect(AGE, "0 days") ~ "birth",
-          str_detect(AGE, "1 week") ~ "birth",
-          str_detect(AGE, "8 week") ~ "birth",
-          str_detect(AGE, "8-10 monthes") ~ "mid-meiosis",
-          str_detect(AGE, "9 months") ~ "mid-meiosis",
-          str_detect(AGE, "9m") ~ "mid-meiosis",
-          str_detect(AGE, "12 month") ~ "mid-meiosis",
-          str_detect(AGE, "12 months") ~ "mid-meiosis",
-          str_detect(AGE, "one year old") ~ "mid-meiosis",
-          str_detect(AGE, "18m") ~ "adult",
-          str_detect(AGE, "23 months old") ~ "adult",
-          str_detect(AGE, "1.25y") ~ "adult",
-          str_detect(AGE, "2 years") ~ "adult",
-          str_detect(AGE, "two year old") ~ "adult",
-          str_detect(AGE, "3 years") ~ "adult",
-          str_detect(AGE, "4 years") ~ "adult",
-          str_detect(AGE, "4.94years") ~ "adult",
-          str_detect(AGE, "4.96years") ~ "adult",
-          str_detect(AGE, "5.73years") ~ "adult",
-          str_detect(AGE, "5.76years") ~ "adult",
-          str_detect(AGE, "6.76years") ~ "adult",
-          .default = "other"
-        ),
-        DevStage = AGE,
-        CommonName = "cattle"
-      ) |>
-      dplyr::filter(Timepoint %in% c("birth", "mid-meiosis", "adult")) |>
-      dplyr::group_by(Organism_part, Timepoint, sex) |>
-      dplyr::arrange(desc(Bases)) |>
-      dplyr::slice_head(n = 10) |>
-      merge(GENOME.DATA, by = "CommonName") |>
-      dplyr::select(
-        Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-        Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-      )
+
+#### Samples from other cattle Bioprojects ####
+read.csv("metadata/cattle_other.csv") |>
+  dplyr::rename(Sex = sex) |>
+  dplyr::filter(Assay.Type == "RNA-Seq") |>
+  dplyr::filter(tissue %in% c("brain", "heart", "kidney", "lung", "liver", "muscle", "spleen", "testis", "ovary")) |>
+  dplyr::filter(
+    # LibrarySelection %in% c("cDNA", "Oligo-dT", "PolyA"),
+    LibraryLayout == "PAIRED",
+    Sex %in% c("male", "female"),
+    treatment != "treatment",
+    !(AGE %in% c("", "missing", "Missing")),
+    !(BioProject %in% c(
+      "PRJNA471564", "PRJNA776655", "PRJNA1457669", "PRJNA1100253",
+      "PRJNA1043830", "PRJNA616249"
+    )),
   ) |>
-  write.table(file = "metadata/cattle.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+  dplyr::mutate(
+    Tissue = tissue,
+    Timepoint = case_when(
+      str_detect(AGE, "at birth") ~ "birth",
+      str_detect(AGE, "0 days") ~ "birth",
+      str_detect(AGE, "1 week") ~ "birth",
+      str_detect(AGE, "8 week") ~ "birth",
+      str_detect(AGE, "8-10 monthes") ~ "mid-meiosis",
+      str_detect(AGE, "9 months") ~ "mid-meiosis",
+      str_detect(AGE, "9m") ~ "mid-meiosis",
+      str_detect(AGE, "12 month") ~ "mid-meiosis",
+      str_detect(AGE, "12 months") ~ "mid-meiosis",
+      str_detect(AGE, "one year old") ~ "mid-meiosis",
+      str_detect(AGE, "18m") ~ "adult",
+      str_detect(AGE, "23 months old") ~ "adult",
+      str_detect(AGE, "1.25y") ~ "adult",
+      str_detect(AGE, "2 years") ~ "adult",
+      str_detect(AGE, "two year old") ~ "adult",
+      str_detect(AGE, "3 years") ~ "adult",
+      str_detect(AGE, "4 years") ~ "adult",
+      str_detect(AGE, "4.94years") ~ "adult",
+      str_detect(AGE, "4.96years") ~ "adult",
+      str_detect(AGE, "5.73years") ~ "adult",
+      str_detect(AGE, "5.76years") ~ "adult",
+      str_detect(AGE, "6.76years") ~ "adult",
+      .default = "other"
+    ),
+    DevStage = AGE,
+    CommonName = "cattle"
+  ) |>
+  dplyr::filter(Timepoint %in% c("birth", "mid-meiosis", "adult")) |>
+  dplyr::group_by(Tissue, Timepoint, Sex) |>
+  dplyr::arrange(desc(Bases)) |>
+  dplyr::slice_head(n = 10) |>
+  .append.data()
 
 
 
@@ -763,39 +633,29 @@ read.csv("metadata/cattle.csv") |>
 # Note - tissue is mislabelled. Actual tissue is in the library name
 read.csv("metadata/PRJNA1218892.csv") |>
   dplyr::mutate(
-    Organism_part = stringr::str_extract(Library.Name, ".*_(\\w+)$", group = 1),
-    Organism_part = stringr::str_replace(Organism_part, "testes", "testis"),
+    Tissue = stringr::str_extract(Library.Name, ".*_(\\w+)$", group = 1),
+    Tissue = stringr::str_replace(Tissue, "testes", "testis"),
     Timepoint = "adult", # assumed - no publication for this!
     DevStage = Timepoint,
     CommonName = "wallaby",
-    sex = "male"
+    Sex = "male"
   ) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-  ) |>
-  rbind(
-    read.csv("metadata/wallaby.csv") |>
-      dplyr::filter(
-        Organism == "Notamacropus eugenii",
-        BioProject == "PRJDB1934"
-      ) |>
-      dplyr::mutate(
-        Organism_part = "testis",
-        Timepoint = "adult", # assumed - no publication for this!
-        DevStage = Timepoint,
-        CommonName = "wallaby",
-        sex = "male"
-      ) |>
-      merge(GENOME.DATA, by = "CommonName") |>
-      dplyr::select(
-        Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-        Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-      )
-  ) |>
-  write.table(file = "metadata/wallaby.filt.csv", row.names = FALSE, quote = TRUE, append = FALSE, sep = ",", col.names = TRUE)
+  .append.data()
 
+read.csv("metadata/wallaby.csv") |>
+  dplyr::filter(
+    Organism == "Notamacropus eugenii",
+    BioProject == "PRJDB1934"
+  ) |>
+  dplyr::mutate(
+    Tissue = "testis",
+    Timepoint = "adult", # assumed - no publication for this!
+    DevStage = Timepoint,
+    CommonName = "wallaby",
+    Sex = "male"
+  ) |>
+  .append.data()
+    
 #### Samples from tasmanian devil ####
 
 # Brain samples for tasmanian devil. Mix of male and female
@@ -805,59 +665,45 @@ read.csv("metadata/PRJNA1218892.csv") |>
 read.csv("metadata/PRJEB28680.csv") |>
   dplyr::filter(tissue_type %in% c("brain", "heart", "kidney", "lung", "liver", "muscle", "spleen", "testis")) |>
   dplyr::mutate(
-    Organism_part = tissue_type,
+    Tissue = tissue_type,
     Timepoint = "adult", # assumed, age not given in paper
     DevStage = Timepoint,
     CommonName = "tasmaniandevil",
-    sex = ifelse(Organism_part == "testis", "male", "unknown")
+    Sex = ifelse(Tissue == "testis", "male", "unknown")
   ) |>
-  merge(GENOME.DATA, by = "CommonName") |>
-  dplyr::select(
-    Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-    Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
+  .append.data()
+
+#brain samples - most likely other tissue to have splicing if present
+read.csv("metadata/tasmanian_devil_brain.csv") |>
+  dplyr::rename(Sex = sex) |>
+  dplyr::filter(
+    LibrarySelection != "size fractionation",
+    BioProject != "PRJEB28680"
   ) |>
-  rbind(
-    # Other brain samples - most likely other tissue to have splicing if present
-    read.csv("metadata/tasmanian_devil_brain.csv") |>
-      dplyr::filter(
-        LibrarySelection != "size fractionation",
-        BioProject != "PRJEB28680"
-      ) |>
-      dplyr::mutate(
-        Organism_part = "brain",
-        Timepoint = "adult", # assumed - no publication for this!
-        DevStage = Timepoint,
-        CommonName = "tasmaniandevil"
-      ) |>
-      merge(GENOME.DATA, by = "CommonName") |>
-      dplyr::select(
-        Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-        Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-      )
+  dplyr::mutate(
+    Tissue = "brain",
+    Timepoint = "adult", # assumed - no publication for this!
+    DevStage = Timepoint,
+    CommonName = "tasmaniandevil"
   ) |>
-  rbind(
-    # SRA run selector down, so manually write equivalent table from ENA
-    data.frame(
-      Run = c("ERR3568424", "ERR3568434"),
-      BioProject = "PRJEB34650",
-      LibraryLayout = "PAIRED",
-      CommonName = "tasmaniandevil",
-      DevStage = "adult",
-      sex = "male",
-      Timepoint = "adult",
-      Organism_part = "testis",
-      Organism = "Sarcophilus harrisii",
-      LibrarySelection = "cDNA",
-      LibrarySource = "TRANSCRIPTOMIC",
-      Bases = c(16643508000, 18824106750)
-    ) |>
-      merge(GENOME.DATA, by = "CommonName") |>
-      dplyr::select(
-        Run, BioProject, LibraryLayout, CommonName, Genome, GTF_FILE, DevStage, sex,
-        Timepoint, Organism_part, Organism, LibrarySelection, LibrarySource, Bases
-      )
-  ) |>
-  write.table(
-    file = "metadata/tasmaniandevil.filt.csv", row.names = FALSE, quote = TRUE,
-    append = FALSE, sep = ",", col.names = TRUE
-  )
+  .append.data()
+
+
+# SRA run selector temporarily down, so manually write equivalent table from ENA
+data.frame(
+  Run = c("ERR3568424", "ERR3568434"),
+  BioProject = "PRJEB34650",
+  LibraryLayout = "PAIRED",
+  CommonName = "tasmaniandevil",
+  DevStage = "adult",
+  Sex = "male",
+  Timepoint = "adult",
+  Tissue = "testis",
+  Organism = "Sarcophilus harrisii",
+  Platform = "ILLUMINA",
+  LibrarySelection = "cDNA",
+  LibrarySource = "TRANSCRIPTOMIC",
+  Bases = c(16643508000, 18824106750)
+) |>
+  .append.data()
+

@@ -374,6 +374,6 @@ splicing.zfy.presentation.table.mouse <- splicing.table |>
   dplyr::select(Clade, CommonName, Sex, Tissue, `Day_00-06`, `Day_07-13`, `Day_14-20`, `Day_21-27`)
 
 splicing.zfx.presentation.table <- splicing.table |>
-  dplyr::select(Clade:Organism_part, Splice_junctions_ZFX) |>
+  dplyr::select(Clade:Tissue, Splice_junctions_ZFX) |>
   tidyr::pivot_wider(names_from = Timepoint, values_from = Splice_junctions_ZFX) |>
-  dplyr::select(Clade, CommonName, Sex, Organism_part, birth, `mid-meiosis`, adult)
+  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `mid-meiosis`, adult)

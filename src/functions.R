@@ -234,6 +234,8 @@ make.sample.groups <- function() {
 
 cat("Setup: Defining global variables\n")
 
+MAPPING.FILE <- "data/mapping.samples.csv"
+
 GENOME.DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE) |>
   dplyr::mutate(Clade = as.factor(Clade))
 
@@ -260,14 +262,5 @@ SELECTED.SAMPLES <- read.selected.samples()
 
 # Locations of exon junctions for exon 2 splice detection
 JUNCTION.COORDINATES <- read.csv("metadata/exon_junctions.csv")
-
-# Create a final sample file for the revised mapping pipeline
-mapping.samples <- SELECTED.SAMPLES |>
-  merge(GENE.LOCATIONS, by = c("CommonName", "GTF_FILE")) |>
-  dplyr::select(Run, LibraryLayout, CommonName, Genome, GTF_FILE, GeneId, Location )
-write.csv(mapping.samples, file = "metadata/mapping.samples.csv", row.names = FALSE, quote = FALSE)
-
-
-
 
 cat("Setup: Common functions and global variables loaded\n")
