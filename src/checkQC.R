@@ -3,7 +3,7 @@ cat("QC check: Beginning\n")
 source("src/functions.R")
 
 
-fs::dir_create("report/_qc")
+fs::dir_create("report/QC")
 
 #### Trimming report ####
 
@@ -33,7 +33,7 @@ extract.trimming.info <- function(f) {
 }
 trimming.summary <- do.call(rbind, lapply(trimming.summary.files, extract.trimming.info))
 
-create.xlsx(trimming.summary, file.name = "report/_qc/trimming_report.xlsx")
+create.xlsx(trimming.summary, file.name = "report/QC/trimming_report.xlsx")
 
 
 #### FASTQC report ####
@@ -47,7 +47,7 @@ fastqc.check <- fastqc.data %>%
   dplyr::mutate(Run = stringr::str_extract(Sample, "^([A-Z\\d]+)_", group = 1)) |>
   merge(SELECTED.SAMPLES, by = "Run", all.y = TRUE)
 
-create.xlsx(fastqc.check, file.name = "report/_qc/FASTQC_report.xlsx")
+create.xlsx(fastqc.check, file.name = "report/QC/FASTQC_report.xlsx")
 
 
 #### Mapping efficiencies ####
@@ -63,21 +63,21 @@ extract.val <- function(x) {
   as.numeric(stringr::str_replace(x, " \\(.*\\)", ""))
 }
 
-file.remove("report/_qc/mapping.txt")
+file.remove("report/QC/mapping.txt")
 
 # Extract the mapping summary from stdout files directed to logs
 if (length(list.files(path = "logs", pattern = "*.mapping.log")) > 0) {
   tryCatch(
     {
       # Combine all mapping outputs into one file, with one line per sample
-      system("for f in logs/*.mapping.log; do  grep -w -e 'Aligned' -e 'rate' $f | echo $f `tr --delete '\t'`  >> report/_qc/mapping.txt; done")
+      system("for f in logs/*.mapping.log; do  grep -w -e 'Aligned' -e 'rate' $f | echo $f `tr --delete '\t'`  >> report/QC/mapping.txt; done")
     },
     error = function(e) warning(e)
   )
 }
 
 # Spread to separate columns
-map.data <- read.table("report/_qc/mapping.txt", sep = "$") |> #  sep char does not exist, force single column
+map.data <- read.table("report/QC/mapping.txt", sep = "$") |> #  sep char does not exist, force single column
   tidyr::extract(V1, "Run", "([A-Z]RR\\d+)", remove = FALSE) |> # columns from regex
   tidyr::extract(V1,
     into = c("Aligned_concordantly_or_discordantly_0_time", "Pct_aligned_concordantly_or_discordantly_0_time"),
@@ -143,7 +143,7 @@ map.data <- read.table("report/_qc/mapping.txt", sep = "$") |> #  sep char does 
   dplyr::select(-V1) |>
   merge(SELECTED.SAMPLES, by = "Run", all.y = TRUE) # Merge in the sample info
 
-create.xlsx(map.data, "report/_qc/mapping.xlsx")
+create.xlsx(map.data, "report/QC/mapping.xlsx")
 
 if (any(map.data$Pct_overall_alignment_rate < 80)) cat("QC check: Some samples have poor mapping rates\n")
 
@@ -164,25 +164,8 @@ plot.mapping.rates <- function(map.data) {
     )
 
   ggsave(
-    plot = last_plot(), filename = "report/_qc/mapping.qc.pct.png", dpi = 300, units = "mm",
+    plot = last_plot(), filename = "report/QC/Mapped_reads_percent_per_sample.png", dpi = 300, units = "mm",
     width = 300, height = 400
-  )
-
-  ggplot(map.data, aes(x = CommonName, y = Pct_overall_alignment_rate, col = Pct_overall_alignment_rate > 80)) +
-    geom_beeswarm(size = 1) +
-    labs(y = "Overall mapping (%)", col = "OK", title = "Overall mapping") +
-    scale_color_manual(values = c(`FALSE` = "salmon", `TRUE` = "lightgreen")) +
-    theme_bw() +
-    facet_wrap(~Tissue) +
-    theme_bw() +
-    theme(
-      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-      axis.title.x = element_blank()
-    )
-
-  ggsave(
-    plot = last_plot(), filename = "report/_qc/mapping.qc.total.png", dpi = 300, units = "mm",
-    width = 200, height = 170
   )
 
   total.mapped.bases <- map.data |>
@@ -218,7 +201,7 @@ plot.mapping.rates <- function(map.data) {
       legend.position = "none"
     )
   ggsave(
-    plot = last_plot(), filename = "report/_qc/mapping.qc.mapped_reads.png", dpi = 300, units = "mm",
+    plot = last_plot(), filename = "report/QC/Mapped_reads_total_bases.png", dpi = 300, units = "mm",
     width = 170, height = 170
   )
 }
