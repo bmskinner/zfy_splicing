@@ -645,6 +645,20 @@ read.csv("metadata/cattle_other.csv") |>
   dplyr::slice_head(n = 10) |>
   .append.data()
 
+#### Samples from sheep ####
+
+read.csv("metadata/sheep.csv") |>
+  dplyr::rename(Sex = sex,
+                ) |>
+  dplyr::filter(Assay.Type == "RNA-Seq",
+                BioProject %in% c("PRJEB19199")) |>
+  dplyr::arrange(desc(Bases))|>
+  dplyr::mutate(DevStage=Animal_age_at_collection,
+                Timepoint="adult",
+                Tissue = "testis",
+                CommonName = "sheep") |>
+  dplyr::slice_head(n=10) |>
+  .append.data()
 
 
 #### Samples from wallaby ####
