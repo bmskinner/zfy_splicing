@@ -215,6 +215,27 @@ read.csv("metadata/human.csv") |>
   dplyr::filter(Timepoint != "other" & Timepoint != "embryo") |>
   .append.data()
 
+
+#### Samples from PRJNA556935 and PRJNA30709 - commercial human pooled testis RNA and human ENCODE RNAseq data ####
+
+# Manually selected samples
+read.csv("metadata/PRJNA30709.PRJNA556935.csv") |>
+  dplyr::rename(
+    DevStage = AGE,
+    Sex = sex
+  ) |>
+  dplyr::filter(Sex == "male") |>
+  dplyr::mutate(
+    Timepoint =  "adult",
+    CommonName = "human",
+    Tissue = "testis"
+  ) |>
+  dplyr::filter(Run %in% c("SRR9849353", "SRR9849354", "SRR4421667", "SRR4421668",
+                           "SRR4422587", "SRR4422588", "SRR5171109", "SRR5171110")) |>
+  .append.data()
+
+
+
 #### Samples from PRJEB26695 - macaque ####
 # Rhesus macacque E-MTAB-6813
 # Lifespan can reach up to 40 in captivity, median age 25
