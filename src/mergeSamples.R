@@ -14,7 +14,7 @@ groups <- SELECTED.SAMPLES |>
   merge(GENE.LOCATIONS, by=c("CommonName", "GTF_FILE", "GeneId")) |>
   dplyr::group_by(Organism, Tissue, Timepoint, CommonName, Sex, GeneId, Gene) |>
   dplyr::mutate(
-    bam.file = paste0("data/", CommonName, "/", Run, ".", Gene, ".bam"),
+    bam.file = paste0("data/", CommonName, "/", Run, ".", GeneId, ".bam"),
     lock.file = paste0("data/", CommonName, "/", Run, ".lck")
   ) |>
   dplyr::summarise(
