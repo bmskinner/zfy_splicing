@@ -656,6 +656,7 @@ read.csv("metadata/sheep.csv") |>
   dplyr::mutate(DevStage=Animal_age_at_collection,
                 Timepoint="adult",
                 Tissue = "testis",
+                Sex = "male",
                 CommonName = "sheep") |>
   dplyr::slice_head(n=10) |>
   .append.data()
