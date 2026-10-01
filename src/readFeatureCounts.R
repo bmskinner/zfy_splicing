@@ -43,13 +43,11 @@ feature.values <- do.call(rbind, parallel::mclapply(feature.files,
   mc.cores = DEFAULT.MC.CORES
 ))
 
-write_csv(feature.values, "report/tpm.csv", quote = "needed")
-create.xlsx(feature.values, "report/tpm.xlsx")
-
+readr::write_csv(feature.values, "report/tpm.csv", quote = "needed")
 
 #### Read the TPM values ####
 
-feature.values <- read_csv("report/tpm.csv", show_col_types = FALSE)
+feature.values <- readr::read_csv("report/tpm.csv", show_col_types = FALSE)
 
 feature.values <- feature.values |>
   merge(SELECTED.SAMPLES, by = "Run") |>

@@ -12,18 +12,45 @@ suppressPackageStartupMessages({
 
 cat("Setup: Defining global functions\n")
 
+# The file that will contain samples to be processed. Created de novo on each run
+# from selectSamples.R
+MAPPING.FILE <- "data/mapping.samples.csv"
+
+# Use multiple cores on Unix via the parallel package
 DEFAULT.MC.CORES <- ifelse(installr::is.windows(), 1, 6)
 
+# Chart display order for timepoints
 TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27"),
   levels = c("birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
 )
 
 #### Common functions ####
 
+#' Save a ggplot with print resolution
+#'
+#' @param filename 
+#' @param plot 
+#' @param ... 
+#'
+#' @returns
+#' @export
+#'
+#' @examples
 save.plot <- function(filename, plot, ...) {
   ggsave(filename, plot, units = "mm", dpi = 300, , create.dir = TRUE, ...)
 }
 
+#' Save a ggplot as a double column width image at 300 dpi.
+#'
+#' @param filename where to save. Missing directories will be created.
+#' @param plot the ggplot to save
+#' @param width width in mm
+#' @param height height in mm
+#'
+#' @returns
+#' @export
+#'
+#' @examples
 save.double.width <- function(filename, plot, width = 170, height = 170) {
   ggsave(filename, plot, units = "mm", height = height, width = width, dpi = 300, create.dir = TRUE)
 }
@@ -221,8 +248,6 @@ make.sample.groups <- function() {
 #### Global variables ####
 
 cat("Setup: Defining global variables\n")
-
-MAPPING.FILE <- "data/mapping.samples.csv"
 
 GENOME.DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE) |>
   dplyr::mutate(Clade = as.factor(Clade))

@@ -17,7 +17,7 @@ bed.files <- list.files(path = "data", pattern = "[SDE]RR.*.bed$",
 # same chromosome.
 read.bed <- function(file){
   if(file.size(file)==0) return()
-  read_tsv(file, col_names = c("Seqname", "Mate1Start", "Mate1End", "Seqname2",
+  readr::read_tsv(file, col_names = c("Seqname", "Mate1Start", "Mate1End", "Seqname2",
                                "Mate2Start", "Mate2End", "ReadName", "Score",
                                "Mate1Strand", "Mate2Strand"),
            col_types = c("ciiciicicc")) |>
@@ -43,8 +43,8 @@ bed.data <- do.call(dplyr::bind_rows, lapply(bed.files, read.bed) ) |>
     JunctionStart = min(Mate1End, Mate2End),
     JunctionEnd = max(Mate1Start, Mate2Start)
   ) |>
-  merge(SELECTED.SAMPLES, by = c("Run")) |>
-  merge(GENE.LOCATIONS, by = c("CommonName", "GeneId", "GTF_FILE"))
+  merge(SELECTED.SAMPLES, by = c("Run", "GeneId")) |>
+  merge(GENE.LOCATIONS, by = c("CommonName", "GeneId", "GTF_FILE", "Location"))
 
 
 pair.spanning.data <- bed.data |>
@@ -62,7 +62,7 @@ pair.spanning.data <- bed.data |>
 # Ensure output dirs exist
 fs::dir_create(c(
   "report/species", "report/timepoints", "report/tissues",
-  "report/raw_sashimi", "report/junctions"
+  "report/raw_sashimi", "report/junctions", "report/merged_sashimi"
 ))
 
 # Read all GTF files once, since we have multiple genes/tissues per species
@@ -79,7 +79,7 @@ bam.files <- data.frame(path = list.files(path = "data", pattern = "[SDE]RR.*.ba
   ) |>
   merge(GENE.LOCATIONS, by = "GeneId") |>
   merge(GENOME.DATA, by=c("CommonName", "GTF_FILE")) |>
-  merge(SELECTED.SAMPLES, by = c("CommonName", "Run",  "Genome", "GTF_FILE")) |>
+  merge(SELECTED.SAMPLES, by = c("CommonName", "Run",  "Genome", "GTF_FILE", "GeneId", "Location")) |>
   dplyr::filter( !(Group %in% c("RBMX", "RBMY"))) # skip genes we don't need splice data from
 
 for (i in 1:nrow(bam.files)) {
@@ -99,12 +99,6 @@ for (i in 1:nrow(bam.files)) {
   # Skip missing data or genes we don't need splice data from
   if (length(group) == 0) next
   
-  # Get the pair-spanning reads from this dataset
-  pair.spanning.subset <- pair.spanning.data |>
-    dplyr::ungroup() |>
-    dplyr::filter(Run == run, GeneId==gene_id) |>
-    dplyr::select(Run, GeneId, Gene, Mate1Start, Mate1End, Mate2Start, Mate2End, SpansExon2, InsertSize, RunMedianInsertSize)
-
   # Skip completed files for testing
   final.out.file <- paste0("report/raw_sashimi/", paste(c(run, gene_id), collapse = "."), ".condensed.png")
   final.junction.file <- paste0(
@@ -113,24 +107,6 @@ for (i in 1:nrow(bam.files)) {
     ".junctions.csv"
   )
   
-  final.pair.spanning.file <- paste0("report/junctions/",
-    paste(c(run, gene_id), collapse = "."),
-    ".pair.spanning.csv"
-  )
-  
-  ##### Create a file with the spanning reads #####
-  
-  if(nrow(pair.spanning.subset)>0 & !file.exists(final.pair.spanning.file) ){
-    
-    # Write out the pair spanning coordinates
-    readr::write_csv(pair.spanning.subset,
-                     file = final.pair.spanning.file,
-                     quote = "needed"
-    )
-  } else {
-    fs::file_touch(final.pair.spanning.file)
-  }
-
   if (file.exists(final.out.file) & file.exists(final.junction.file)) next
   
   # Only read the bam file if needed
@@ -190,10 +166,53 @@ merged.bam.files <- data.frame(path = list.files(path = "data/merged", pattern =
                               delim = ".", names = c("CommonName", "Tissue", "Timepoint", "Sex",  "Gene", "ext")
   ) |>
   merge(GENE.LOCATIONS, by =c("CommonName",  "Gene")) |>
-  merge(GENOME.DATA, by=c("CommonName", "GTF_FILE"))
+  merge(GENOME.DATA, by=c("CommonName", "GTF_FILE")) |>
+  dplyr::filter(Group %in% c("ZFX", "ZFY"))
 
 for (i in 1:nrow(merged.bam.files)) {
+  bam.row <- merged.bam.files[i, ]
+  species <- bam.row$CommonName
+  tissue <- bam.row$Tissue
+  timepoint <- bam.row$Timepoint
+  sex <- bam.row$Sex
+  gene_id <- bam.row$GeneId
+  gene_name <- bam.row$Gene
   
+  gene.data <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene_id & GENE.LOCATIONS$CommonName == species, ] # filter on species too - some genomes do not have an accession for geneid
+  coords <- parse_coordinates(gene.data$Location)
+  group <- gene.data$Group
+  if (length(group) == 0) next
+  cat("Detecting splice junctions for", i, ": ", species, gene_id, "in group", group, "\n")
+  
+  final.out.file <- paste0("report/merged_sashimi/", paste(c(species,tissue, 
+                                                             timepoint, sex, gene_id, gene_name), 
+                                                           collapse = "."), ".condensed.png")
+  
+  sashimi.data <- read_sashimi_data(
+    bam.file = bam.row$path,
+    gtf.data = GTF.DATA[[species]],
+    chr = coords$coord.chr, start = coords$coord.start, end = coords$coord.end,
+    reference.gene.id = gene_id,
+    reference.transcript.id = gene.data$CanonicalTranscriptId
+  )
+  
+  if (sashimi.data$total.reads == 0){
+    fs::file_touch(final.out.file)
+    next
+  } 
+  
+  if(!file.exists(final.out.file) ){
+    
+    sashimi.plot.collapsed <- make_sashimi_coverage_plot(sashimi.data,
+                                                         is.collapse.introns = TRUE, show.x.axis = FALSE,
+                                                         min.spanning.reads = 2, label = paste0(species, "\n", sex, "\n", tissue, "\n", timepoint, "\n", gene_name)
+    )
+    
+    save.double.width(final.out.file,
+      sashimi.plot.collapsed$plot,
+      height = 50
+    )
+  }
   
 }
 
@@ -221,7 +240,5 @@ junction.data <- do.call(bind_rows, lapply(junction.files, read.csv)) |>
 
 # Save for combination with gene expression levels in featureCounts analysis
 readr::write_tsv(junction.data, "report/coding_exon_splice_junctions.tsv")
-
-# readr::write_tsv(junction.data, "report/coding_exon_2_splice_junctions.tsv")
 
 cat("Plot sashimi: Done!\n")

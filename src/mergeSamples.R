@@ -11,7 +11,7 @@ fs::dir_create("data/merged")
 
 #### Create merge command for each gene, tissue, species, timepoint, sex ####
 groups <- SELECTED.SAMPLES |>
-  merge(GENE.LOCATIONS, by=c("CommonName", "GTF_FILE")) |>
+  merge(GENE.LOCATIONS, by=c("CommonName", "GTF_FILE", "GeneId")) |>
   dplyr::group_by(Organism, Tissue, Timepoint, CommonName, Sex, GeneId, Gene) |>
   dplyr::mutate(
     bam.file = paste0("data/", CommonName, "/", Run, ".", Gene, ".bam"),
