@@ -17,12 +17,12 @@ map_se_sample () {
 	GENE_ID=$(echo $5 | tr -d '"')
 	LOCATION=$(echo $6 | tr -d '"')
 	
-	echo "${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
+	echo "`date '+%Y-%m-%d %X'` ${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
 	
 	mkdir -p data/${SPECIES}
 	
 	if [ ! -e ${GTF_FILE} ]; then
-	  echo "${ERR}: Could not find GTF file ${GTF_FILE}, skipping" >> logs/mapping.log 2>&1
+	  echo "`date '+%Y-%m-%d %X'` ${ERR}: Could not find GTF file ${GTF_FILE}, skipping" >> logs/mapping.log 2>&1
 	  continue
 	fi
 	
@@ -33,13 +33,13 @@ map_se_sample () {
 		if [ ! -e data/${SPECIES}/${ERR}.lck ]; then
 
 			touch data/${SPECIES}/${ERR}.lck
-			echo "${ERR}: bam not found" >> logs/${ERR}.mapping.log 2>&1
+			echo "`date '+%Y-%m-%d %X'` ${ERR}: bam not found" >> logs/${ERR}.mapping.log 2>&1
 
 			# Check for existing downloads before running fasterq-dump
 			if [ ! -e data/${SPECIES}/${ERR}.fastq.gz ] && [ ! -e data/${SPECIES}/${ERR}_trimmed.fq.gz ]; then
 				# Fetch data
 				if [ ! -e data/${SPECIES}/${ERR}.fastq ]; then
-					echo "${ERR}: downloading fastq" >> logs/${ERR}.mapping.log 2>&1
+					echo "`date '+%Y-%m-%d %X'` ${ERR}: downloading fastq" >> logs/${ERR}.mapping.log 2>&1
 					fasterq-dump -o data/${SPECIES}/${ERR}.fastq ${ERR}
 				fi
 				gzip data/${SPECIES}/${ERR}.fastq
@@ -47,13 +47,13 @@ map_se_sample () {
 
 			# Trim
 			if [ ! -e data/${SPECIES}/${ERR}_trimmed.fq.gz ]; then
-				echo "${ERR}: trimming" >> logs/${ERR}.mapping.log 2>&1
+				echo "`date '+%Y-%m-%d %X'` ${ERR}: trimming" >> logs/${ERR}.mapping.log 2>&1
 				trim_galore -o data/${SPECIES} --suppress_warn --fastqc --fastqc_args "-t 8 --outdir report/FASTQC --nogroup --extract" data/${SPECIES}/${ERR}.fastq.gz
 			fi
 
 			# map
 			if [ ! -e data/${SPECIES}/${ERR}.bam.csi ]; then
-  			echo "${ERR}: mapping" >> logs/${ERR}.mapping.log 2>&1
+  			echo "`date '+%Y-%m-%d %X'` ${ERR}: mapping" >> logs/${ERR}.mapping.log 2>&1
   			# -k controls number of multimapping locations (default 5 for linear index)
   			# --downstream-transcriptome-assembly forces longer anchors at novel splice sites (more rigorous)
   			# --dta-cfflinks does this and also looks for novel splice sites, stored in tag XS:A:[+-]
@@ -116,12 +116,12 @@ map_pe_sample () {
 	GENE_ID=$(echo $5 | tr -d '"')
 	LOCATION=$(echo $6 | tr -d '"')
 	
-	echo "${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
+	echo "`date '+%Y-%m-%d %X'` ${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
 
 	mkdir -p data/${SPECIES}
 	
 	if [ ! -e ${GTF_FILE} ]; then
-	  echo "${ERR}: Could not find GTF file ${GTF_FILE}, skipping" >> logs/mapping.log 2>&1
+	  echo "`date '+%Y-%m-%d %X'` ${ERR}: Could not find GTF file ${GTF_FILE}, skipping" >> logs/mapping.log 2>&1
 	  continue
 	fi
 	
@@ -132,13 +132,13 @@ map_pe_sample () {
 		if [ ! -e data/${SPECIES}/${ERR}.lck ]; then
 
 			touch data/${SPECIES}/${ERR}.lck
-			echo "${ERR}: Stringtie GTF output not found" >> logs/${ERR}.mapping.log 2>&1
+			echo "`date '+%Y-%m-%d %X'` ${ERR}: Stringtie GTF output not found" >> logs/${ERR}.mapping.log 2>&1
 
 			# Check for existing downloads before running fasterq-dump
 			if [ ! -e data/${SPECIES}/${ERR}_2.fastq.gz ] && [ ! -e data/${SPECIES}/${ERR}_2_val_2.fq.gz ]; then
 				# Fetch data
 				if [ ! -e data/${SPECIES}/${ERR}_2.fastq ]; then
-					echo "${ERR}: downloading fastq" >> logs/${ERR}.mapping.log 2>&1
+					echo "`date '+%Y-%m-%d %X'` ${ERR}: downloading fastq" >> logs/${ERR}.mapping.log 2>&1
 					fasterq-dump -O data/${SPECIES}/ ${ERR}
 				fi
 				gzip data/${SPECIES}/${ERR}_1.fastq
@@ -147,13 +147,13 @@ map_pe_sample () {
 
 			# Trim
 			if [ ! -e data/${SPECIES}/${ERR}_1_val_1.fq.gz ]; then
-				echo "${ERR}: trimming" >> logs/${ERR}.mapping.log 2>&1
+				echo "`date '+%Y-%m-%d %X'` ${ERR}: trimming" >> logs/${ERR}.mapping.log 2>&1
 				trim_galore -o data/${SPECIES} --paired --suppress_warn --fastqc --fastqc_args "-t 8 --outdir report/FASTQC --nogroup --extract" data/${SPECIES}/${ERR}_1.fastq.gz data/${SPECIES}/${ERR}_2.fastq.gz
 			fi
 
 			# map
 			if [ ! -e data/${SPECIES}/${ERR}.bam.csi ]; then
-  			echo "${ERR}: mapping against ${GENOME}" >> logs/${ERR}.mapping.log 2>&1
+  			echo "`date '+%Y-%m-%d %X'` ${ERR}: mapping against ${GENOME}" >> logs/${ERR}.mapping.log 2>&1
   			# -k controls number of multimapping locations (default 5 for linear index)
   			hisat2 -x genomes/${GENOME} --threads 8 -1 data/${SPECIES}/${ERR}_1_val_1.fq.gz -2 data/${SPECIES}/${ERR}_2_val_2.fq.gz --new-summary -S data/${SPECIES}/${ERR}.sam >> logs/${ERR}.mapping.log 2>&1
   			samtools sort -T data/${SPECIES}/${ERR} -@ 8 -o data/${SPECIES}/${ERR}.bam data/${SPECIES}/${ERR}.sam
@@ -210,12 +210,12 @@ map_long_read_sample () {
 	LOCATION=$(echo $6 | tr -d '"')
 	
 	
-	echo "${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
+	echo "`date '+%Y-%m-%d %X'` ${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
 
 	mkdir -p data/${SPECIES}
 	
 	if [ ! -e ${GTF_FILE} ]; then
-	  echo "${ERR}: Could not find GTF file ${GTF_FILE}, skipping" >> logs/mapping.log 2>&1
+	  echo "`date '+%Y-%m-%d %X'` ${ERR}: Could not find GTF file ${GTF_FILE}, skipping" >> logs/mapping.log 2>&1
 	  continue
 	fi
 	
@@ -226,7 +226,7 @@ map_long_read_sample () {
 		if [ ! -e data/${SPECIES}/${ERR}.lck ]; then
 
 			touch data/${SPECIES}/${ERR}.lck
-			echo "${ERR}: Stringtie GTF output not found" >> logs/${ERR}.mapping.log 2>&1
+			echo "`date '+%Y-%m-%d %X'` ${ERR}: Stringtie GTF output not found" >> logs/${ERR}.mapping.log 2>&1
 
 			# Check for existing downloads before running fasterq-dump
 			if [ ! -e data/${SPECIES}/${ERR}.fastq.gz ]; then
@@ -240,17 +240,17 @@ map_long_read_sample () {
 
 				# Trim and QC
 			if [ ! -e data/${SPECIES}/${ERR}_trimmed.fq.gz ]; then
-				echo "${ERR}: QC and trimming" >> logs/${ERR}.mapping.log 2>&1
+				echo "`date '+%Y-%m-%d %X'` ${ERR}: QC and trimming" >> logs/${ERR}.mapping.log 2>&1
 				fastplong --in data/${SPECIES}/${ERR}.fastq.gz --out data/${SPECIES}/${ERR}_trimmed.fq.gz --thread 6 --qualified_quality_phred 9 --json report/QC/fastp/${ERR}.json --report_title "${ERR} ${SPECIES}"
 				if [ $? -ne 0 ]; then
-			    echo "Error running fastplong, exiting" >> logs/${ERR}.mapping.log 2>&1
+			    echo "`date '+%Y-%m-%d %X'` Error running fastplong, exiting" >> logs/${ERR}.mapping.log 2>&1
 			    exit 1
 			  fi
 			fi
 
 			# mapping
 			if [ ! -e data/${SPECIES}/${ERR}.bam.csi ]; then
-  			echo "${ERR}: mapping against ${GENOME}" >> logs/${ERR}.mapping.log 2>&1
+  			echo "`date '+%Y-%m-%d %X'` ${ERR}: mapping against ${GENOME}" >> logs/${ERR}.mapping.log 2>&1
   			minimap2 -a genomes/${GENOME}.mmi -x splice:hq -u b -t 7 data/${SPECIES}/${ERR}_trimmed.fq.gz > data/${SPECIES}/${ERR}.sam
   			samtools sort -T data/${SPECIES}/${ERR} -@ 8 -o data/${SPECIES}/${ERR}.bam data/${SPECIES}/${ERR}.sam
   			samtools index -c -@ 7 data/${SPECIES}/${ERR}.bam # index with csi incase of long chromosomes
@@ -295,18 +295,18 @@ map_long_read_sample () {
 # We may have parallel scripts running, so ensure only one runs this step
 if [ ! -e data/preMapping.lck ]; then
 	touch data/preMapping.lck
-	echo "Running genome indexing and sample selection" > logs/preMapping.log 2>&1
+	echo "`date '+%Y-%m-%d %X'` Running genome indexing and sample selection" > logs/preMapping.log 2>&1
 	# Ensure all genome and annotations are present
 	bash src/makeIndexedGenomes.sh >> logs/preMapping.log 2>&1
 	if [ $? -ne 0 ]; then
-		echo "Error making genome indexes, exiting" >> logs/preMapping.log 2>&1
+		echo "`date '+%Y-%m-%d %X'` Error making genome indexes, exiting" >> logs/preMapping.log 2>&1
 		rm data/preMapping.lck
 		exit 1
 	fi
 	# Select samples to map from metadata by loading all functions and data
 	Rscript src/functions.R >> logs/preMapping.log 2>&1
 	if [ $? -ne 0 ]; then
-		echo "Error running sample selection, exiting" >> logs/preMapping.log 2>&1
+		echo "`date '+%Y-%m-%d %X'` Error running sample selection, exiting" >> logs/preMapping.log 2>&1
 		rm data/preMapping.lck
 		exit 1
 	fi
@@ -320,11 +320,11 @@ fi
 
 # Remap samples and generate bam files for splice junction detection
 # Select the Run, Library type, species and genome columns
-SE_SAMPLES=$(cat metadata/mapping.samples.csv | cut -f 1,2,3,4,5,6,7 -d , | grep -e '[S|E|D]RR' | grep -e 'SINGLE')
-PE_SAMPLES=$(cat metadata/mapping.samples.csv | cut -f 1,2,3,4,5,6,7 -d , | grep -e '[S|E|D]RR' | grep -e 'PAIRED')
-LR_SAMPLES=$(cat metadata/mapping.samples.csv | cut -f 1,2,3,4,5,6,7 -d , | grep -e '[S|E|D]RR' | grep -e 'LONG_READ')
+SE_SAMPLES=$(cat data/mapping.samples.csv | cut -f 1,2,3,4,5,6,7 -d , | grep -e '[S|E|D]RR' | grep -e 'SINGLE')
+PE_SAMPLES=$(cat data/mapping.samples.csv | cut -f 1,2,3,4,5,6,7 -d , | grep -e '[S|E|D]RR' | grep -e 'PAIRED')
+LR_SAMPLES=$(cat data/mapping.samples.csv | cut -f 1,2,3,4,5,6,7 -d , | grep -e '[S|E|D]RR' | grep -e 'LONG_READ')
 
-echo "Processing single end samples" >> logs/mapping.log 2>&1
+echo "`date '+%Y-%m-%d %X'` Processing single end samples" >> logs/mapping.log 2>&1
 for LINE in ${SE_SAMPLES}; do
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
 	SPECIES=$(echo ${LINE} | cut -f 3 -d , )
@@ -335,7 +335,7 @@ for LINE in ${SE_SAMPLES}; do
 	map_se_sample ${SPECIES} ${ERR} ${GENOME} ${GTF_FILE} ${GENE_ID} ${LOCATION}
 done
 
-echo "Processing paired end samples" >> logs/mapping.log 2>&1
+echo "`date '+%Y-%m-%d %X'` Processing paired end samples" >> logs/mapping.log 2>&1
 for LINE in ${PE_SAMPLES}; do
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
 	SPECIES=$(echo ${LINE} | cut -f 3 -d , )
@@ -346,7 +346,7 @@ for LINE in ${PE_SAMPLES}; do
 	map_pe_sample ${SPECIES} ${ERR} ${GENOME} ${GTF_FILE} ${GENE_ID} ${LOCATION}
 done
 
-echo "Processing long read samples" >> logs/mapping.log 2>&1
+echo "`date '+%Y-%m-%d %X'` Processing long read samples" >> logs/mapping.log 2>&1
 for LINE in ${LR_SAMPLES}; do
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
 	SPECIES=$(echo ${LINE} | cut -f 3 -d , )
