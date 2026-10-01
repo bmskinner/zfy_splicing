@@ -41,10 +41,10 @@ if (nrow(to.merge) > 0) {
 
 #### Index the bams ####
 cat("Merge samples: Indexing bams\n")
+
 # Index with CSI since opossum chromosomes are longer than the max for bai
-if (nrow(to.index) > 0) {
-  mapply(system2, command = "samtools", args = paste("index -@ 7 -c ", to.merge$merged.bam))
-} 
+mapply(system2, command = "samtools", args = paste("index -@ 7 -c ", to.merge$merged.bam))
+
 
 # Make a summary table of which bams were merged
 create.xlsx(groups, "report/merged.bams.xlsx")
