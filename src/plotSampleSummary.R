@@ -5,9 +5,6 @@ source("src/functions.R")
 
 cat("Making sample summary tables\n")
 
-# Read the filtered samples, match folder names
-SELECTED.SAMPLES <- read.selected.samples()
-
 # What are the timepoints, tissues and species we can look at?
 sample.groups <- SELECTED.SAMPLES %>%
   dplyr::rename(

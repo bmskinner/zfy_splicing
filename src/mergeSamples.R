@@ -24,7 +24,7 @@ groups <- SELECTED.SAMPLES |>
     .groups = "drop_last"
   ) |>
   dplyr::mutate(
-    merged.bam = paste0("data/merged/", CommonName, ".", Tissue, ".", Timepoint, ".", Sex,".", Gene,".bam"),
+    merged.bam = paste0("data/merged/", CommonName, ".", Tissue, ".", Timepoint, ".", Sex,".", GeneId,".bam"),
     samtools.merge.arguments = paste("merge -@ 7 -r -o", merged.bam, bams)
   )
 

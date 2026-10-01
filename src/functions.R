@@ -10,7 +10,7 @@ suppressPackageStartupMessages({
   if (!all(is.installed)) stop("The following packages are required:", paste(packages[!is.installed], collapse = ", "))
 })
 
-cat("Setup: Defining global functions\n")
+cat("Setup: Defining global functions and variables\n")
 
 # The file that will contain samples to be processed. Created de novo on each run
 # from selectSamples.R
@@ -246,8 +246,6 @@ make.sample.groups <- function() {
 }
 
 #### Global variables ####
-
-cat("Setup: Defining global variables\n")
 
 GENOME.DATA <- readr::read_csv("metadata/genomes.csv", show_col_types = FALSE) |>
   dplyr::mutate(Clade = as.factor(Clade))
