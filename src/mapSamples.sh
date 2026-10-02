@@ -17,8 +17,6 @@ map_se_sample () {
 	GENE_ID=$(echo $5 | tr -d '"')
 	LOCATION=$(echo $6 | tr -d '"')
 	
-	echo "`date '+%Y-%m-%d %X'` ${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
-	
 	mkdir -p data/${SPECIES}
 	
 	if [ ! -e ${GTF_FILE} ]; then
@@ -28,6 +26,8 @@ map_se_sample () {
 	
 	# Run if final output is missing
 	if [ ! -e data/${SPECIES}/${ERR}.${GENE_ID}.gtf ]; then
+	
+		echo "`date '+%Y-%m-%d %X'` ${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
 
 		# Don't work on a sample already being processed
 		if [ ! -e data/${SPECIES}/${ERR}.lck ]; then
@@ -116,8 +116,6 @@ map_pe_sample () {
 	GENE_ID=$(echo $5 | tr -d '"')
 	LOCATION=$(echo $6 | tr -d '"')
 	
-	echo "`date '+%Y-%m-%d %X'` ${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
-
 	mkdir -p data/${SPECIES}
 	
 	if [ ! -e ${GTF_FILE} ]; then
@@ -127,6 +125,8 @@ map_pe_sample () {
 	
 	# Run if final output is missing
 	if [ ! -e data/${SPECIES}/${ERR}.${GENE_ID}.gtf ]; then
+	
+	  echo "`date '+%Y-%m-%d %X'` ${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
 
 		# Don't work on a sample already being processed
 		if [ ! -e data/${SPECIES}/${ERR}.lck ]; then
@@ -208,9 +208,6 @@ map_long_read_sample () {
 	GTF_FILE=$(echo $4 | tr -d '"')
 	GENE_ID=$(echo $5 | tr -d '"')
 	LOCATION=$(echo $6 | tr -d '"')
-	
-	
-	echo "`date '+%Y-%m-%d %X'` ${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
 
 	mkdir -p data/${SPECIES}
 	
