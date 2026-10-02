@@ -36,14 +36,18 @@ to.merge <- groups |>
 
 if (nrow(to.merge) > 0) {
   cat("Merge samples: Merging bams\n")
-  mapply(system2, command = "samtools", args = to.merge$samtools.merge.arguments)
+  mcmapply(system2, command = "samtools", 
+           args = to.merge$samtools.merge.arguments, 
+           mc.cores = DEFAULT.MC.CORES)
 } 
 
 #### Index the bams ####
 cat("Merge samples: Indexing bams\n")
 
 # Index with CSI since opossum chromosomes are longer than the max for bai
-mapply(system2, command = "samtools", args = paste("index -@ 7 -c ", to.merge$merged.bam))
+mcmapply(system2, command = "samtools", 
+         args = paste("index -@ 7 -c ", to.merge$merged.bam),
+         mc.cores = DEFAULT.MC.CORES)
 
 
 # Make a summary table of which bams were merged
