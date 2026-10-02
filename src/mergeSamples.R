@@ -52,7 +52,7 @@ mcmapply(system2, command = "samtools",
 
 # Make a summary table of which bams were merged
 create.xlsx(groups, "report/merged.bams.xlsx")
-cat("Merge samples: Exported merged bam table to report/grouped.bams.xlsx\n")
+cat("Merge samples: Exported merged bam table to report/merged.bams.xlsx\n")
 
 #### Zip the results ####
 cat("Merge samples: Done!\n")

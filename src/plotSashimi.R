@@ -8,55 +8,6 @@ library(png)
 library(grid)
 cat("Plot sashimi: running shashimi plotting\n")
 
-#### Read the bed files of pair spanning reads ####
-
-bed.files <- list.files(path = "data", pattern = "[SDE]RR.*.bed$",
-                        full.names = TRUE, recursive=TRUE)
-
-# Read the bed file. Keep only reads with pairs on opposite strands of the
-# same chromosome.
-read.bed <- function(file){
-  if(file.size(file)==0) return()
-  readr::read_tsv(file, col_names = c("Seqname", "Mate1Start", "Mate1End", "Seqname2",
-                               "Mate2Start", "Mate2End", "ReadName", "Score",
-                               "Mate1Strand", "Mate2Strand"),
-           col_types = c("ciiciicicc")) |>
-    dplyr::filter(Mate1Strand!=Mate2Strand,
-                  Seqname==Seqname2,
-                  Mate1Start!=Mate2Start,
-                  Mate1End != Mate2End) |>
-    dplyr::mutate(File = file,
-                  Run = str_extract(File, "([SDE]RR\\d+)", group = 1),
-                  GeneId = str_extract(File, "[SDE]RR\\d+\\.([\\w\\d]+)\\.bam.bed$", group = 1)
-    ) |>
-    dplyr::select(-Seqname2, -File, -Score)
-}
-
-bed.data <- do.call(dplyr::bind_rows, lapply(bed.files, read.bed) ) |>
-  dplyr::rowwise() |>
-  dplyr::mutate(
-    Mate1Size = Mate1End - Mate1Start + 1,
-    Mate2Size = Mate2End - Mate2Start + 1,
-    InsertStart = min(Mate1Start, Mate2Start),
-    InsertEnd = max(Mate1End, Mate2End),
-    InsertSize = InsertEnd - InsertStart + 1,
-    JunctionStart = min(Mate1End, Mate2End),
-    JunctionEnd = max(Mate1Start, Mate2Start)
-  ) |>
-  merge(SELECTED.SAMPLES, by = c("Run", "GeneId")) |>
-  merge(GENE.LOCATIONS, by = c("CommonName", "GeneId", "GTF_FILE", "Location"))
-
-
-pair.spanning.data <- bed.data |>
-  dplyr::filter(Group %in% c("ZFX", "ZFY")) |>
-  dplyr::group_by(Run)|>
-  dplyr::mutate(RunMedianInsertSize = median(InsertSize)) |>
-  merge(JUNCTION.COORDINATES, by = c("CommonName", "GeneId")) |>
-  dplyr::mutate(SpansExon2 = JunctionStart <= start & JunctionEnd >= end) |>
-  dplyr::filter(SpansExon2)
- 
-
-
 #### Create individual plots  ####
 
 # Ensure output dirs exist
