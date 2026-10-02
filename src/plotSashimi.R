@@ -22,7 +22,7 @@ GTF.DATA <- read_gtf_data(GENOME.DATA$GTF_FILE, GENOME.DATA$CommonName)
 cat("Plot sashimi: Making figures\n")
 
 # Read all single sample bam files and bind in the complete metadata
-bam.files <- data.frame(path = list.files(path = "data", pattern = "[SDE]RR\\..*\\.bam$", 
+bam.files <- data.frame(path = list.files(path = "data", pattern = "[SDE]RR\\d+\\..*\\.bam$", 
                                           full.names = TRUE, recursive=TRUE)) |>
   dplyr::mutate(file = basename(path)) |>
   tidyr::separate_wider_delim(file,
