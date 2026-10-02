@@ -140,6 +140,9 @@ merged.bam.files <- data.frame(path = list.files(path = "data/merged", pattern =
 
 for (i in 1:nrow(merged.bam.files)) {
   
+  # Error handling
+  skip.file <- FALSE
+  
   tryCatch({
     bam.row <- merged.bam.files[i, ]
     species <- bam.row$CommonName
@@ -185,7 +188,17 @@ for (i in 1:nrow(merged.bam.files)) {
       )
     }
     
+  }, error=function(e){
+    cat("Error making shashimi plot\n")
+    print(e)
+    # tryCatch will return an error object which will quit the loop by default
+    # Set a skip variable instead
+    skip.file <<- TRUE
   })
+  
+  
+  # Skip to next loop iteration if an error was caught
+  if(skip.file) { next }     
 }
 
 #### Match the junction coordinates found with the coding exon 2 splice sites ####
