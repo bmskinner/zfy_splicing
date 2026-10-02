@@ -394,7 +394,8 @@ read.csv("metadata/platypus.csv") |>
   dplyr::filter(Sex == "male") |>
   dplyr::filter(
     Assay.Type == "RNA-Seq",
-    LibrarySelection != "size fractionation"
+    LibrarySelection != "size fractionation",
+    Fraction != "Ribo-seq"
   ) |>
   dplyr::mutate(
     Organism_part = str_to_lower(case_when(tissue != "" ~ tissue,
@@ -407,7 +408,8 @@ read.csv("metadata/platypus.csv") |>
       .default = NA
     )),
     Timepoint = DevStage,
-    CommonName = "platypus"
+    CommonName = "platypus",
+    Tissue = Organism_part
   ) |>
   dplyr::filter(DevStage != "") |>
   dplyr::filter(Tissue != "fibroblast") |>
@@ -743,3 +745,27 @@ data.frame(
 ) |>
   .append.data()
 
+#### Samples from SRP316316 - NT2 cell line differentiation ####
+
+# NTERA-2 (also known as NT2/D1) and TCam-2 are two testicular germ cell cancer
+# cell lines. NT2 is an embryonal carcinoma: dedifferentiated, pluripotent and
+# thus ES cell-like. NT2 is also a well known model for differentiating into
+# neural cells with retinoic acid stimulation. NT2 does express RBMY at low
+# levels, and at least one paper says it also expresses ZFY. The same paper said
+# both RBMY and ZFY increase on neurobal differentiation (so even though they’re
+# neurons they may retain some germline / embryonic features?). neural cells
+# with retinoic acid stimulation. NT2 does express RBMY at low levels, and at
+# least one paper says it also expresses ZFY. The same paper said both RBMY and
+# ZFY increase on neuronal differentiation (so even though they’re neurons they
+# may retain some germline / embryonic features?). So if RBMY = splicing, we may
+# see it in these.
+
+read.csv("metadata/SRP316316.csv") |>
+  dplyr::mutate(
+    Sex = "male",
+    Tissue = paste0(cell_type,"_",treatment),
+    Timepoint = "adult", # assumed - no publication for this!
+    DevStage = source_name,
+    CommonName = "human"
+  ) |>
+  .append.data()
