@@ -35,6 +35,9 @@ bam.files <- data.frame(path = list.files(path = "data", pattern = "[SDE]RR\\d+\
 
 for (i in 1:nrow(bam.files)) {
   
+  # Error handling
+  skip.file <- FALSE
+  
   tryCatch({
     
     bam.row <- bam.files[i, ]
@@ -110,7 +113,17 @@ for (i in 1:nrow(bam.files)) {
       )
     }
     
+  }, error=function(e){
+    cat("Error making shashimi plot\n")
+    print(e)
+    # tryCatch will return an error object which will quit the loop by default
+    # Set a skip variable instead
+    skip.file <<- TRUE
   })
+  
+
+  # Skip to next loop iteration if an error was caught
+  if(skip.file) { next }     
 }
 
 #### Create aggregate plots for merged samples ####
