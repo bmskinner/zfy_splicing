@@ -1085,7 +1085,7 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
   xmin <- min(sashimi.data$coverage$position)
   xmax <- max(sashimi.data$coverage$position)
 
-  max.coverage <- max(sashimi.data$coverage$coverage)
+  max.coverage <- max(sashimi.data$coverage$forward.strand, sashimi.data$coverage$reverse.strand)
 
   intron.y <- 1.5
   exon.ymin <- 1.1
@@ -1102,7 +1102,7 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
              x = ifelse(is.x.reverse, -Inf, Inf),
              y = 1,
              label = max.coverage,
-             hjust = 1.1, vjust = 0.5,
+             hjust = 1.2, vjust = 0.5,
              size = 2
     ) +
     annotate("text",
@@ -1117,7 +1117,7 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
             x = ifelse(is.x.reverse, -Inf, Inf),
             xend = ifelse(is.x.reverse, -Inf, Inf),
             y=1, yend=-1,
-            linewidth=0.3
+            linewidth=0.3, col="black"
             ) +
     
     
@@ -1142,21 +1142,23 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
       linewidth = 0.3, col = "blue"
     ) +
 
+    # Add centre line
+    geom_hline(yintercept = 0, linewidth=0.3, col="black") +
+    
     # Add upper strand label
-    geom_hline(yintercept = 0) +
     annotate("text",
-      x = ifelse(is.x.reverse, Inf, -Inf),
+      x = ifelse(is.x.reverse, -Inf, Inf),
       y = intron.y + 1,
       label = sashimi.data$reference.transcript.strand,
-      hjust = 0, vjust = 0.5
+      hjust = 1, vjust = 0.5
     ) +
 
     # Add lower strand label
     annotate("text",
-      x = ifelse(is.x.reverse, Inf, -Inf),
+      x = ifelse(is.x.reverse, -Inf, Inf),
       y = -intron.y - 1,
       label = sashimi.data$non.reference.transcript.strand,
-      hjust = 0, vjust = 0.5
+      hjust = 1, vjust = 0.5
     ) +
 
     # Non-reference transcript exons
