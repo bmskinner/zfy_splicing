@@ -31,7 +31,10 @@ done
 # Plot splice variation
 Rscript src/plotSashimi.R >> logs/postMapping.log 2>&1
 
-# Read gene expression data from featureCounts, extract key genes TPM
+# Find mate pairs that suggest E2 is missing
+Rscript src/findE2SpanningPairs.R >> logs/postMapping.log 2>&1
+
+# Read gene expression data from featureCounts, extract key genes and calc TPM
 Rscript src/readFeatureCounts.R >> logs/postMapping.log 2>&1
 
 # Tar the figures and output data
