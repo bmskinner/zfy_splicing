@@ -91,6 +91,7 @@ map_se_sample () {
   		      awk '$3 != "gene" ' ${GTF_FILE} > ${GTF_FILE}.no.gene.gtf
   		    fi
   		    stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE}.no.gene.gtf -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam >> logs/${ERR}.mapping.log 2>&1
+  		  fi
 		  fi
 
 			# Remove original FASTQ, we have the trimmed reads still
@@ -189,6 +190,7 @@ map_pe_sample () {
   		      awk '$3 != "gene" ' ${GTF_FILE} > ${GTF_FILE}.no.gene.gtf
   		    fi
   		    stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE}.no.gene.gtf -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam >> logs/${ERR}.mapping.log 2>&1
+		    fi
 		  fi
 			
 			# Remove original FASTQ, we have the trimmed reads still
@@ -286,6 +288,7 @@ map_long_read_sample () {
   		      awk '$3 != "gene" ' ${GTF_FILE} > ${GTF_FILE}.no.gene.gtf
   		    fi
   		    stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE}.no.gene.gtf -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam >> logs/${ERR}.mapping.log 2>&1
+		    fi
 		  fi
 		  
 			# Remove original FASTQ, we have the trimmed reads still
