@@ -14,7 +14,7 @@ Rscript src/checkQC.R >> logs/postMapping.log 2>&1
 Rscript src/mergeSamples.R >> logs/postMapping.log 2>&1
 
 # Count strand ratios across samples
-echo "`date '+%Y-%m-%d %X'` Counting strand ratios" > logs/postMapping.log 2>&1
+echo "`date '+%Y-%m-%d %X'` Counting strand ratios" >> logs/postMapping.log 2>&1
 rm report/strand_ratios.txt
 for f in data/*/[SDE]RR*.*.bam; do
   # Get the read counts from the file with strand info
@@ -27,7 +27,7 @@ for f in data/*/[SDE]RR*.*.bam; do
   echo "$f ${FORWARD} ${REVERSE} ${TOTAL}" >> report/strand_ratios.txt
 done
 
-
+echo "`date '+%Y-%m-%d %X'` Looking for splicing" >> logs/postMapping.log 2>&1
 # Plot splice variation
 Rscript src/plotSashimi.R >> logs/postMapping.log 2>&1
 

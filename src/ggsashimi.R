@@ -528,7 +528,7 @@ read_gtf_data <- function(gtf.files, gtf.names) {
         gene_name = if ("gene_name" %in% colnames(.)) gene_name else if ("gene" %in% colnames(.)) gene else gene_id,
         transcript_name = if ("transcript_name" %in% colnames(.)) transcript_name else if ("transcript" %in% colnames(.)) transcript else transcript_id,
       )
-    cat("Plot sashimi: Read ", x, "\n")
+    cat("Plot sashimi: Read", x, "\n")
     df
   },
   mc.cores = DEFAULT.MC.CORES
@@ -843,8 +843,36 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
     strand = strand
   ))
 
-  # Remove introns that overlap an exon due to multiple transcripts
-  intron.ranges$overlappingExons <- GenomicRanges::countOverlaps(intron.ranges, exon.ranges, minoverlap = 1)
+  # Remove introns that overlap an exon due to multiple transcripts. Standard
+  # GenomicRanges::countOverlaps fails with <simpleError in
+  # .Call2("C_find_overlaps_NCList", start(query), end(query), start(subject),
+  # end(subject), nclist, nclist_is_q, maxgap, minoverlap, type,     select,
+  # circle.length, PACKAGE = "IRanges"): build_NCList: memory allocation failed>
+  # on our HPC. Replace GenomicRanges::countOverlaps with custom function here
+  # only. Standard code:
+  # intron.ranges$overlappingExons <- GenomicRanges::countOverlaps(intron.ranges, exon.ranges, minoverlap = 1)
+  
+  has.overlaps <- function(intron.ranges, exon.ranges){
+    
+    sapply(1:length(intron.ranges), \(i){
+      i.start <- start(intron.ranges[i])
+      i.end <- end(intron.ranges[i])
+      for(j in 1:length(exon.ranges)){
+        j.start <- start(exon.ranges[j])
+        j.end <- end(exon.ranges[j])
+        
+        if( (i.start <= j.start & i.end >= j.start) |
+            (i.start <= j.end & i.end >= j.end)  |
+            (i.start >= j.start & i.end <=j.end )  
+        ){
+          return(1) # don't need an absolute count, just a numeric non-zero
+        }
+      }
+      return(0)
+    })
+  }
+  
+  intron.ranges$overlappingExons <- has.overlaps(intron.ranges, exon.ranges)
   intron.ranges <- intron.ranges[intron.ranges$overlappingExons == 0, ]
 
   # Some introns or intergenic sequence may be missing. Fill in gaps from min start to max end that are
@@ -893,8 +921,6 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
       new.position = ((as.double(0:(old.end - old.start))) / original.length * new.length) + new.start
     )
   }, full.ranges$new.start, full.ranges$new.end, full.ranges$start, full.ranges$end, full.ranges$original.length, full.ranges$new.length, SIMPLIFY = FALSE))
-
-  # rownames(lookup.table) <- lookup.table$old.position
 
   # Create a function that uses the above tables to convert a coordinate vector
   # to the new ranges.
