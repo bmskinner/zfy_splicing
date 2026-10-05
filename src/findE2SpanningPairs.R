@@ -1,8 +1,25 @@
-# Find paired end reads in bed files with mate1, mate2 coordinates
+# Even without junction spanning reads, we can infer e2 skipping if the distance
+# between mate pairs straddling e2 is longer than expected from the library
+# size. Find paired end reads in bed files with mate1, mate2 coordinates.
+source("src/functions.R")
+
+#### Create bed files with read pair coordinates ####
+
+bam.files <- list.files(path = "data", pattern = "[SDE]RR\\d+\\..*\\.bam$", 
+                        full.names = TRUE, recursive=TRUE)
+
+for(bam.file in bam.files){
+  bed.file <- stringr::str_replace(bam.file, ".bam$", ".bed")
+  
+  if(!file.exists(bed.file)){
+    system2("samtools", paste0("sort -n ", bam.file, " | samtools fixmate -@ 7 -rm - - | samtools view -h -f 0x03 | samtools sort -n | bedtools bamtobed  -bedpe -split > ", 
+                               bed.file))
+  }
+}
 
 #### Read bed files ####
 
-bed.files <- list.files(path = "data", pattern = "[SDE]RR.*.bed$", 
+bed.files <- list.files(path = "data", pattern = "[SDE]RR\\d+\\..*\\.bed$", 
                                           full.names = TRUE, recursive=TRUE)
 
 # Read the bed file. Keep only reads with pairs on opposite strands and on the
@@ -43,6 +60,9 @@ bed.data <- do.call(dplyr::bind_rows, lapply(bed.files, read.bed) ) |>
 #### Match reads to exon 2 boundaries ####
 
 # junction coordinates are set in plotSashimi
+junction.coordinates <- readr::read_tsv("report/coding_exon_splice_junctions.tsv")
+
+
 splice.data <- bed.data |>
   dplyr::filter(Group %in% c("ZFX", "ZFY"),
                 ) |>
