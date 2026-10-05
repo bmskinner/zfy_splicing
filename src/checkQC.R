@@ -141,7 +141,9 @@ map.data <- read.table("report/QC/mapping.txt", sep = "$") |> #  sep char does n
     )
   ) |>
   dplyr::select(-V1) |>
-  merge(SELECTED.SAMPLES, by = "Run", all.y = TRUE) # Merge in the sample info
+  merge(SELECTED.SAMPLES, by = "Run", all.y = TRUE) |> # Merge in the sample info
+  dplyr::select(-GeneId, -Location)|>
+  dplyr::distinct()
 
 create.xlsx(map.data, "report/QC/mapping.xlsx")
 
@@ -159,7 +161,7 @@ plot.mapping.rates <- function(map.data) {
     facet_wrap(CommonName ~ Tissue, scales = "free_x") +
     theme_bw() +
     theme(
-      axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+      axis.text.x = element_blank(),
       axis.title.x = element_blank()
     )
 
