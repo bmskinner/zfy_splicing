@@ -49,13 +49,6 @@ for (i in 1:nrow(bam.files)) {
     gene_id <- bam.row$GeneId
     gene_name <- bam.row$Gene
     
-    gene.data <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene_id & GENE.LOCATIONS$CommonName == species, ] # filter on species too - some genomes do not have an accession for geneid
-    coords <- parse_coordinates(gene.data$Location)
-    group <- gene.data$Group
-    
-    # Skip missing data or genes we don't need splice data from
-    if (length(group) == 0) next
-    
     # Skip completed files for testing
     final.out.file <- paste0("report/raw_sashimi/", paste(c(run, gene_id), collapse = "."), ".condensed.png")
     final.junction.file <- paste0(
@@ -66,6 +59,13 @@ for (i in 1:nrow(bam.files)) {
     
     if (file.exists(final.out.file) & file.exists(final.junction.file)) next
     
+    gene.data <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene_id & GENE.LOCATIONS$CommonName == species, ] # filter on species too - some genomes do not have an accession for geneid
+    coords <- parse_coordinates(gene.data$Location)
+    group <- gene.data$Group
+    
+    # Skip missing data or genes we don't need splice data from
+    if (length(group) == 0) next
+
     # Only read the bam file if needed
     
     cat("Detecting splice junctions for", i, ": ", run, gene_id, "in group", group, "\n")

@@ -763,7 +763,7 @@ data.frame(
 read.csv("metadata/SRP316316.csv") |>
   dplyr::mutate(
     Sex = "male",
-    Tissue = paste0(cell_type,"_",treatment),
+    Tissue = stringr::str_replace_all(paste0(cell_type,"_",treatment), " ", "-"),
     Timepoint = "adult", # assumed - no publication for this!
     DevStage = source_name,
     CommonName = "human"
