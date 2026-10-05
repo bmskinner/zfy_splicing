@@ -821,27 +821,40 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
   exon.data <- exon.data[exon.data$strand == strand, ]
   intron.data <- intron.data[intron.data$strand == strand, ]
   cat("Creating intron collapser; detected", nrow(exon.data), "exons and", nrow(intron.data), "introns\n")
+  
+  
+  exon.ranges <- tryCatch({
+    GenomicRanges::GRanges(
+      seqnames = rep("test", nrow(exon.data)),
+      ranges = IRanges::IRanges(
+        start = exon.data$start,
+        end = exon.data$end
+      ),
+      strand = strand
+    )
+  }, error = \(e){
+    cat("Error creating exon ranges\n")
+    print(e)
+  })
 
   # Reduce any overlapping exons if we have multiple transcripts
-  exon.ranges <- GenomicRanges::reduce(GenomicRanges::GRanges(
-    seqnames = rep("test", nrow(exon.data)),
-    ranges = IRanges::IRanges(
-      start = exon.data$start,
-      end = exon.data$end
-    ),
-    strand = strand
-  ))
-
-  # Break overlapping introns apart, since they can be part of an exon for a
-  # different transcript
-  intron.ranges <- GenomicRanges::disjoin(GenomicRanges::GRanges(
+  cat("Reducing exons\n")
+  exon.ranges <- GenomicRanges::reduce(exon.ranges)
+  
+  cat("Creating introns\n")
+  intron.ranges <- GenomicRanges::GRanges(
     seqnames = rep("test", nrow(intron.data)),
     ranges = IRanges::IRanges(
       start = intron.data$start,
       end = intron.data$end
     ),
     strand = strand
-  ))
+  )
+
+  cat("Disjoining introns\n")
+  # Break overlapping introns apart, since they can be part of an exon for a
+  # different transcript
+  intron.ranges <- GenomicRanges::disjoin(intron.ranges)
 
   # Remove introns that overlap an exon due to multiple transcripts. Standard
   # GenomicRanges::countOverlaps fails with <simpleError in
