@@ -1040,6 +1040,30 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
     geom_area(data = sashimi.data$coverage, aes(x = position, y = reference.strand / max.coverage), fill = "darkgrey", col = "darkgrey") +
     geom_area(data = sashimi.data$coverage, aes(x = position, y = -non.reference.strand / max.coverage), fill = "darkgrey", col = "darkgrey") +
 
+    # Add label for the max coverage value on the coverage chart at max x value
+    annotate("text",
+             x = ifelse(is.x.reverse, -Inf, Inf),
+             y = 1,
+             label = max.coverage,
+             hjust = 1.1, vjust = 0.5,
+             size = 2
+    ) +
+    annotate("text",
+             x = ifelse(is.x.reverse, -Inf, Inf),
+             y = -1,
+             label = max.coverage,
+             hjust = 1.1, vjust = 0.5,
+             size = 2
+    ) +
+    # Axis for coverage region
+   annotate("segment",
+            x = ifelse(is.x.reverse, -Inf, Inf),
+            xend = ifelse(is.x.reverse, -Inf, Inf),
+            y=1, yend=-1,
+            linewidth=0.3
+            ) +
+    
+    
     # Non reference transcript introns
     geom_segment(
       data = non.reference.introns, aes(
