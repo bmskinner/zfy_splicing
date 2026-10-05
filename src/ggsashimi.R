@@ -852,6 +852,8 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
   # only. Standard code:
   # intron.ranges$overlappingExons <- GenomicRanges::countOverlaps(intron.ranges, exon.ranges, minoverlap = 1)
   
+  cat("Checking introns for overlaps\n")
+  
   has.overlaps <- function(intron.ranges, exon.ranges){
     
     sapply(1:length(intron.ranges), \(i){
@@ -875,11 +877,14 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
   intron.ranges$overlappingExons <- has.overlaps(intron.ranges, exon.ranges)
   intron.ranges <- intron.ranges[intron.ranges$overlappingExons == 0, ]
 
+  cat("Filling intron gaps\n")
   # Some introns or intergenic sequence may be missing. Fill in gaps from min start to max end that are
   # not covered by intron or exons
   missing.introns <- GenomicRanges::gaps(GenomicRanges::reduce(c(intron.ranges, exon.ranges)),
     start = min(exon.data$start)
   )
+  
+  cat("Found intron and exon set\n")
 
   # Convert back to data frames
   intron.ranges <- c(intron.ranges, missing.introns) |>
@@ -922,6 +927,8 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
     )
   }, full.ranges$new.start, full.ranges$new.end, full.ranges$start, full.ranges$end, full.ranges$original.length, full.ranges$new.length, SIMPLIFY = FALSE))
 
+  cat("Created lookup table\n")
+  
   # Create a function that uses the above tables to convert a coordinate vector
   # to the new ranges.
   calculate <- function(coordinate) {
