@@ -833,10 +833,10 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
     )
 
     # Reduce any overlapping exons if we have multiple transcripts
-    cat("Reducing exons\n")
+    # cat("Reducing exons\n")
     exon.ranges <- GenomicRanges::reduce(exon.ranges)
     
-    cat("Creating introns\n")
+    # cat("Creating introns\n")
     intron.ranges <- GenomicRanges::GRanges(
       seqnames = rep("test", nrow(intron.data)),
       ranges = IRanges::IRanges(
@@ -846,7 +846,7 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
       strand = strand
     )
     
-    cat("Disjoining introns\n")
+
     
     # Remove introns that overlap an exon due to multiple transcripts. Standard
     # GenomicRanges::disjoin fails with <simpleError in
@@ -882,23 +882,24 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
     intron.ranges$overlappingIntrons <- has.overlaps(intron.ranges, intron.ranges)
     
     if(any(intron.ranges$overlappingIntrons>1)){
+      cat("Disjoining introns\n")
       intron.ranges <- GenomicRanges::disjoin(intron.ranges)
     }
 
-    cat("Checking introns for overlaps with exons\n")
+    # cat("Checking introns for overlaps with exons\n")
     
     # intron.ranges$overlappingExons <- GenomicRanges::countOverlaps(intron.ranges, exon.ranges, minoverlap = 1)
     intron.ranges$overlappingExons <- has.overlaps(intron.ranges, exon.ranges)
     intron.ranges <- intron.ranges[intron.ranges$overlappingExons == 0, ]
     
-    cat("Filling intron gaps\n")
+    # cat("Filling intron gaps\n")
     # Some introns or intergenic sequence may be missing. Fill in gaps from min start to max end that are
     # not covered by intron or exons
     missing.introns <- GenomicRanges::gaps(GenomicRanges::reduce(c(intron.ranges, exon.ranges)),
                                            start = min(exon.data$start)
     )
     
-    cat("Found intron and exon set\n")
+    # cat("Found intron and exon set\n")
     
     # Convert back to data frames
     intron.ranges <- c(intron.ranges, missing.introns) |>
@@ -941,7 +942,7 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
       )
     }, full.ranges$new.start, full.ranges$new.end, full.ranges$start, full.ranges$end, full.ranges$original.length, full.ranges$new.length, SIMPLIFY = FALSE))
     
-    cat("Created lookup table\n")
+    # cat("Created lookup table\n")
   }, error = \(e){
     cat("Error creating intron collapser, not collapsing\n")
     print(e)
