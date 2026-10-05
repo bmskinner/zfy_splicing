@@ -162,6 +162,8 @@ for (i in 1:nrow(merged.bam.files)) {
                                                                timepoint, sex, gene_id, gene_name), 
                                                              collapse = "."), ".condensed.png")
     
+    if(file.exists(final.out.file)){ next }
+    
     sashimi.data <- read_sashimi_data(
       bam.file = bam.row$path,
       gtf.data = GTF.DATA[[species]],

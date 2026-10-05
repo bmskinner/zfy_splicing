@@ -660,7 +660,6 @@ read.csv("metadata/sheep.csv") |>
                 Tissue = "testis",
                 Sex = "male",
                 CommonName = "sheep") |>
-  dplyr::slice_head(n=10) |>
   .append.data()
 
 
@@ -759,6 +758,7 @@ data.frame(
 # ZFY increase on neuronal differentiation (so even though they’re neurons they
 # may retain some germline / embryonic features?). So if RBMY = splicing, we may
 # see it in these.
+# https://pmc.ncbi.nlm.nih.gov/articles/PMC3677681/
 
 read.csv("metadata/SRP316316.csv") |>
   dplyr::mutate(
