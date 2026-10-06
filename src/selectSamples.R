@@ -28,6 +28,27 @@ if(file.exists(MAPPING.FILE)) file.remove(MAPPING.FILE)
   }
 }
 
+.append.cds.data <- function(data){
+  data <- data |>
+
+    # Adjust the library field to note long read sequencing distinct from short
+    # read paired
+    dplyr::mutate(,
+                  LibraryLayout = ifelse(Platform %in% c("PACBIO_SMRT"), "LONG_READ", LibraryLayout)) |>
+    dplyr::select(Run, CommonName, Genome, LibraryLayout,
+                  BioProject, DevStage, Sex, Timepoint, Tissue, Organism, LibrarySelection, 
+                  LibrarySource, Bases
+    )
+  
+  if(file.exists(CDS.MAPPING.FILE)){
+    write.table(data, file = CDS.MAPPING.FILE, row.names = FALSE, quote = TRUE, 
+                append = TRUE, sep = ",", col.names = FALSE)
+  } else {
+    write.table(data, file = CDS.MAPPING.FILE, row.names = FALSE, quote = TRUE, 
+                append = FALSE, sep = ",", col.names = TRUE)
+  }
+}
+
 # These are the filtered files used for sample selection
 filt.files <- list.files("metadata", pattern = "*.filt.csv", full.names = TRUE)
 file.remove(filt.files)
@@ -802,3 +823,9 @@ read.csv("metadata/pheasant.csv") |>
     CommonName = "pheasant"
   ) |>
   .append.data()
+
+
+#### Samples for CDS-only mapping #### 
+#These are samples for which there is not a fully annotated genome assembly. In
+#these cases, we map to just the ZFX/ZFY CDS or mRNA. The FASTA sequence is in 
+# cds/fasta.

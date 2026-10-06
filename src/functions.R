@@ -15,6 +15,7 @@ cat("Setup: Defining global functions and variables\n")
 # The file that will contain samples to be processed. Created de novo on each run
 # from selectSamples.R
 MAPPING.FILE <- "data/mapping.samples.csv"
+CDS.MAPPING.FILE <- "cds/cds.samples.csv"
 
 # Use multiple cores on Unix via the parallel package
 DEFAULT.MC.CORES <- ifelse(installr::is.windows(), 1, 6)
