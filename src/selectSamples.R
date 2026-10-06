@@ -89,6 +89,8 @@ read.csv("metadata/turkey.csv") |>
 
 #### Samples from PRJEB26695 - chicken E-MTAB-6769 ####
 
+# Note that this is Red Junglefowl, not domestic chicken
+
 # Chicken E-MTAB-6769
 read.csv("metadata/chicken.csv") |>
   dplyr::filter(sex == "male") |>
@@ -766,5 +768,21 @@ read.csv("metadata/SRP316316.csv") |>
     Timepoint = "adult", # assumed - no publication for this!
     DevStage = source_name,
     CommonName = "human"
+  ) |>
+  .append.data()
+
+
+#### Samples from ring-necked pheasant ####
+
+# The only other close relative of chicken with an annotated genome. 
+
+read.csv("metadata/pheasant.csv") |>
+  dplyr::filter(tissue =="Gonad", sex =="male") |>
+  dplyr::mutate(
+    Sex = sex,
+    Tissue = "testis",
+    Timepoint = "adult", # assumed - no publication for this!
+    DevStage = dev_stage,
+    CommonName = "pheasant"
   ) |>
   .append.data()
