@@ -745,7 +745,7 @@ data.frame(
 ) |>
   .append.data()
 
-#### Samples from SRP316316 - NT2 cell line differentiation ####
+#### Samples from PRJNA725137 - SRP316316 - NT2 cell line differentiation ####
 
 # NTERA-2 (also known as NT2/D1) and TCam-2 are two testicular germ cell cancer
 # cell lines. NT2 is an embryonal carcinoma: dedifferentiated, pluripotent and
@@ -753,12 +753,10 @@ data.frame(
 # neural cells with retinoic acid stimulation. NT2 does express RBMY at low
 # levels, and at least one paper says it also expresses ZFY. The same paper said
 # both RBMY and ZFY increase on neurobal differentiation (so even though they’re
-# neurons they may retain some germline / embryonic features?). neural cells
-# with retinoic acid stimulation. NT2 does express RBMY at low levels, and at
-# least one paper says it also expresses ZFY. The same paper said both RBMY and
-# ZFY increase on neuronal differentiation (so even though they’re neurons they
-# may retain some germline / embryonic features?). So if RBMY = splicing, we may
-# see it in these.
+# neurons they may retain some germline / embryonic features?). The same paper
+# said both RBMY and ZFY increase on neuronal differentiation (so even though
+# they’re neurons they may retain some germline / embryonic features?). So if
+# RBMY = splicing, we may see it in these.
 # https://pmc.ncbi.nlm.nih.gov/articles/PMC3677681/
 
 read.csv("metadata/SRP316316.csv") |>
@@ -771,17 +769,35 @@ read.csv("metadata/SRP316316.csv") |>
   ) |>
   .append.data()
 
+# Another study looking at NT2-N cells: PRJNA813137
+# https://pmc.ncbi.nlm.nih.gov/articles/PMC9024411/
+
+read.csv("metadata/PRJNA813137.csv") |>
+  dplyr::filter(BioProject=="PRJNA813137") |>
+  dplyr::mutate(
+    Sex = "male",
+    Tissue = stringr::str_replace_all(paste0("NT2-N_",treatment), " ", "-"),
+    Tissue = stringr::str_replace_all(Tissue, "%", ""),
+    Timepoint = "adult", # assumed - no publication for this!
+    DevStage = stringr::str_replace_all(cell_type, " ", "-"),
+    CommonName = "human"
+  ) |>
+  .append.data()
+
+
+
 
 #### Samples from ring-necked pheasant ####
 
 # The only other close relative of chicken with an annotated genome. 
+# These samples are from PRJNA271731 (Wright et al 2019)
 
 read.csv("metadata/pheasant.csv") |>
   dplyr::filter(tissue =="Gonad", sex =="male") |>
   dplyr::mutate(
     Sex = sex,
     Tissue = "testis",
-    Timepoint = "adult", # assumed - no publication for this!
+    Timepoint = "adult", # first year reproductive age
     DevStage = dev_stage,
     CommonName = "pheasant"
   ) |>
