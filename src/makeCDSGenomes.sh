@@ -1,7 +1,6 @@
 #!/bin/bash
 
 mkdir -p cds/genomes
-mkdir -p cds/fasta
 mkdir -p cds/data
 
 # Create indexed genomes for any mRNA or CDS ZFX/Y sequences

@@ -5,6 +5,7 @@ cat("Sample selection: Reading and filtering sample data\n")
 fs::dir_create(c("data", "report"))
 # These are the filtered samples used for mapping. Recreate each time.
 if(file.exists(MAPPING.FILE)) file.remove(MAPPING.FILE)
+if(file.exists(CDS.MAPPING.FILE)) file.remove(CDS.MAPPING.FILE)
 
 # Merge with genome data and append the given data to the mapping file
 .append.data <- function(data){
@@ -829,3 +830,16 @@ read.csv("metadata/pheasant.csv") |>
 #These are samples for which there is not a fully annotated genome assembly. In
 #these cases, we map to just the ZFX/ZFY CDS or mRNA. The FASTA sequence is in 
 # cds/fasta.
+
+read.csv("metadata/Tokudaia_osimensis.csv") |>
+  dplyr::filter(tissue!="Tail") |>
+  dplyr::mutate(
+    Sex = str_replace_all(sex, " ", "-"),
+    Tissue = tissue,
+    Timepoint = AGE,
+    DevStage = dev_stage,
+    CommonName = "tokudaia_osimensis",
+    Genome = "Tokudaia_osimensis_CDS"
+  )|>
+  .append.cds.data()
+  
