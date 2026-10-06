@@ -236,9 +236,9 @@ for (species in unique(feature.values$CommonName)) {
 
 junction.data <- readr::read_tsv("report/coding_exon_splice_junctions.tsv", show_col_types = FALSE) |>
   dplyr::filter(E1E3>0) |>
-  merge(SELECTED.SAMPLES, by=c("CommonName", "Sex", "Tissue", "Timepoint")) |>
+  merge(SELECTED.SAMPLES, by=c("CommonName", "Sex", "Tissue", "Timepoint", "GeneId")) |>
   merge(GENE.LOCATIONS, by=c("CommonName", "GeneId", "GTF_FILE")) |>
-  dplyr::select(CommonName, Sex, Tissue, Timepoint, GeneId, Gene, E1E3, pctE2Spliced, Group) |>
+  dplyr::select(CommonName, Sex, Tissue, Timepoint, GeneId, Gene, E1E2, E2E3, E1E3, pctE2Spliced, Group) |>
   dplyr::group_by(CommonName, Sex, Tissue, Timepoint, Group) |>
   dplyr::distinct() |>
   dplyr::mutate(Splicing = paste0(Gene, " (", E1E3, " reads, ", sprintf("%.2f%%)",  pctE2Spliced)),
@@ -246,15 +246,17 @@ junction.data <- readr::read_tsv("report/coding_exon_splice_junctions.tsv", show
                                               E1E3>=2 & pctE2Spliced>=10 ~ "Marginal",
                                               E1E3>=1 & pctE2Spliced>=15 ~ "Marginal",
                                               E1E3>=5 & pctE2Spliced>=4 ~ "Marginal",
-                                              E1E2 < 10 & E2E3 < 10 ~ "Insufficient coverage",
+                                              E1E2 < 10 | E2E3 < 10 ~ "Insufficient coverage",
                                               .default = "")) |>
   dplyr::summarise(Splice_junctions = paste(Splicing, collapse = ", "),
                    Splice_detected = case_when( any(str_detect(SplicingDetected, "Clear")) ~"Clear",
                                                 any(str_detect(SplicingDetected, "Marginal")) ~"Marginal",
+                                                any(str_detect(SplicingDetected, "Insufficient coverage")) ~"Insufficient coverage",
                                                 .default = ""
                                                 ),
                    .groups = "drop_last") |>
-  tidyr::pivot_wider(names_from = Group, values_from = c(Splice_junctions, Splice_detected))
+  tidyr::pivot_wider(names_from = Group, values_from = c(Splice_junctions, Splice_detected)) |>
+  dplyr::arrange(CommonName, Tissue, Sex)
 
 splicing.table <- feature.values |>
   dplyr::select(CommonName, Sex, Timepoint, Tissue, Group, GeneId, MedianTPM, TotalBases) |>
