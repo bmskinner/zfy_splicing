@@ -31,6 +31,9 @@ echo "`date '+%Y-%m-%d %X'` Looking for splicing" >> logs/postMapping.log 2>&1
 # Plot splice variation
 Rscript src/plotSashimi.R >> logs/postMapping.log 2>&1
 
+# Combine individual plots for easier comparison across tissues and species
+Rscript src/aggregateSashimiPlots.R >> logs/postMapping.log 2>&1
+
 # Find mate pairs that suggest E2 is missing
 Rscript src/findE2SpanningPairs.R >> logs/postMapping.log 2>&1
 

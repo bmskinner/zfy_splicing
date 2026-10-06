@@ -246,6 +246,7 @@ junction.data <- readr::read_tsv("report/coding_exon_splice_junctions.tsv", show
                                               E1E3>=2 & pctE2Spliced>=10 ~ "Marginal",
                                               E1E3>=1 & pctE2Spliced>=15 ~ "Marginal",
                                               E1E3>=5 & pctE2Spliced>=4 ~ "Marginal",
+                                              E1E2 < 10 & E2E3 < 10 ~ "Insufficient coverage",
                                               .default = "")) |>
   dplyr::summarise(Splice_junctions = paste(Splicing, collapse = ", "),
                    Splice_detected = case_when( any(str_detect(SplicingDetected, "Clear")) ~"Clear",
