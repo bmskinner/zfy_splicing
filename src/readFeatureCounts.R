@@ -38,6 +38,8 @@ read.feature.count.file <- function(file) {
 
 feature.files <- list.files(path = "data", pattern = ".*.counts.txt$", full.names = TRUE, recursive = TRUE)
 
+if(length(feature.files)==0) { stop("No feature counts files available to process") }
+
 feature.values <- do.call(rbind, parallel::mclapply(feature.files,
   read.feature.count.file,
   mc.cores = DEFAULT.MC.CORES
@@ -47,9 +49,7 @@ readr::write_csv(feature.values, "report/tpm.csv", quote = "needed")
 
 #### Read the TPM values ####
 
-feature.values <- readr::read_csv("report/tpm.csv", show_col_types = FALSE)
-
-feature.values <- feature.values |>
+feature.values <- readr::read_csv("report/tpm.csv", show_col_types = FALSE) |>
   merge(SELECTED.SAMPLES, by = "Run") |>
   merge(GENE.LOCATIONS, by = c("GeneId", "CommonName", "GTF_FILE")) |>
   merge(GENOME.DATA, by = c("CommonName", "Genome", "GTF_FILE")) |>
