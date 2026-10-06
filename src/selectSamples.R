@@ -313,7 +313,6 @@ read.csv("metadata/PRJNA238328.csv") |>
   ) |>
   dplyr::group_by(Tissue, Sex, Timepoint) |>
   dplyr::arrange(desc(Bases)) |>
-  dplyr::slice_head(n = 10) |> # we don't need all of them
   .append.data()
 
 #### Samples from PRJEB26889 - E-MTAB-6811 rat ####
