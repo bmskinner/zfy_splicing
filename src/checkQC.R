@@ -185,17 +185,18 @@ plot.mapping.rates <- function(map.data) {
   ggplot(
     total.mapped.bases,
     aes(
-      x = CommonName, y = TotalMappedReads / 1e6,
-      fill = BaseSizeGroup
+      x = Timepoint, y = TotalMappedReads / 1e6,
+      # fill = BaseSizeGroup
     )
   ) +
     geom_hline(yintercept = 100, col = "lightgreen") +
     geom_hline(yintercept = 400, col = "darkgreen") +
     scale_fill_manual(values = c("Low" = "salmon", "Mid" = "lightgreen", "High" = "darkgreen")) +
-    geom_col() +
+    scale_y_log10()+
+    geom_col(fill="darkgreen") +
     labs(y = "Total mapped reads (Millions)") +
     theme_bw() +
-    facet_grid(Tissue ~ Timepoint) +
+    facet_wrap(CommonName ~ Tissue) +
     theme_bw() +
     theme(
       axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
@@ -204,7 +205,7 @@ plot.mapping.rates <- function(map.data) {
     )
   ggsave(
     plot = last_plot(), filename = "report/QC/Mapped_reads_total_bases.png", dpi = 300, units = "mm",
-    width = 170, height = 170
+    width = 300, height = 400
   )
 }
 
