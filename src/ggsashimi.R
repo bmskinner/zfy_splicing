@@ -651,7 +651,7 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
 
   # Get the longest transcript in the gene if none specified
   if (is.na(reference.transcript.id)) {
-    cat("No reference transcript given, selecting longest for gene id", sashimi.data$reference.gene.id, "\n")
+    cat("No reference transcript given, selecting longest for gene id '", sashimi.data$reference.gene.id, "'\n")
     reference.transcript.id <- sashimi.data$reference.gtf.region |>
       dplyr::filter(gene_id == sashimi.data$reference.gene.id, type == "transcript") |>
       dplyr::mutate(length = end - start + 1) |>
@@ -661,10 +661,9 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
       dplyr::pull()
   }
   sashimi.data$reference.transcript.id <- reference.transcript.id
-  cat("Reference transcript is", reference.transcript.id, "\n")
 
   if (nrow(sashimi.data$reference.gtf.region[sashimi.data$reference.gtf.region$transcript_id == sashimi.data$reference.transcript.id, ]) == 0) {
-    stop("Cannot detect a reference transcript with id", reference.transcript.id, " in genome region GTF\n")
+    stop("Cannot detect a reference transcript with id '", reference.transcript.id, "' in genome region GTF\n")
   }
 
   # Is the gene on the forward or reverse strand? Note - this is the gene, not the junctions or reads
@@ -680,7 +679,7 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
 
   sashimi.data$non.reference.transcript.strand <- ifelse(sashimi.data$reference.transcript.strand == "+", "-", "+")
 
-  cat("Reference transcript is on strand '", paste(sashimi.data$reference.transcript.strand, collapse = ","), "'\n")
+  cat("Reference transcript is '", reference.transcript.id, "' on strand '", paste(sashimi.data$reference.transcript.strand, collapse = ","), "'\n")
   if (is.null(sashimi.data$reference.transcript.strand)) stop("Unable to find reference strand for", sashimi.data$reference.transcript.id)
 
   sashimi.data$reference.transcript.boundaries <- get_exon_boundaries(sashimi.data$reference.gtf.region, chr, start, end)
@@ -745,8 +744,6 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
     dplyr::slice_tail(n = 1) |>
     dplyr::select(junction.strand) |>
     dplyr::pull()
-
-  cat("Reference read strand is '", sashimi.data$reference.read.strand, "'\n")
 
   # What if there were no reference transcript junctions? Not going to use the
   # plot, so just default to forward strand.
