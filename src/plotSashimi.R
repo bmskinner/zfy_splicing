@@ -24,7 +24,8 @@ cat("Plot sashimi: Making figures\n")
 # Read all single sample bam files and bind in the complete metadata
 bam.files <- data.frame(path = list.files(path = "data", pattern = "[SDE]RR\\d+\\..*\\.bam$", 
                                           full.names = TRUE, recursive=TRUE)) |>
-  dplyr::mutate(file = basename(path)) |>
+  dplyr::mutate(file = basename(path),
+                mtime = file.mtime(path)) |>
   tidyr::separate_wider_delim(file,
                               delim = ".", names = c("Run", "GeneId", "ext")
   ) |>
@@ -48,6 +49,7 @@ for (i in 1:nrow(bam.files)) {
     sex <- bam.row$Sex
     gene_id <- bam.row$GeneId
     gene_name <- bam.row$Gene
+    bam.mtime <- bam.row$mtime
     
     # Skip completed files for testing
     final.out.file <- paste0("report/raw_sashimi/", paste(c(run, gene_id), collapse = "."), ".condensed.png")
@@ -57,7 +59,9 @@ for (i in 1:nrow(bam.files)) {
       ".junctions.csv"
     )
     
-    if (file.exists(final.out.file) & file.exists(final.junction.file)) next
+    # If the output image file exists and was created after the bam file (in
+    # case a sample was remapped), we can skip
+    if (file.exists(final.out.file) & file.exists(final.junction.file) & file.mtime(final.out.file)>bam.mtime) next
     
     gene.data <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene_id & GENE.LOCATIONS$CommonName == species, ] # filter on species too - some genomes do not have an accession for geneid
     coords <- parse_coordinates(gene.data$Location)
@@ -130,7 +134,8 @@ for (i in 1:nrow(bam.files)) {
 
 merged.bam.files <- data.frame(path = list.files(path = "data/merged", pattern = ".*.bam$", 
                                           full.names = TRUE, recursive=TRUE)) |>
-  dplyr::mutate(file = basename(path)) |>
+  dplyr::mutate(file = basename(path),
+                mtime = file.mtime(path)) |>
   tidyr::separate_wider_delim(file,
                               delim = ".", names = c("CommonName", "Tissue", "Timepoint", "Sex",  "GeneId", "ext")
   ) |>
@@ -151,6 +156,7 @@ for (i in 1:nrow(merged.bam.files)) {
     sex <- bam.row$Sex
     gene_id <- bam.row$GeneId
     gene_name <- bam.row$Gene
+    bam.mtime <- bam.row$mtime
     
     gene.data <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene_id & GENE.LOCATIONS$CommonName == species, ] # filter on species too - some genomes do not have an accession for geneid
     coords <- parse_coordinates(gene.data$Location)
@@ -162,7 +168,7 @@ for (i in 1:nrow(merged.bam.files)) {
                                                                timepoint, sex, gene_id, gene_name), 
                                                              collapse = "."), ".condensed.png")
     
-    if(file.exists(final.out.file)){ next }
+    if(file.exists(final.out.file) & file.mtime(final.out.file)>bam.mtime){ next }
     
     sashimi.data <- read_sashimi_data(
       bam.file = bam.row$path,
@@ -177,18 +183,16 @@ for (i in 1:nrow(merged.bam.files)) {
       next
     } 
     
-    if(!file.exists(final.out.file) ){
-      
-      sashimi.plot.collapsed <- make_sashimi_coverage_plot(sashimi.data,
-                                                           is.collapse.introns = TRUE, show.x.axis = FALSE,
-                                                           min.spanning.reads = 2, label = paste0(species, "\n", sex, "\n", tissue, "\n", timepoint, "\n", gene_name)
-      )
-      
-      save.double.width(final.out.file,
-                        sashimi.plot.collapsed$plot,
-                        height = 50
-      )
-    }
+    sashimi.plot.collapsed <- make_sashimi_coverage_plot(sashimi.data,
+                                                         is.collapse.introns = TRUE, show.x.axis = FALSE,
+                                                         min.spanning.reads = 2, label = paste0(species, "\n", sex, "\n", tissue, "\n", timepoint, "\n", gene_name)
+    )
+    
+    save.double.width(final.out.file,
+                      sashimi.plot.collapsed$plot,
+                      height = 50
+    )
+    
     
   }, error=function(e){
     cat("Error making shashimi plot\n")
