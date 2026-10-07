@@ -34,8 +34,8 @@ bam.files <- data.frame(path = list.files(path = "data", pattern = "[SDE]RR\\d+\
   merge(SELECTED.SAMPLES, by = c("CommonName", "Run",  "Genome", "GTF_FILE", "GeneId", "Location")) |>
   dplyr::filter( !(Group %in% c("RBMX", "RBMY"))) # skip genes we don't need splice data from
 
-for (i in 1:nrow(bam.files)) {
-  
+create.sashimi.plot <- function(i){
+
   # Error handling
   skip.file <- FALSE
   
@@ -61,14 +61,14 @@ for (i in 1:nrow(bam.files)) {
     
     # If the output image file exists and was created after the bam file (in
     # case a sample was remapped), we can skip
-    if (file.exists(final.out.file) & file.exists(final.junction.file) & file.mtime(final.out.file)>bam.mtime) next
+    if (file.exists(final.out.file) & file.exists(final.junction.file) & file.mtime(final.out.file)>bam.mtime) return(TRUE)
     
     gene.data <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene_id & GENE.LOCATIONS$CommonName == species, ] # filter on species too - some genomes do not have an accession for geneid
     coords <- parse_coordinates(gene.data$Location)
     group <- gene.data$Group
     
     # Skip missing data or genes we don't need splice data from
-    if (length(group) == 0) next
+    if (length(group) == 0) return(TRUE)
 
     # Only read the bam file if needed
     
@@ -83,10 +83,9 @@ for (i in 1:nrow(bam.files)) {
     )
     
     if (sashimi.data$total.reads == 0){
-      # fs::file_touch(final.pair.spanning.file)
       fs::file_touch(final.junction.file)
       fs::file_touch(final.out.file)
-      next
+      return(TRUE)
     } 
     
     junction.data <- sashimi.data$junctions |>
@@ -125,10 +124,12 @@ for (i in 1:nrow(bam.files)) {
     skip.file <<- TRUE
   })
   
-
+  return(skip.file)
   # Skip to next loop iteration if an error was caught
-  if(skip.file) { next }     
+  # if(skip.file) { next }     
 }
+
+mclapply(1:nrow(bam.files), create.sashimi.plot, mc.cores = DEFAULT.MC.CORES)
 
 #### Create aggregate plots for merged samples ####
 
