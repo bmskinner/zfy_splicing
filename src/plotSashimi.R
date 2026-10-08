@@ -3,9 +3,7 @@
 # right irrespective of strand.
 source("src/functions.R")
 source("src/ggsashimi.R")
-library(gridExtra)
-library(png)
-library(grid)
+
 cat("Plot sashimi: running shashimi plotting\n")
 
 #### Create individual plots  ####
@@ -136,7 +134,11 @@ mclapply(1:nrow(bam.files), create.sashimi.plot, mc.cores = DEFAULT.MC.CORES)
 merged.bam.files <- data.frame(path = list.files(path = "data/merged", pattern = ".*.bam$", 
                                           full.names = TRUE, recursive=TRUE)) |>
   dplyr::mutate(file = basename(path),
-                mtime = file.mtime(path)) |>
+                mtime = file.mtime(path),
+                file = str_replace_all(file, "0\\.2", "02"),
+                file = str_replace_all(file, "0\\.5", "02"),
+                file = str_replace_all(file, "2\\.5", "02"),
+                ) |>
   tidyr::separate_wider_delim(file,
                               delim = ".", names = c("CommonName", "Tissue", "Timepoint", "Sex",  "GeneId", "ext")
   ) |>

@@ -1,6 +1,3 @@
-library(gridExtra)
-library(png)
-library(grid)
 source("src/functions.R")
 
 #### Individual runs ####

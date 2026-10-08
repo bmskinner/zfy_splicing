@@ -191,7 +191,7 @@ plot.mapping.rates <- function(map.data) {
   ) +
     geom_hline(yintercept = 100, col = "lightgreen") +
     geom_hline(yintercept = 400, col = "darkgreen") +
-    scale_fill_manual(values = c("Low" = "salmon", "Mid" = "lightgreen", "High" = "darkgreen")) +
+    # scale_fill_manual(values = c("Low" = "salmon", "Mid" = "lightgreen", "High" = "darkgreen")) +
     scale_y_log10()+
     geom_col(fill="darkgreen") +
     labs(y = "Total mapped reads (Millions)") +

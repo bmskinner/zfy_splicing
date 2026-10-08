@@ -2,7 +2,7 @@ cat("Setup: Loading packages\n")
 packages <- c(
   "parallel", "installr", "openxlsx2", "tidyverse", "GenomicRanges",
   "fs", "data.table", "patchwork", "grid", "scales", "ggbeeswarm",
-  "rtracklayer", "Rsamtools", "bitops", "rlang", "R.utils"
+  "rtracklayer", "Rsamtools", "bitops", "rlang", "R.utils", "gridExtra", "png"
 )
 
 suppressPackageStartupMessages({
