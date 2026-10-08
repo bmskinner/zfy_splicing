@@ -55,6 +55,7 @@ if(file.exists(CDS.MAPPING.FILE)) file.remove(CDS.MAPPING.FILE)
 # These are the filtered files used for sample selection
 filt.files <- list.files("metadata", pattern = "*.filt.csv", full.names = TRUE)
 file.remove(filt.files)
+rm(filt.files)
 
 #### Samples from human not from PRJEB26695 ####
 # None of the reads from SRR6253462 - SRR6253470 mapped successfully.

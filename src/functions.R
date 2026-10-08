@@ -1,5 +1,5 @@
 cat("Setup: Loading packages\n")
-packages <- c(
+.packages <- c(
   "parallel", "installr", "openxlsx2", "tidyverse", "GenomicRanges",
   "fs", "data.table", "patchwork", "grid", "scales", "ggbeeswarm",
   "rtracklayer", "Rsamtools", "bitops", "rlang", "R.utils", "gridExtra", "png",
@@ -7,8 +7,9 @@ packages <- c(
 )
 
 suppressPackageStartupMessages({
-  is.installed <- sapply(packages, require, character.only = TRUE)
-  if (!all(is.installed)) stop("The following packages are required:", paste(packages[!is.installed], collapse = ", "))
+  is.installed <- sapply(.packages, require, character.only = TRUE)
+  if (!all(is.installed)) stop("The following packages are required:", paste(.packages[!is.installed], collapse = ", "))
+  rm(is.installed)
 })
 
 cat("Setup: Defining global functions and variables\n")
