@@ -680,14 +680,23 @@ read.csv("metadata/cattle_other.csv") |>
 
 #### Samples from sheep ####
 
-read.csv("metadata/sheep.csv") |>
+# Hu sheep from PRJNA731673 https://www.sciencedirect.com/science/article/abs/pii/S0093691X22003946
+# Fast to reach puberty at ~120 days
+# PRJEB19199 from Roslin sheep atlas
+
+sheep <- read.csv("metadata/sheep.csv") |>
   dplyr::rename(Sex = sex,
                 ) |>
-  dplyr::filter(Assay.Type == "RNA-Seq",
-                BioProject %in% c("PRJEB19199")) |>
+  dplyr::filter(Assay.Type == "RNA-Seq") |>
+  dplyr::filter(BioProject %in% c("PRJEB19199", "PRJNA731673")) |>
   dplyr::arrange(desc(Bases))|>
-  dplyr::mutate(DevStage=Animal_age_at_collection,
-                Timepoint="adult",
+  dplyr::mutate(DevStage= case_when(is.na(Animal_age_at_collection) ~ AGE,
+                                    .default = as.character(Animal_age_at_collection)),
+                Timepoint= case_when(Animal_age_at_collection == 2 ~ "adult", # years
+                                     AGE <= 30 ~ "birth",
+                                     AGE >=90 & AGE <=150 ~ "mid-meiosis",
+                                     AGE >150 ~ "adult"
+                                     ),
                 Tissue = "testis",
                 Sex = "male",
                 CommonName = "sheep") |>
@@ -838,7 +847,8 @@ read.csv("metadata/pheasant.csv") |>
 
 # 12-tissue, five-species survey of sex differences in gene expression using
 # both publicly available (human) and newly generated (cynomolgus macaque,
-# mouse, rat, and dog) RNA sequencing data
+# mouse, rat, and dog) RNA sequencing data. Naqvi et al 2019.
+# https://pubmed.ncbi.nlm.nih.gov/31320509/
 
 read.csv("metadata/PRJNA516470.csv") |>
   dplyr::filter(Organism %in% c("Mus musculus","Rattus norvegicus"),
