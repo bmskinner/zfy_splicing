@@ -10,21 +10,31 @@ fs::dir_delete("data/merged")
 fs::dir_create("data/merged")
 
 #### Create merge command for each gene, tissue, species, timepoint, sex ####
+
+# If a merged bam does not exist, create it. If a merged bam exists, and is more
+# recent than any of the individual bams, don't overwrite it.
+
 groups <- SELECTED.SAMPLES |>
   merge(GENE.LOCATIONS, by=c("CommonName", "GTF_FILE", "GeneId")) |>
   dplyr::group_by(Organism, Tissue, Timepoint, CommonName, Sex, GeneId, Gene) |>
   dplyr::mutate(
     bam.file = paste0("data/", CommonName, "/", Run, ".", GeneId, ".bam"),
-    lock.file = paste0("data/", CommonName, "/", Run, ".lck")
+    lock.file = paste0("data/", CommonName, "/", Run, ".lck"),
+    bam.mtime = file.mtime(bam.file)
   ) |>
   dplyr::summarise(
     bams = paste(bam.file, collapse = " "),
+    bams.exist = all(file.exists(bam.file)),
     lock.files.exist = any(file.exists(lock.file)), # bam may be in process of being written
     count = n(),
+    max.bam.mtime = max(bam.mtime), # what is the most recent bam creation time?
     .groups = "drop_last"
   ) |>
   dplyr::mutate(
     merged.bam = paste0("data/merged/", CommonName, ".", Tissue, ".", Timepoint, ".", Sex,".", GeneId,".bam"),
+    merged.bam.exists = file.exists(merged.bam),
+    is.replace.merged.bam = merged.bam.exists & file.mtime(merged.bam) < max.bam.mtime,
+    is.merge  = !lock.files.exist & bams.exist & (!merged.bam.exists | is.replace.merged.bam), # Do not overwrite if no bams have changed
     samtools.merge.arguments = paste("merge -@ 7 -r -o", merged.bam, bams)
   )
 
@@ -32,7 +42,7 @@ groups <- SELECTED.SAMPLES |>
 
 # Any existing merged files will be overwritten
 to.merge <- groups |>
-  dplyr::filter(!lock.files.exist) # ensure we only try to merge when all bams of a group are available and complete
+  dplyr::filter(is.merge) # ensure we only try to merge when all bams of a group are available and complete
 
 if (nrow(to.merge) > 0) {
   cat("Merge samples: Merging bams\n")

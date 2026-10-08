@@ -127,7 +127,7 @@ create.sashimi.plot <- function(i){
   # if(skip.file) { next }     
 }
 
-mclapply(1:nrow(bam.files), create.sashimi.plot, mc.cores = DEFAULT.MC.CORES)
+invisible(mclapply(1:nrow(bam.files), create.sashimi.plot, mc.cores = DEFAULT.MC.CORES))
 
 #### Create aggregate plots for merged samples ####
 
@@ -214,7 +214,7 @@ create.merged.sashimi.plot <- function(i){
   TRUE
 }
 
-mclapply(1:nrow(merged.bam.files), create.merged.sashimi.plot, mc.cores = DEFAULT.MC.CORES)
+invisible(mclapply(1:nrow(merged.bam.files), create.merged.sashimi.plot, mc.cores = DEFAULT.MC.CORES))
 
 #### Match the junction coordinates found with the coding exon 2 splice sites ####
 
