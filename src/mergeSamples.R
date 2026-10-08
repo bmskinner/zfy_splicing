@@ -6,13 +6,14 @@ source("src/functions.R")
 
 cat("Merge samples: selecting bams for merging\n")
 
-fs::dir_delete("data/merged")
 fs::dir_create("data/merged")
 
 #### Create merge command for each gene, tissue, species, timepoint, sex ####
 
 # If a merged bam does not exist, create it. If a merged bam exists, and is more
 # recent than any of the individual bams, don't overwrite it.
+
+# Ditto for StringTie - run if we need to
 
 groups <- SELECTED.SAMPLES |>
   merge(GENE.LOCATIONS, by=c("CommonName", "GTF_FILE", "GeneId")) |>
@@ -67,6 +68,7 @@ mcmapply(system2, command = "samtools",
          mc.cores = DEFAULT.MC.CORES)
 
 #### Run StringTie on the merged bam if needed ####
+cat("Merge samples: Running stringtie on merged bams\n")
 to.stringtie <- groups |>
   dplyr::filter(is.stringtie) 
 
@@ -74,10 +76,7 @@ mcmapply(system2, command = "stringtie",
          args = to.stringtie$stringtie.arguments,
          mc.cores = DEFAULT.MC.CORES)
 
-
-
-
-# Make a summary table of which bams were merged
+#### Make a summary table of which bams were merged ####
 create.xlsx(groups, "report/merged.bams.xlsx")
 cat("Merge samples: Exported merged bam table to report/merged.bams.xlsx\n")
 
