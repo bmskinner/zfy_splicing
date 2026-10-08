@@ -50,7 +50,7 @@ readr::write_csv(feature.values, "report/tpm.csv", quote = "needed")
 #### Read the TPM values ####
 
 feature.values <- readr::read_csv("report/tpm.csv", show_col_types = FALSE) |>
-  merge(SELECTED.SAMPLES, by = "Run") |>
+  merge(SELECTED.SAMPLES, by = "Run", "GeneId") |>
   merge(GENE.LOCATIONS, by = c("GeneId", "CommonName", "GTF_FILE")) |>
   merge(GENOME.DATA, by = c("CommonName", "Genome", "GTF_FILE")) |>
   dplyr::mutate(
