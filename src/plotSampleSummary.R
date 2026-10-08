@@ -31,7 +31,7 @@ create.xlsx(sample.groups, "report/sample.groups.xlsx")
 # Make summary plot of total bases
 sample.plot <- ggplot(
   sample.groups %>% dplyr::filter(MappedTimepoint %in% c("adult", "adolescence", "birth")),
-  aes(x = interaction(CommonName, Sex), y = TotalBases / 1e9, fill = BaseSizeGroup)
+  aes(x =MappedTimepoint, y = TotalBases / 1e9, fill = BaseSizeGroup)
 ) +
   geom_hline(yintercept = 10, col = "lightgreen") +
   geom_hline(yintercept = 50, col = "darkgreen") +
@@ -40,14 +40,14 @@ sample.plot <- ggplot(
   scale_size_manual(values = c(1, 3), guide = "none") +
   scale_fill_manual(values = c("Poor" = "salmon", "OK" = "lightgreen", "Good" = "darkgreen")) +
   labs(y = "Total bases (Gb)") +
-  facet_grid(Tissue ~ MappedTimepoint) +
+  facet_wrap(Tissue ~ interaction(CommonName, Sex)) +
   theme_bw() +
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
     axis.title.x = element_blank(),
     legend.position = "none"
   )
-save.double.width("report/read.depths.png", sample.plot, height = 230)
+save.plot("report/read.depths.png", sample.plot, height = 400, width = 300)
 
 # And the mouse specific timepoints
 mouse.samples <- SELECTED.SAMPLES |>
