@@ -1,12 +1,6 @@
-# Find novel ZFX transcripts
-library(tidyverse)
-library(ggtranscript) # devtools::install_github("dzhang32/ggtranscript")
-library(GenomicRanges)
-library(rtracklayer)
-library(Biostrings)
-library(GenomicFeatures)
-library(BSgenome)
-library(patchwork)
+# Visualise transcripts from StringTie
+# This expects StringTie binary in ./bin
+cat("Visualise transcripts: Beginning\n")
 source("src/functions.R")
 
 #### Define functions ####
@@ -52,11 +46,10 @@ export.novel.transcript.sequences <- function(novel.gtf.file, reference.fasta) {
 }
 
 # Read novel transcript gtf file and plot.
-plot.novel.transcripts <- function(novel.gtf.file) {
-  gene.names <- str_extract(novel.gtf.file, "(\\w+)\\.(\\w+)\\.([\\w-\\d]+)\\.([\\w\\d]+)\\.([A-Za-z\\d]+)\\.gtf", group = c(1:5))
-
-  cat("Plotting", gene.names, "\n")
-  novel.gtf <- read.novel.transcripts(novel.gtf.file) %>%
+plot.novel.transcripts <- function(gtf.file, species, tissue, timepoint, sex, gene.id, gene.name) {
+  cat("Plotting", gene.name, "\n")
+  
+  novel.gtf <- read.novel.transcripts(gtf.file) %>%
     dplyr::group_by(transcript_id) %>%
     dplyr::arrange(strand, transcript_id, start)
 
@@ -139,41 +132,68 @@ plot.novel.transcripts <- function(novel.gtf.file) {
       title = element_text(),
       legend.position = "top"
     )
-
-  save.plot(paste0("data/stringtie/", paste(gene.names, collapse = "."), ".transcripts.png"), transcript.plot,
-    width = 170, height = nrow(novel.gtf) * 50
+  
+  
+  stringtie.plot.file <- paste0("report/stringtie/", paste(c(species,tissue, 
+                                                             timepoint, sex, gene.id, gene.name), 
+                                                           collapse = "."), ".png")
+  save.plot(stringtie.plot.file, transcript.plot,
+    width = 170, height = min(1000, nrow(novel.gtf) * 50)
   )
 
-  transcript.plot
+  TRUE
 }
 
-#### Plot novel transcripts ####
-
-# Read the genome FASTA files
-cat("Reading genome FASTA files\n")
-genome.fastas <- lapply(paste0("genomes/", GENOME_DATA$FASTA), read.reference.genome)
-names(genome.fastas) <- GENOME_DATA$CommonName
+#### Find and read merged StringTie GTF files ####
 
 # Find the transcript GTFs
-novel.gtf.files <- list.files(path = "data", pattern = "*.gtf$", recursive = TRUE,
-                              full.names = TRUE)
-sapply(novel.gtf.files, \(x) tryCatch(plot.novel.transcripts(x), error = \(e) print(e)))
+
+stringtie.gtf.files <- SELECTED.SAMPLES |>
+  merge(GENE.LOCATIONS, by=c("CommonName", "GTF_FILE", "GeneId")) |>
+  dplyr::select(Organism, Tissue, Timepoint, CommonName, Sex, GTF_FILE, GeneId, Gene) |>
+  dplyr::distinct() |>
+  dplyr::mutate(
+    stringtie.gtf = paste0("data/merged/", CommonName, ".", Tissue, ".", Timepoint, ".", Sex,".", GeneId,".gtf"),
+    stringtie.gtf.exists = file.exists(stringtie.gtf)
+  )
+
+stringtie.to.plot <- stringtie.gtf.files |>
+  dplyr::filter(stringtie.gtf.exists)
+
+invisible(mcmapply(\(x, ...) tryCatch(plot.novel.transcripts(x,...), 
+                                      error = \(e) {
+                                        print(e)
+                                        return(FALSE)
+                                      }), 
+                   stringtie.to.plot$stringtie.gtf, 
+                   stringtie.to.plot$CommonName,
+                   stringtie.to.plot$Tissue,
+                   stringtie.to.plot$Timepoint,
+                   stringtie.to.plot$Sex, 
+                   stringtie.to.plot$GeneId,
+                   stringtie.to.plot$Gene,
+                   mc.cores = DEFAULT.MC.CORES))
 # plot.novel.transcripts("data/stringtie/zebrafinch.testis.adult.ENSTGUG00000007219.gtf")
 
 
 #### Export FASTA sequence of novel transcripts ####
 
-# Extract the transcript sequence for each
-cat("Extracting transcript FASTA sequences\n")
-sapply(novel.gtf.files, \(x){
-  common.name <- stringr::str_split(basename(x), "\\.")[[1]][1]
-  cat("Extracting from genome", common.name, "\n")
-  fasta <- genome.fastas[[common.name]]
-  tryCatch(export.novel.transcript.sequences(x, fasta), error = \(e) print(e))
-})
+# Read the genome FASTA files
+# cat("Reading genome FASTA files\n")
+# genome.fastas <- lapply(GENOME.DATA$FASTA_FILE, read.reference.genome)
+# names(genome.fastas) <- GENOME.DATA$CommonName
+
+# # Extract the transcript sequence for each
+# cat("Extracting transcript FASTA sequences\n")
+# sapply(novel.gtf.files, \(x){
+#   common.name <- stringr::str_split(basename(x), "\\.")[[1]][1]
+#   cat("Extracting from genome", common.name, "\n")
+#   fasta <- genome.fastas[[common.name]]
+#   tryCatch(export.novel.transcript.sequences(x, fasta), error = \(e) print(e))
+# })
 
 #### Manual analyses #####
-read.novel.transcripts("data/stringtie/rat.testis.adult.ENSRNOG00000053042.Zfy2.gtf")
+# read.novel.transcripts("data/stringtie/rat.testis.adult.ENSRNOG00000053042.Zfy2.gtf")
 
 
 # cat("Reading genome FASTA\n")

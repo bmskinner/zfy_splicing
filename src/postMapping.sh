@@ -10,8 +10,11 @@ Rscript src/plotSampleSummary.R >> logs/postMapping.log 2>&1
 # Make trimming and mapping QC plots
 Rscript src/checkQC.R >> logs/postMapping.log 2>&1
 
-# combine samples for each tissue
+# combine samples for each tissue and run StringTie
 Rscript src/mergeSamples.R >> logs/postMapping.log 2>&1
+
+# plot StringTie transcripts from merged samples
+Rscript src/plotNovelTranscripts.R >> logs/postMapping.log 2>&1
 
 # Count strand ratios across samples
 echo "`date '+%Y-%m-%d %X'` Counting strand ratios" >> logs/postMapping.log 2>&1
