@@ -844,7 +844,7 @@ read.csv("metadata/PRJNA516470.csv") |>
   dplyr::filter(Organism %in% c("Mus musculus","Rattus norvegicus"),
                 source_name %in% c("Testis")) |>
   dplyr::mutate(
-    Sex = sex,
+    Sex = "male",
     Tissue = stringr::str_to_lower(source_name),
     Timepoint = "adult", 
     DevStage = AGE,
