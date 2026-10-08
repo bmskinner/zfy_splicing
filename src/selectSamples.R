@@ -305,7 +305,7 @@ read.csv("metadata/PRJEB33381.csv") |>
                                "Rattus norvegicus", 
                                "Sus scrofa")) |>
   dplyr::mutate(
-    Timepoint = DevStage,
+    Timepoint = Developmental_stage,
     CommonName = case_when(
       Organism == "Mus musculus" ~ "mouse",
       Organism == "Monodelphis domestica" ~ "opossum",
