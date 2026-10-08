@@ -286,14 +286,22 @@ read.csv("metadata/macaque.csv") |>
 
 #### Samples from PRJEB33381 - multispecies ####
 
+# study of tissue-specific evolution of regulatory elements and gene expression
+# in the mammalian lineage. RNA-seq experiments in adult liver, muscle, brain and
+# testis of 10 species.
+
 read.csv("metadata/PRJEB33381.csv") |>
   dplyr::rename(
-    Tissue = Experimental_Factor._organism_part..exp.,
+    Tissue = Organism_part,
     Species = Experimental_Factor._organism..exp.,
-    DevStage = Developmental_stage,
+    DevStage = AGE,
     Sex = sex
   ) |>
-  dplyr::filter(Species %in% c("Mus musculus", "Monodelphis domestica", "Macaca mulatta", "Rattus norvegicus", "Sus scrofa")) |>
+  dplyr::filter(Species %in% c("Mus musculus", 
+                               "Monodelphis domestica", 
+                               "Macaca mulatta", 
+                               "Rattus norvegicus", 
+                               "Sus scrofa")) |>
   dplyr::mutate(
     Timepoint = DevStage,
     CommonName = case_when(
@@ -823,6 +831,28 @@ read.csv("metadata/pheasant.csv") |>
     DevStage = dev_stage,
     CommonName = "pheasant"
   ) |>
+  .append.data()
+
+
+#### Samples from PRJNA516470 ####
+
+# 12-tissue, five-species survey of sex differences in gene expression using
+# both publicly available (human) and newly generated (cynomolgus macaque,
+# mouse, rat, and dog) RNA sequencing data
+
+read.csv("metadata/PRJNA516470.csv") |>
+  dplyr::filter(Organism %in% c("Mus musculus","Rattus norvegicus"),
+                source_name %in% c("Testis")) |>
+  dplyr::mutate(
+    Sex = sex,
+    Tissue = stringr::str_to_lower(source_name),
+    Timepoint = "adult", 
+    DevStage = AGE,
+    CommonName = case_when(
+      Organism == "Mus musculus" ~ "mouse",
+      Organism == "Rattus norvegicus" ~ "rat"
+    )
+  )|>
   .append.data()
 
 
