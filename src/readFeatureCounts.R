@@ -55,7 +55,7 @@ feature.values <- readr::read_csv("report/tpm.csv", show_col_types = FALSE) |>
   merge(GENOME.DATA, by = c("CommonName", "Genome", "GTF_FILE")) |>
   dplyr::mutate(
     Clade = fct_relevel(Clade, "Outgroup", "Birds", "Monotremes", "Marsupials", "Artiodactyls", "Primates", "Rodents"),
-    Timepoint = fct_relevel(as.factor(Timepoint), "birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
+    Timepoint = fct_relevel(as.factor(Timepoint), "birth", "adolescence", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
   ) |>
   dplyr::group_by(Tissue, Timepoint, CommonName, Group, Sex, GeneId) |>
   dplyr::mutate(
@@ -74,7 +74,7 @@ for (tissue in unique(feature.values$Tissue)) {
 
   zfxy.data <- tissue.data |>
     dplyr::filter(
-      Timepoint %in% c("adult", "mid-meiosis", "birth"),
+      Timepoint %in% c("adult", "adolescence", "birth"),
       Group %in% c("ZFX", "ZFY")
     )
   zfxy.mouse.data <- tissue.data |>
@@ -85,7 +85,7 @@ for (tissue in unique(feature.values$Tissue)) {
 
   rbmy.data <- tissue.data |>
     dplyr::filter(
-      Timepoint %in% c("adult", "mid-meiosis", "birth"),
+      Timepoint %in% c("adult", "adolescence", "birth"),
       Group %in% c("RBMX", "RBMY")
     )
   rbmy.mouse.data <- tissue.data |>
@@ -180,7 +180,7 @@ for (species in unique(feature.values$CommonName)) {
 
   zfxy.data <- species.data |>
     dplyr::filter(
-      Timepoint %in% c("adult", "mid-meiosis", "birth"),
+      Timepoint %in% c("adult", "adolescence", "birth"),
       Group %in% c("ZFX", "ZFY", "RBMY")
     )
   zfxy.mouse.data <- species.data |>
@@ -280,7 +280,7 @@ splicing.table <- feature.values |>
   ) |>
   dplyr::mutate(
     Clade = fct_relevel(Clade, "Outgroup", "Birds", "Monotremes", "Marsupials", "Artiodactyls", "Primates", "Rodents"),
-    Timepoint = fct_relevel(as.factor(Timepoint), "birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
+    Timepoint = fct_relevel(as.factor(Timepoint), "birth", "adolescence", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
   ) |>
   dplyr::arrange(Clade, CommonName, Tissue)
 
@@ -352,21 +352,21 @@ zfy.expn.table <- splicing.table |>
   dplyr::mutate(Max_ZFY_TPM = round(Max_ZFY_TPM, digits = 2)) |>
   tidyr::pivot_wider(names_from = Timepoint, values_from = Max_ZFY_TPM) |>
   dplyr::filter(Sex=="male")|>
-  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `mid-meiosis`, adult)
+  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `adolescence`, adult)
 
 zfx.expn.table <- splicing.table |>
   dplyr::select(Clade:Tissue, Max_ZFX_TPM) |>
   dplyr::mutate(Max_ZFX_TPM = round(Max_ZFX_TPM, digits = 2)) |>
   tidyr::pivot_wider(names_from = Timepoint, values_from = Max_ZFX_TPM) |>
   dplyr::filter(Sex=="male")|>
-  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `mid-meiosis`, adult)
+  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `adolescence`, adult)
 
 
 splicing.zfy.presentation.table <- splicing.table |>
   dplyr::select(Clade:Tissue, Splice_junctions_ZFY) |>
   tidyr::pivot_wider(names_from = Timepoint, values_from = Splice_junctions_ZFY) |>
   dplyr::filter(Sex=="male")|>
-  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `mid-meiosis`, adult)
+  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `adolescence`, adult)
 
 splicing.zfy.presentation.table.mouse <- splicing.table |>
   dplyr::select(Clade:Tissue, Splice_junctions_ZFY) |>
@@ -377,4 +377,4 @@ splicing.zfy.presentation.table.mouse <- splicing.table |>
 splicing.zfx.presentation.table <- splicing.table |>
   dplyr::select(Clade:Tissue, Splice_junctions_ZFX) |>
   tidyr::pivot_wider(names_from = Timepoint, values_from = Splice_junctions_ZFX) |>
-  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `mid-meiosis`, adult)
+  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `adolescence`, adult)

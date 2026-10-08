@@ -27,6 +27,7 @@ if(file.exists(CDS.MAPPING.FILE)) file.remove(CDS.MAPPING.FILE)
     write.table(data, file = MAPPING.FILE, row.names = FALSE, quote = TRUE, 
                 append = FALSE, sep = ",", col.names = TRUE)
   }
+  data
 }
 
 .append.cds.data <- function(data){
@@ -48,6 +49,7 @@ if(file.exists(CDS.MAPPING.FILE)) file.remove(CDS.MAPPING.FILE)
     write.table(data, file = CDS.MAPPING.FILE, row.names = FALSE, quote = TRUE, 
                 append = FALSE, sep = ",", col.names = TRUE)
   }
+  data
 }
 
 # These are the filtered files used for sample selection
@@ -125,7 +127,7 @@ read.csv("metadata/chicken.csv") |>
     Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
       DevStage == "postnatal day 0" ~ "birth",
       DevStage == "postnatal day 7" ~ "birth",
-      DevStage == "postnatal day 70" ~ "mid-meiosis",
+      DevStage == "postnatal day 70" ~ "adolescence",
       DevStage == "postnatal day 155" ~ "adult",
       .default = "other"
     ),
@@ -147,7 +149,7 @@ read.csv("metadata/opossum.csv") |>
     Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
       DevStage == "postnatal day 0" ~ "birth",
       # DevStage == "postnatal day 28" ~ "birth",
-      DevStage == "postnatal day 60" ~ "mid-meiosis",
+      DevStage == "postnatal day 60" ~ "adolescence",
       DevStage == "postnatal day 180" ~ "adult",
       .default = "other"
     ),
@@ -168,7 +170,7 @@ read.csv("metadata/opossum.csv") |>
   dplyr::mutate(
     Timepoint = dplyr::case_when(Developmental_stage == "embryo" ~ "embryo",
                           DevStage == "postnatal day 0" ~ "birth",
-                          DevStage == "postnatal day 60" ~ "mid-meiosis",
+                          DevStage == "postnatal day 60" ~ "adolescence",
                           DevStage == "postnatal day 180" ~ "adult",
                           .default = "other"
     ),
@@ -208,7 +210,7 @@ read.csv("metadata/mouse.csv") |>
   dplyr::mutate(
     Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
       DevStage == "postnatal day 0" ~ "birth",
-      DevStage == "postnatal day 14" ~ "mid-meiosis",
+      DevStage == "postnatal day 14" ~ "adolescence",
       DevStage == "postnatal day 63" ~ "adult",
       .default = "other"
     ),
@@ -229,7 +231,7 @@ read.csv("metadata/human.csv") |>
   dplyr::mutate(
     Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
       DevStage == "neonate" ~ "birth",
-      DevStage == "adolescent" ~ "mid-meiosis",
+      DevStage == "adolescent" ~ "adolescence",
       DevStage == "middle adult" ~ "adult",
       DevStage == "elderly" ~ "adult",
       .default = "other"
@@ -273,8 +275,8 @@ read.csv("metadata/macaque.csv") |>
   dplyr::mutate(
     Timepoint = case_when(Developmental_stage == "embryo" ~ "embryo",
       DevStage == "postnatal day 0" ~ "birth",
-      DevStage == "3 years postnatal" ~ "mid-meiosis", # adolescence for a macaque
-      DevStage == "8 years postnatal" ~ "mid-meiosis", # adolescence for a macaque
+      DevStage == "3 years postnatal" ~ "adolescence", # adolescence for a macaque
+      DevStage == "8 years postnatal" ~ "adolescence", # adolescence for a macaque
       DevStage == "14 to 15 years postnatal" ~ "adult",
       DevStage == "20 to 26 years postnatal" ~ "adult", # reaching menopause in females
       .default = "other"
@@ -335,7 +337,7 @@ read.csv("metadata/PRJNA238328.csv") |>
     Tissue = stringr::str_to_lower(tissue),
     Tissue = stringr::str_replace(Tissue, "testes", "testis"),
     DevStage = Age_Week,
-    Timepoint = case_when(Age_Week == 2 ~ "mid-meiosis",
+    Timepoint = case_when(Age_Week == 2 ~ "adolescence",
       Age_Week == 6 ~ "adult",
       Age_Week == 21 ~ "adult",
       Age_Week == 104 ~ "adult",
@@ -360,8 +362,8 @@ read.csv("metadata/PRJEB26889.csv") |>
     DevStage = Experimental_Factor._developmental_stage..exp.,
     Timepoint = case_when(DevStage == "postnatal day 0" ~ "birth",
       DevStage == "postnatal day 3" ~ "birth",
-      DevStage == "postnatal day 7" ~ "mid-meiosis",
-      DevStage == "postnatal day 14" ~ "mid-meiosis",
+      DevStage == "postnatal day 7" ~ "adolescence",
+      DevStage == "postnatal day 14" ~ "adolescence",
       DevStage == "postnatal day 42" ~ "adult",
       DevStage == "postnatal day 112" ~ "adult",
       .default = "other"
@@ -616,7 +618,7 @@ read.csv("metadata/cattle.csv") |>
     Timepoint = case_when(str_detect(Sample.Name, "neonatal") ~ "birth",
       str_detect(Sample.Name, "mature") ~ "adult",
       str_detect(Sample.Name, "TY0") ~ "birth",
-      str_detect(Sample.Name, "TY1") ~ "mid-meiosis",
+      str_detect(Sample.Name, "TY1") ~ "adolescence",
       str_detect(Sample.Name, "TY2") ~ "adult",
       .default = "missing"
     ),
@@ -649,12 +651,12 @@ read.csv("metadata/cattle_other.csv") |>
       str_detect(AGE, "0 days") ~ "birth",
       str_detect(AGE, "1 week") ~ "birth",
       str_detect(AGE, "8 week") ~ "birth",
-      str_detect(AGE, "8-10 monthes") ~ "mid-meiosis",
-      str_detect(AGE, "9 months") ~ "mid-meiosis",
-      str_detect(AGE, "9m") ~ "mid-meiosis",
-      str_detect(AGE, "12 month") ~ "mid-meiosis",
-      str_detect(AGE, "12 months") ~ "mid-meiosis",
-      str_detect(AGE, "one year old") ~ "mid-meiosis",
+      str_detect(AGE, "8-10 monthes") ~ "adolescence",
+      str_detect(AGE, "9 months") ~ "adolescence",
+      str_detect(AGE, "9m") ~ "adolescence",
+      str_detect(AGE, "12 month") ~ "adolescence",
+      str_detect(AGE, "12 months") ~ "adolescence",
+      str_detect(AGE, "one year old") ~ "adolescence",
       str_detect(AGE, "18m") ~ "adult",
       str_detect(AGE, "23 months old") ~ "adult",
       str_detect(AGE, "1.25y") ~ "adult",
@@ -672,7 +674,7 @@ read.csv("metadata/cattle_other.csv") |>
     DevStage = AGE,
     CommonName = "cattle"
   ) |>
-  dplyr::filter(Timepoint %in% c("birth", "mid-meiosis", "adult")) |>
+  dplyr::filter(Timepoint %in% c("birth", "adolescence", "adult")) |>
   dplyr::group_by(Tissue, Timepoint, Sex) |>
   dplyr::arrange(desc(Bases)) |>
   dplyr::slice_head(n = 10) |>
@@ -684,7 +686,7 @@ read.csv("metadata/cattle_other.csv") |>
 # Fast to reach puberty at ~120 days
 # PRJEB19199 from Roslin sheep atlas
 
-sheep <- read.csv("metadata/sheep.csv") |>
+read.csv("metadata/sheep.csv") |>
   dplyr::rename(Sex = sex,
                 ) |>
   dplyr::filter(Assay.Type == "RNA-Seq") |>
@@ -694,7 +696,7 @@ sheep <- read.csv("metadata/sheep.csv") |>
                                     .default = as.character(Animal_age_at_collection)),
                 Timepoint= case_when(Animal_age_at_collection == 2 ~ "adult", # years
                                      AGE <= 30 ~ "birth",
-                                     AGE >=90 & AGE <=150 ~ "mid-meiosis",
+                                     AGE >=90 & AGE <=150 ~ "adolescence",
                                      AGE >150 ~ "adult"
                                      ),
                 Tissue = "testis",

@@ -130,14 +130,13 @@ map_pe_sample () {
 	
 	# Run if final output is missing
 	if [ ! -e data/${SPECIES}/${ERR}.${GENE_ID}.gtf ]; then
-	
-	  echo "`date '+%Y-%m-%d %X'` ${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
 
 		# Don't work on a sample already being processed
 		if [ ! -e data/${SPECIES}/${ERR}.lck ]; then
+		
+		  echo "`date '+%Y-%m-%d %X'` ${ERR}: finding reads covering ${GENE_ID} at ${LOCATION} in ${SPECIES}" >> logs/mapping.log 2>&1
 
 			touch data/${SPECIES}/${ERR}.lck
-			echo "`date '+%Y-%m-%d %X'` ${ERR}: Stringtie GTF output not found" >> logs/${ERR}.mapping.log 2>&1
 
 			# Check for existing downloads before running fasterq-dump
 			if [ ! -e data/${SPECIES}/${ERR}_2.fastq.gz ] && [ ! -e data/${SPECIES}/${ERR}_2_val_2.fq.gz ]; then

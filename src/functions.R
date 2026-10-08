@@ -21,8 +21,8 @@ CDS.MAPPING.FILE <- "cds/cds.samples.csv"
 DEFAULT.MC.CORES <- ifelse(installr::is.windows(), 1, 6)
 
 # Chart display order for timepoints
-TIME.ORDER <- factor(c("birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27"),
-  levels = c("birth", "mid-meiosis", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
+TIME.ORDER <- factor(c("birth", "adolescence", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27"),
+  levels = c("birth", "adolescence", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
 )
 
 #### Common functions ####

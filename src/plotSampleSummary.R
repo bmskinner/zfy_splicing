@@ -30,7 +30,7 @@ create.xlsx(sample.groups, "report/sample.groups.xlsx")
 
 # Make summary plot of total bases
 sample.plot <- ggplot(
-  sample.groups %>% dplyr::filter(MappedTimepoint %in% c("adult", "mid-meiosis", "birth")),
+  sample.groups %>% dplyr::filter(MappedTimepoint %in% c("adult", "adolescence", "birth")),
   aes(x = interaction(CommonName, Sex), y = TotalBases / 1e9, fill = BaseSizeGroup)
 ) +
   geom_hline(yintercept = 10, col = "lightgreen") +

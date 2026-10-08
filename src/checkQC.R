@@ -171,7 +171,7 @@ plot.mapping.rates <- function(map.data) {
   )
 
   total.mapped.bases <- map.data |>
-    dplyr::filter(Timepoint %in% c("birth", "mid-meiosis", "adult")) |>
+    dplyr::filter(Timepoint %in% c("birth", "adolescence", "adult")) |>
     dplyr::group_by(CommonName, Tissue, Timepoint, Sex) |>
     dplyr::summarise(
       TotalMappedReads = sum(Single_mapped),

@@ -85,7 +85,7 @@ read.ratios <- tidyr::separate_wider_delim(read.ratios, sample,
     f.stranded = total.stranded / total,
     f.forward = forward / total.stranded
   ) %>%
-  dplyr::filter(timepoint %in% c("adult", "mid-meiosis", "birth"))
+  dplyr::filter(timepoint %in% c("adult", "adolescence", "birth"))
 
 create.xlsx(read.ratios, "report/strand_ratios.xlsx")
 
