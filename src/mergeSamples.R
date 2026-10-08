@@ -16,7 +16,7 @@ fs::dir_create("data/merged")
 
 groups <- SELECTED.SAMPLES |>
   merge(GENE.LOCATIONS, by=c("CommonName", "GTF_FILE", "GeneId")) |>
-  dplyr::group_by(Organism, Tissue, Timepoint, CommonName, Sex, GeneId, Gene) |>
+  dplyr::group_by(Organism, Tissue, Timepoint, CommonName, Sex, GTF_FILE, GeneId, Gene) |>
   dplyr::mutate(
     bam.file = paste0("data/", CommonName, "/", Run, ".", GeneId, ".bam"),
     lock.file = paste0("data/", CommonName, "/", Run, ".lck"),
@@ -35,7 +35,14 @@ groups <- SELECTED.SAMPLES |>
     merged.bam.exists = file.exists(merged.bam),
     is.replace.merged.bam = merged.bam.exists & file.mtime(merged.bam) < max.bam.mtime,
     is.merge  = !lock.files.exist & bams.exist & (!merged.bam.exists | is.replace.merged.bam), # Do not overwrite if no bams have changed
-    samtools.merge.arguments = paste("merge -@ 7 -r -o", merged.bam, bams)
+    samtools.merge.arguments = paste("merge -@ 7 -r -o", merged.bam, bams),
+    merged.gtf = stringr::str_replace(merged.bam, ".bam", ".gtf"),
+    merged.gtf.exists = file.exists(merged.gtf),
+    is.replace.merged.gtf = merged.gtf.exists & file.mtime(merged.gtf) < max.bam.mtime,
+    is.stringtie  = !lock.files.exist & bams.exist & (!merged.gtf.exists | is.replace.merged.gtf),
+    GFF.FILE = stringr::str_replace(GTF_FILE, ".gtf", ".gff"),
+    annotation.file = ifelse(file.exists(GFF.FILE), GFF.FILE, GTF_FILE), # only some replaced 
+    stringtie.arguments = paste0("-o ", merged.gtf, " -p 1 -l ", CommonName," -G ",annotation.file, " -f 0.01 ", merged.bam),
   )
 
 #### Merge the bams ####
@@ -58,6 +65,16 @@ cat("Merge samples: Indexing bams\n")
 mcmapply(system2, command = "samtools", 
          args = paste("index -@ 7 -c ", to.merge$merged.bam),
          mc.cores = DEFAULT.MC.CORES)
+
+#### Run StringTie on the merged bam if needed ####
+to.stringtie <- groups |>
+  dplyr::filter(is.stringtie) 
+
+mcmapply(system2, command = "stringtie", 
+         args = to.stringtie$stringtie.arguments,
+         mc.cores = DEFAULT.MC.CORES)
+
+
 
 
 # Make a summary table of which bams were merged
