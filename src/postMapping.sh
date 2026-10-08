@@ -8,12 +8,15 @@ echo "`date '+%Y-%m-%d %X'` Beginning post mapping" > logs/postMapping.log 2>&1
 Rscript src/plotSampleSummary.R >> logs/postMapping.log 2>&1
 
 # Make trimming and mapping QC plots
+echo "`date '+%Y-%m-%d %X'` Checking QC" > logs/postMapping.log 2>&1
 Rscript src/checkQC.R >> logs/postMapping.log 2>&1
 
 # combine samples for each tissue and run StringTie
+echo "`date '+%Y-%m-%d %X'` Merging samples" > logs/postMapping.log 2>&1
 Rscript src/mergeSamples.R >> logs/postMapping.log 2>&1
 
 # plot StringTie transcripts from merged samples
+echo "`date '+%Y-%m-%d %X'` Plotting transcripts" > logs/postMapping.log 2>&1
 Rscript src/plotNovelTranscripts.R >> logs/postMapping.log 2>&1
 
 # Count strand ratios across samples
@@ -30,8 +33,8 @@ for f in data/*/[SDE]RR*.*.bam; do
   echo "$f ${FORWARD} ${REVERSE} ${TOTAL}" >> report/strand_ratios.txt
 done
 
-echo "`date '+%Y-%m-%d %X'` Looking for splicing" >> logs/postMapping.log 2>&1
 # Plot splice variation
+echo "`date '+%Y-%m-%d %X'` Plotting splicing" >> logs/postMapping.log 2>&1
 Rscript src/plotSashimi.R >> logs/postMapping.log 2>&1
 
 # Combine individual plots for easier comparison across tissues and species
@@ -47,6 +50,7 @@ echo "`date '+%Y-%m-%d %X'` Calculating TPMs" >> logs/postMapping.log 2>&1
 Rscript src/readFeatureCounts.R >> logs/postMapping.log 2>&1
 
 # Tar the figures and output data
+echo "`date '+%Y-%m-%d %X'` Making tarballs" >> logs/postMapping.log 2>&1
 tar czf report.tar.gz report/*
 tar czf reads.tar.gz data/*/*.*.bam* # only those with gene name included
 tar czf featureCounts.tar.gz data/*/*.counts.txt
