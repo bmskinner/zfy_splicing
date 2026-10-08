@@ -146,7 +146,9 @@ merged.bam.files <- data.frame(path = list.files(path = "data/merged", pattern =
   merge(GENOME.DATA, by=c("CommonName", "GTF_FILE")) |>
   dplyr::filter(Group %in% c("ZFX", "ZFY"))
 
-for (i in 1:nrow(merged.bam.files)) {
+create.merged.sashimi.plot <- function(i){
+
+# for (i in 1:nrow(merged.bam.files)) {
   
   # Error handling
   skip.file <- FALSE
@@ -164,14 +166,14 @@ for (i in 1:nrow(merged.bam.files)) {
     gene.data <- GENE.LOCATIONS[GENE.LOCATIONS$GeneId == gene_id & GENE.LOCATIONS$CommonName == species, ] # filter on species too - some genomes do not have an accession for geneid
     coords <- parse_coordinates(gene.data$Location)
     group <- gene.data$Group
-    if (length(group) == 0) next
+    if (length(group) == 0) return(FALSE)
     cat("Detecting splice junctions for", i, ": ", species, gene_id, "in group", group, "\n")
     
     final.out.file <- paste0("report/merged_sashimi/", paste(c(species,tissue, 
                                                                timepoint, sex, gene_id, gene_name), 
                                                              collapse = "."), ".condensed.png")
     
-    if(file.exists(final.out.file) & file.mtime(final.out.file)>bam.mtime){ next }
+    if(file.exists(final.out.file) & file.mtime(final.out.file)>bam.mtime){ return(FALSE) }
     
     sashimi.data <- read_sashimi_data(
       bam.file = bam.row$path,
@@ -203,12 +205,16 @@ for (i in 1:nrow(merged.bam.files)) {
     # tryCatch will return an error object which will quit the loop by default
     # Set a skip variable instead
     skip.file <<- TRUE
+    return(FALSE)
   })
   
   
   # Skip to next loop iteration if an error was caught
-  if(skip.file) { next }     
+  # if(skip.file) { next } 
+  TRUE
 }
+
+mclapply(1:nrow(merged.bam.files), create.merged.sashimi.plot, mc.cores = DEFAULT.MC.CORES)
 
 #### Match the junction coordinates found with the coding exon 2 splice sites ####
 
