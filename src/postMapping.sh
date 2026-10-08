@@ -35,12 +35,15 @@ echo "`date '+%Y-%m-%d %X'` Looking for splicing" >> logs/postMapping.log 2>&1
 Rscript src/plotSashimi.R >> logs/postMapping.log 2>&1
 
 # Combine individual plots for easier comparison across tissues and species
+echo "`date '+%Y-%m-%d %X'` Aggregating sashimi plots" >> logs/postMapping.log 2>&1
 Rscript src/aggregateSashimiPlots.R >> logs/postMapping.log 2>&1
 
 # Find mate pairs that suggest E2 is missing
+echo "`date '+%Y-%m-%d %X'` Looking for spanning reads" >> logs/postMapping.log 2>&1
 Rscript src/findE2SpanningPairs.R >> logs/postMapping.log 2>&1
 
 # Read gene expression data from featureCounts, extract key genes and calc TPM
+echo "`date '+%Y-%m-%d %X'` Calculating TPMs" >> logs/postMapping.log 2>&1
 Rscript src/readFeatureCounts.R >> logs/postMapping.log 2>&1
 
 # Tar the figures and output data

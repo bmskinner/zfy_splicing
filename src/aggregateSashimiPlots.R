@@ -7,9 +7,7 @@ png.files <- data.frame(path = list.files(path = "report/raw_sashimi", pattern =
   tidyr::separate_wider_delim(file,
                               delim = ".", names = c("Run", "GeneId", "condensed", "ext")
   ) |>
-  merge(GENE.LOCATIONS, by = "GeneId") |>
-  merge(GENOME.DATA, by=c("CommonName", "GTF_FILE")) |>
-  merge(SELECTED.SAMPLES, by = c("CommonName", "Run",  "Genome", "GTF_FILE", "GeneId", "Location"))
+  merge(SELECTED.SAMPLES, by = c("Run", "GeneId"))
 
 
 
