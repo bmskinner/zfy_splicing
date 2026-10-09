@@ -229,7 +229,7 @@ junction.data <- do.call(bind_rows, lapply(junction.files, read.csv)) |>
   dplyr::select(-type) |>
   tidyr::pivot_wider(id_cols = c(CommonName, Run, GeneId),  
                      names_from = Junction, values_from = count, values_fill = 0) |>
-  merge(SELECTED.SAMPLES, by=c("CommonName", "Run"))|>
+  merge(SELECTED.SAMPLES, by=c("CommonName", "Run","GeneId"))|>
   dplyr::group_by(CommonName, Sex, Tissue, Timepoint, GeneId)|>
   dplyr::summarise(E1E2 = sum(E1E2),
                    E2E3 = sum(E2E3),

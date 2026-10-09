@@ -14,21 +14,21 @@ png.files <- data.frame(path = list.files(path = "report/raw_sashimi", pattern =
 unique.species <- sort(unique(png.files$CommonName))
 tissues <- sort(unique(png.files$Tissue))
 timepoints <- sort(unique(png.files$Timepoint))
-genes <- sort(unique(png.files$Gene))
+genes <- sort(unique(png.files$GeneId))
 sexes <- sort(unique(png.files$Sex))
 
 for(species in unique.species){
   for (tissue in tissues) {
     for (timepoint in timepoints) {
-      for (gene in genes) {
+      for (geneid in genes) {
         for(sex in sexes){
           
-          out.file <- paste0("report/tissues/",species, ".", sex, ".", tissue, ".", timepoint, ".", gene , ".png")
+          out.file <- paste0("report/tissues/",species, ".", sex, ".", tissue, ".", timepoint, ".", geneid , ".png")
           if(file.exists(out.file)) next
           
           srrs <- png.files |> 
             dplyr::filter(CommonName==species, Tissue==tissue,
-                          Timepoint==timepoint, Gene==gene, Sex==sex) |>
+                          Timepoint==timepoint, GeneId==geneid, Sex==sex) |>
             dplyr::select(path) |>
             dplyr::pull()
           

@@ -63,18 +63,18 @@ if (nrow(to.merge) > 0) {
 cat("Merge samples: Indexing bams\n")
 
 # Index with CSI since opossum chromosomes are longer than the max for bai
-mcmapply(system2, command = "samtools", 
+invisible(mcmapply(system2, command = "samtools", 
          args = paste("index -@ 7 -c ", to.merge$merged.bam),
-         mc.cores = DEFAULT.MC.CORES)
+         mc.cores = DEFAULT.MC.CORES))
 
 #### Run StringTie on the merged bam if needed ####
 cat("Merge samples: Running stringtie on merged bams\n")
 to.stringtie <- groups |>
   dplyr::filter(is.stringtie) 
 
-mcmapply(system2, command = "stringtie", 
+invisible(mcmapply(system2, command = "stringtie", 
          args = to.stringtie$stringtie.arguments,
-         mc.cores = DEFAULT.MC.CORES)
+         mc.cores = DEFAULT.MC.CORES))
 
 #### Make a summary table of which bams were merged ####
 create.xlsx(groups, "report/merged.bams.xlsx")
