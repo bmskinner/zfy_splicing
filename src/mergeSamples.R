@@ -36,7 +36,7 @@ groups <- SELECTED.SAMPLES |>
     merged.bam.exists = file.exists(merged.bam),
     is.replace.merged.bam = merged.bam.exists & file.mtime(merged.bam) < max.bam.mtime,
     is.merge  = !lock.files.exist & bams.exist & (!merged.bam.exists | is.replace.merged.bam), # Do not overwrite if no bams have changed
-    samtools.merge.arguments = paste("merge -@ 7 -r -o", merged.bam, bams),
+    samtools.merge.arguments = paste("merge -@ 7 -f -r -o", merged.bam, bams),
     merged.gtf = stringr::str_replace(merged.bam, ".bam", ".gtf"),
     merged.gtf.exists = file.exists(merged.gtf),
     is.replace.merged.gtf = merged.gtf.exists & file.mtime(merged.gtf) < max.bam.mtime,
