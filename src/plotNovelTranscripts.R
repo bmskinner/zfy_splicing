@@ -140,7 +140,7 @@ plot.novel.transcripts <- function(gtf.file, species, tissue, timepoint, sex, ge
                                                              timepoint, sex, gene.id, gene.name), 
                                                            collapse = "."), ".png")
   save.plot(stringtie.plot.file, transcript.plot,
-    width = 170, height = min(1000, n.transcripts * 50)
+    width = 170, height = min(1000, 20 + (n.transcripts * 50))
   )
 
   TRUE

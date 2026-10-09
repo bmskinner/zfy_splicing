@@ -34,9 +34,6 @@ bam.files <- data.frame(path = list.files(path = "data", pattern = "[SDE]RR\\d+\
 
 create.sashimi.plot <- function(i){
 
-  # Error handling
-  skip.file <- FALSE
-  
   tryCatch({
     
     bam.row <- bam.files[i, ]
@@ -97,35 +94,24 @@ create.sashimi.plot <- function(i){
     
     #### Create plot with collapsed introns ####
     
-    if(!file.exists(final.out.file) ){
-      
-      sashimi.plot.collapsed <- make_sashimi_coverage_plot(sashimi.data,
-                                                           is.collapse.introns = TRUE, show.x.axis = FALSE,
-                                                           min.spanning.reads = 1, label = paste0(run,"\n", species, "\n", sex, "\n", tissue, "\n", timepoint, "\n", gene_name)
-      )
-      
-      save.double.width(
-        paste0(
-          "report/raw_sashimi/",
-          paste(c(run, gene_id), collapse = "."),
-          ".condensed.png"
-        ),
-        sashimi.plot.collapsed$plot,
-        height = 50
-      )
-    }
+    sashimi.plot.collapsed <- make_sashimi_coverage_plot(sashimi.data,
+                                                         is.collapse.introns = TRUE, show.x.axis = FALSE,
+                                                         min.spanning.reads = 1, label = paste0(run,"\n", species, "\n", sex, "\n", tissue, "\n", timepoint, "\n", gene_name)
+    )
+    
+    save.double.width(
+      final.out.file,
+      sashimi.plot.collapsed$plot,
+      height = 50
+    )
+    
     
   }, error=function(e){
     cat("Error making shashimi plot\n")
     print(e)
-    # tryCatch will return an error object which will quit the loop by default
-    # Set a skip variable instead
-    skip.file <<- TRUE
   })
   
-  return(skip.file)
-  # Skip to next loop iteration if an error was caught
-  # if(skip.file) { next }     
+  return(FALSE)
 }
 
 invisible(mclapply(1:nrow(bam.files), create.sashimi.plot, mc.cores = DEFAULT.MC.CORES))

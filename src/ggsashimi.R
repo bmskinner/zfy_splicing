@@ -625,7 +625,6 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
   if (is.null(end)) stop("No end coordinate given")
   if (is.null(reference.gene.id)) stop("No reference gene id given")
 
-  cat("Reading sashimi data from bam file in region '", paste0(chr, ":", start, "-", end), "'\n")
   sashimi.data <- list()
   sashimi.data$input.file <- bam.file
   bam.data <- read_bam(bam.file, paste0(chr, ":", start, "-", end), "SENSE")
@@ -683,7 +682,6 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
 
 
   if (nrow(bam.data$junctions) > 0) {
-    cat("No splice junctions detected\n")
     sashimi.data$junctions.all <- do.call(rbind, mapply(classify_junction,
       junction.start = bam.data$junctions$start,
       junction.end = bam.data$junctions$end,
@@ -698,6 +696,7 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
     ))
   } else {
     # No junctions detected, return the coverage
+    cat("No splice junctions detected\n")
     sashimi.data$junctions <- data.frame(
       start = c(),
       end = c(),
