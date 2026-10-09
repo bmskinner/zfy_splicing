@@ -83,6 +83,7 @@ create.sashimi.plot <- function(i){
     if (sashimi.data$total.reads == 0){
       fs::file_touch(final.junction.file)
       fs::file_touch(final.out.file)
+      cat("No reads in file for", i, ": ", run, gene_id, "in group", group, "\n")
       return(TRUE)
     } 
     

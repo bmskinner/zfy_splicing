@@ -52,6 +52,8 @@ plot.novel.transcripts <- function(gtf.file, species, tissue, timepoint, sex, ge
   novel.gtf <- read.novel.transcripts(gtf.file) %>%
     dplyr::group_by(transcript_id) %>%
     dplyr::arrange(strand, transcript_id, start)
+  
+  n.transcripts <- length(unique(novel.gtf$transcript_id))
 
   novel.gtf.exon <- novel.gtf %>% dplyr::filter(type == "exon")
 
@@ -138,7 +140,7 @@ plot.novel.transcripts <- function(gtf.file, species, tissue, timepoint, sex, ge
                                                              timepoint, sex, gene.id, gene.name), 
                                                            collapse = "."), ".png")
   save.plot(stringtie.plot.file, transcript.plot,
-    width = 170, height = min(1000, nrow(novel.gtf) * 50)
+    width = 170, height = min(1000, n.transcripts * 50)
   )
 
   TRUE
@@ -173,8 +175,6 @@ invisible(mcmapply(\(x, ...) tryCatch(plot.novel.transcripts(x,...),
                    stringtie.to.plot$GeneId,
                    stringtie.to.plot$Gene,
                    mc.cores = DEFAULT.MC.CORES))
-# plot.novel.transcripts("data/stringtie/zebrafinch.testis.adult.ENSTGUG00000007219.gtf")
-
 
 #### Export FASTA sequence of novel transcripts ####
 
