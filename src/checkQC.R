@@ -63,7 +63,7 @@ extract.val <- function(x) {
   as.numeric(stringr::str_replace(x, " \\(.*\\)", ""))
 }
 
-file.remove("report/QC/mapping.txt")
+invisible(file.remove("report/QC/mapping.txt"))
 
 # Extract the mapping summary from stdout files directed to logs
 if (length(list.files(path = "logs", pattern = "*.mapping.log")) > 0) {

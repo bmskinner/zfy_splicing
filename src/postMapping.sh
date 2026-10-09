@@ -14,15 +14,15 @@ echo "`date '+%Y-%m-%d %X'` Beginning post mapping" > logs/postMapping.log 2>&1
 Rscript src/plotSampleSummary.R >> logs/postMapping.log 2>&1
 
 # Make trimming and mapping QC plots
-echo "`date '+%Y-%m-%d %X'` Checking QC" > logs/postMapping.log 2>&1
+echo "`date '+%Y-%m-%d %X'` Checking QC" >> logs/postMapping.log 2>&1
 Rscript src/checkQC.R >> logs/postMapping.log 2>&1
 
 # combine samples for each tissue and run StringTie
-echo "`date '+%Y-%m-%d %X'` Merging samples" > logs/postMapping.log 2>&1
+echo "`date '+%Y-%m-%d %X'` Merging samples" >> logs/postMapping.log 2>&1
 Rscript src/mergeSamples.R >> logs/postMapping.log 2>&1
 
 # plot StringTie transcripts from merged samples
-echo "`date '+%Y-%m-%d %X'` Plotting transcripts" > logs/postMapping.log 2>&1
+echo "`date '+%Y-%m-%d %X'` Plotting transcripts" >> logs/postMapping.log 2>&1
 Rscript src/plotNovelTranscripts.R >> logs/postMapping.log 2>&1
 
 # Count strand ratios across samples
