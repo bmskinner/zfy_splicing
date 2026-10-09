@@ -101,7 +101,7 @@ plot.novel.transcripts <- function(gtf.file, species, tissue, timepoint, sex, ge
     scale_fill_viridis_c() +
     labs(
       x = "Position", y = "Assembled transcript",
-      title = paste(gene.names, collapse = " "), fill = "TPM"
+      title = gene.name, fill = "TPM"
     ) +
     geom_text(
       data = add_exon_number(novel.gtf.exon, "transcript_id"),
