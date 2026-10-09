@@ -24,7 +24,7 @@ make.aggregate.plot <- function(paths, out.file){
 
 #### Individual runs ####
 
-cat("Making aggregate plots of individual samples\n")
+flog.info("Making aggregate plots of individual samples\n")
 png.files <- data.frame(path = list.files(path = "report/raw_sashimi", pattern = "[SDE]RR.*.png$", 
                                           full.names = TRUE, recursive=TRUE)) |>
   dplyr::mutate(file = basename(path)) |>
@@ -42,7 +42,7 @@ unique.combos <- png.files |>
 invisible(mcmapply(make.aggregate.plot, unique.combos$paths, unique.combos$out.file))
 
 #### Merged images ####
-cat("Making aggregate plots of merged species samples\n")
+flog.info("Making aggregate plots of merged species samples\n")
 png.files <- data.frame(path = list.files(path = "report/merged_sashimi", pattern = ".*.png$", 
                                           full.names = TRUE, recursive=TRUE)) |>
   dplyr::mutate(file = basename(path)) |>
@@ -57,7 +57,7 @@ unique.merged.species.combos <- png.files |>
 
 invisible(mcmapply(make.aggregate.plot, unique.merged.species.combos$paths, unique.merged.species.combos$out.file))
 
-cat("Making aggregate plots of merged tissues samples\n")
+flog.info("Making aggregate plots of merged tissues samples\n")
 unique.merged.tissues.combos <- png.files |>
   dplyr::group_by(Tissue) |>
   dplyr::summarise(nPNGs = n(), paths = list(path), .groups = "drop_last") |>

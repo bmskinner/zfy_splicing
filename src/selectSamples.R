@@ -1,5 +1,5 @@
 # This script should never be run directly - it is called from src/functions.R
-cat("Sample selection: Reading and filtering sample data\n")
+flog.info("Sample selection: Reading and filtering sample data\n")
 
 # Filter metadata from SRA searches to get samples of interest
 fs::dir_create(c("data", "report"))

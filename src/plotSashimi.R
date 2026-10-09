@@ -4,7 +4,7 @@
 source("src/functions.R")
 source("src/ggsashimi.R")
 
-cat("Plot sashimi: running shashimi plotting\n")
+flog.info("Plot sashimi: running shashimi plotting\n")
 
 #### Create individual plots  ####
 
@@ -17,7 +17,7 @@ fs::dir_create(c(
 # Read all GTF files once, since we have multiple genes/tissues per species
 GTF.DATA <- read_gtf_data(GENOME.DATA$GTF_FILE, GENOME.DATA$CommonName)
 
-cat("Plot sashimi: Making figures\n")
+flog.info("Plot sashimi: Making figures\n")
 
 # Read all single sample bam files and bind in the complete metadata
 bam.files <- data.frame(path = list.files(path = "data", pattern = "[SDE]RR\\d+\\..*\\.bam$", 
@@ -67,7 +67,7 @@ create.sashimi.plot <- function(i){
 
     # Only read the bam file if needed
     
-    cat("Detecting splice junctions for", i, ": ", run, gene_id, "in group", group, "\n")
+    flog.info("Detecting splice junctions for", i, ": ", run, gene_id, "in group", group, "\n")
     
     sashimi.data <- read_sashimi_data(
       bam.file = bam.row$path,
@@ -107,7 +107,7 @@ create.sashimi.plot <- function(i){
     
     
   }, error=function(e){
-    cat("Error making shashimi plot\n")
+    flog.warn("Error making shashimi plot\n")
     print(e)
   })
   
@@ -154,7 +154,7 @@ create.merged.sashimi.plot <- function(i){
     coords <- parse_coordinates(gene.data$Location)
     group <- gene.data$Group
     if (length(group) == 0) return(FALSE)
-    cat("Detecting splice junctions for", i, ": ", species, gene_id, "in group", group, "\n")
+    flog.info("Detecting splice junctions for", i, ": ", species, gene_id, "in group", group, "\n")
     
     final.out.file <- paste0("report/merged_sashimi/", paste(c(species,tissue, 
                                                                timepoint, sex, gene_id, gene_name), 
@@ -187,7 +187,7 @@ create.merged.sashimi.plot <- function(i){
     
     
   }, error=function(e){
-    cat("Error making shashimi plot\n")
+    flog.warn("Error making shashimi plot\n")
     print(e)
     # tryCatch will return an error object which will quit the loop by default
     # Set a skip variable instead
@@ -228,4 +228,4 @@ junction.data <- do.call(bind_rows, lapply(junction.files, read.csv)) |>
 # Save for combination with gene expression levels in featureCounts analysis
 readr::write_tsv(junction.data, "report/coding_exon_splice_junctions.tsv")
 
-cat("Plot sashimi: Done!\n")
+flog.info("Plot sashimi: Done!\n")

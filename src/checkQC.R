@@ -1,13 +1,13 @@
 # Check sample QC
-cat("QC check: Beginning\n")
-source("src/functions.R")
 
+source("src/functions.R")
+flog.info("QC check: Beginning\n")
 
 fs::dir_create("report/QC")
 
 #### Trimming report ####
 
-cat("QC check: Checking trimming\n")
+flog.info("QC check: Checking trimming\n")
 
 trimming.summary.files <- list.files(path = "data", pattern = "fastq.gz_trimming_report.txt$", full.names = T, recursive = T)
 
@@ -37,7 +37,7 @@ create.xlsx(trimming.summary, file.name = "report/QC/trimming_report.xlsx")
 
 
 #### FASTQC report ####
-cat("QC check: Checking FastQC\n")
+flog.info("QC check: Checking FastQC\n")
 fastqc.summary.files <- list.files(path = "report/FASTQC", pattern = "summary.txt$", full.names = T, recursive = T)
 fastqc.data <- do.call(rbind, lapply(fastqc.summary.files, read.table, sep = "\t"))
 colnames(fastqc.data) <- c("Outcome", "Measure", "Sample")
@@ -51,7 +51,7 @@ create.xlsx(fastqc.check, file.name = "report/QC/FASTQC_report.xlsx")
 
 
 #### Mapping efficiencies ####
-cat("QC check: Checking mapping reports\n")
+flog.info("QC check: Checking mapping reports\n")
 extract.pct <- function(x) {
   x <- stringr::str_extract(x, "\\(.*\\)")
   x <- stringr::str_replace(x, "\\(", "")
@@ -147,7 +147,7 @@ map.data <- read.table("report/QC/mapping.txt", sep = "$") |> #  sep char does n
 
 create.xlsx(map.data, "report/QC/mapping.xlsx")
 
-if (any(map.data$Pct_overall_alignment_rate < 80)) cat("QC check: Some samples have poor mapping rates\n")
+if (any(map.data$Pct_overall_alignment_rate < 80)) flog.warn("QC check: Some samples have poor mapping rates\n")
 
 # Plot the mapping efficiencies
 
@@ -211,11 +211,11 @@ plot.mapping.rates <- function(map.data) {
 
 tryCatch(
   {
-    cat("QC check: Making mapping plots\n")
+    flog.info("QC check: Making mapping plots\n")
     plot.mapping.rates(map.data)
   },
-  error = \(e) warning(e)
+  error = \(e) flog.warn(e)
 )
 
 #### ####
-cat("QC check: Done!\n")
+flog.info("QC check: Done!\n")

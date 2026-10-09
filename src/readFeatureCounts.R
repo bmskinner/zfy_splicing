@@ -1,6 +1,6 @@
 # Read featureCounts outputs, combine per species and calculate TPM for genes
 source("src/functions.R")
-
+flog.info("Beginning TPM calculations")
 dir.create("report/tpm")
 
 sample.groups <- SELECTED.SAMPLES %>%
@@ -17,7 +17,7 @@ feature.data <- SELECTED.SAMPLES |>
   dplyr::mutate(featureCountsFile = paste0("data/", CommonName, "/", Run, ".counts.txt"))
 
 read.feature.count.file <- function(file) {
-  cat("Reading feature counts from", file, "\n")
+  flog.debug("Reading feature counts from", file, "\n")
   read_tsv(file,
     skip = 2, show_col_types = FALSE,
     col_names = c("GeneId", "Chr", "Start", "End", "Strand", "Length", "Reads"),
@@ -231,6 +231,7 @@ for (species in unique(feature.values$CommonName)) {
 
 #### Create splicing table ####
 
+flog.info("Making splicing output tables")
 # Create an output table for manually filling detected ZFX/Y splicing. Add the
 # median TPM for ZFX and ZFY expression.
 

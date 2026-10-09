@@ -1,10 +1,9 @@
 #!/bin/Rscript
 # Merge bam files for splice junction counting. This aggregates the data plotted
 # from each sample individually.
-cat("Merge samples: Beginning\n")
 source("src/functions.R")
 
-cat("Merge samples: selecting bams for merging\n")
+flog.info("Merge samples: selecting bams for merging\n")
 
 fs::dir_create("data/merged")
 
@@ -53,14 +52,14 @@ to.merge <- groups |>
   dplyr::filter(is.merge) # ensure we only try to merge when all bams of a group are available and complete
 
 if (nrow(to.merge) > 0) {
-  cat("Merge samples: Merging bams\n")
+  flog.info("Merge samples: Merging bams\n")
   mcmapply(system2, command = "samtools", 
            args = to.merge$samtools.merge.arguments, 
            mc.cores = DEFAULT.MC.CORES)
 } 
 
 #### Index the bams ####
-cat("Merge samples: Indexing bams\n")
+flog.info("Merge samples: Indexing bams\n")
 
 # Index with CSI since opossum chromosomes are longer than the max for bai
 invisible(mcmapply(system2, command = "samtools", 
@@ -68,7 +67,7 @@ invisible(mcmapply(system2, command = "samtools",
          mc.cores = DEFAULT.MC.CORES))
 
 #### Run StringTie on the merged bam if needed ####
-cat("Merge samples: Running stringtie on merged bams\n")
+flog.info("Merge samples: Running stringtie on merged bams\n")
 to.stringtie <- groups |>
   dplyr::filter(is.stringtie) 
 
@@ -77,8 +76,7 @@ invisible(mcmapply(system2, command = "stringtie",
          mc.cores = DEFAULT.MC.CORES))
 
 #### Make a summary table of which bams were merged ####
+flog.info("Merge samples: Exporting merged bam table to report/merged.bams.xlsx\n")
 create.xlsx(groups, "report/merged.bams.xlsx")
-cat("Merge samples: Exported merged bam table to report/merged.bams.xlsx\n")
 
-#### Zip the results ####
-cat("Merge samples: Done!\n")
+flog.info("Merge samples: Done!\n")

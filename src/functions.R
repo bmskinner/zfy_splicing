@@ -1,9 +1,9 @@
-cat("Setup: Loading packages\n")
 .packages <- c(
   "parallel", "installr", "openxlsx2", "tidyverse", "GenomicRanges",
   "fs", "data.table", "patchwork", "grid", "scales", "ggbeeswarm",
   "rtracklayer", "Rsamtools", "bitops", "rlang", "R.utils", "gridExtra", "png",
-  "Biostrings", "GenomicFeatures", "BSgenome", "ggtranscript" # devtools::install_github("dzhang32/ggtranscript")
+  "Biostrings", "GenomicFeatures", "BSgenome", "ggtranscript", # devtools::install_github("dzhang32/ggtranscript")
+  "futile.logger"
 )
 
 suppressPackageStartupMessages({
@@ -12,7 +12,9 @@ suppressPackageStartupMessages({
   rm(is.installed)
 })
 
-cat("Setup: Defining global functions and variables\n")
+invisible(flog.layout(layout.format('~t ~m')))
+
+flog.info("Setup: Defining global functions and variables\n")
 
 # The file that will contain samples to be processed. Created de novo on each run
 # from selectSamples.R
@@ -114,7 +116,7 @@ get.gene.locations <- function(genome.data) {
   gene.ids <- readr::read_csv("metadata/gene_ids.csv", show_col_types = FALSE)
 
   if (file.exists("./data/gene_coordinates.csv")) {
-    cat("Setup: An existing gene coordinate file was found\n")
+    flog.info("Setup: An existing gene coordinate file was found\n")
     existing.coordinates <- readr::read_csv("./data/gene_coordinates.csv", show_col_types = FALSE)
 
     has.raw.gtfs <- all(genome.data$GTF_FILE %in% existing.coordinates$GTF_FILE)
@@ -123,29 +125,29 @@ get.gene.locations <- function(genome.data) {
     has.saved.genes <- all(existing.coordinates$GeneId %in% gene.ids$GeneId)
 
     if (!has.raw.gtfs) {
-      cat(
+      flog.info(
         "Setup: Missing coordinates from a GTF file in ./genomes : ",
         paste(genome.data$GTF_FILE[!genome.data$GTF_FILE %in% existing.coordinates$GTF_FILE], collapse = ", "),
         "\n"
       )
     }
     if (!has.saved.gtfs) {
-      cat(
+      flog.info(
         "Setup: Saved coordinates do not have a GTF file in ./genomes : ",
         paste(existing.coordinates$GTF_FILE[!existing.coordinates$GTF_FILE %in% genome.data$GTF_FILE], collapse = ", "),
         "\n"
       )
     }
     if (!has.raw.genes) {
-      cat(
+      flog.info(
         "Setup: Missing coordinates from a gene in metadata/gene_locations.csv : ",
         paste(gene.ids$GeneId[!gene.ids$GeneId %in% existing.coordinates$GeneId], collapse = ", "),
         "\n"
       )
     }
     if (!has.saved.genes) {
-      cat("Setup: Saved coordinates from a gene are not found in in metadata/gene_locations.csv\n")
-      cat(
+      flog.info("Setup: Saved coordinates from a gene are not found in in metadata/gene_locations.csv\n")
+      flog.info(
         "Setup: Saved coordinates from a gene are not found in in metadata/gene_locations.csv : ",
         paste(existing.coordinates$GeneId[!existing.coordinates$GeneId %in% gene.ids$GeneId], collapse = ", "),
         "\n"
@@ -157,10 +159,10 @@ get.gene.locations <- function(genome.data) {
   }
 
   # Find these ids in the relevant GTF file and extract location
-  cat("Setup: Finding gene coordinates in GTF\n")
+  flog.info("Setup: Finding gene coordinates in GTF\n")
   # Identify the coordinates of a given gene id from GTF. Expand by size on each flank if desired
   get.gene.coordinates <- function(common.name, gtf.file, size = 1000) {
-    cat("Setup: Reading GTF file for", common.name, "\n")
+    flog.info("Setup: Reading GTF file for", common.name, "\n")
     if (!file.exists(gtf.file)) stop("Missing GTF file", gtf.file)
     gtf.data <- rtracklayer::import(gtf.file)
 
@@ -197,7 +199,7 @@ get.gene.locations <- function(genome.data) {
         min(GenomicRanges::start(filt.data) - size), "-",
         max(GenomicRanges::end(filt.data) + size)
       )
-      cat("Setup: Found", gene.id, "in", common.name, "at", location.string, "\n")
+      flog.info("Setup: Found", gene.id, "in", common.name, "at", location.string, "\n")
       location.string
     })
 
@@ -279,4 +281,4 @@ SELECTED.SAMPLES <- read.csv(MAPPING.FILE) |>
 # Locations of exon junctions for exon 2 splice detection
 JUNCTION.COORDINATES <- read.csv("metadata/exon_junctions.csv")
 
-cat("Setup: Common functions and global variables loaded\n")
+flog.info("Setup: Common functions and global variables loaded\n")

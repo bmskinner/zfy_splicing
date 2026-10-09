@@ -3,7 +3,7 @@ source("src/functions.R")
 
 #### Make summary tables ####
 
-cat("Making sample summary tables\n")
+flog.info("Making sample summary tables\n")
 
 # What are the timepoints, tissues and species we can look at?
 sample.groups <- SELECTED.SAMPLES %>%
@@ -84,4 +84,4 @@ mouse.plot <- ggplot(
   )
 save.double.width("report/read.depths.mouse.png", mouse.plot, height = 230)
 
-cat("Sample selection: Done!\n")
+flog.info("Sample summary plots: Done!\n")
