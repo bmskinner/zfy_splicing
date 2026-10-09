@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# If a mapping script is starting up, wait for lock to release
+# Otherwise we may conflict with the metadata files being written
+while [ -e data/preMapping.lck ]; do
+		sleep 30
+done
+
 # Scripts to run after parallel mapping scripts are completed
 # Create summary reports and get gene bam files for later visualisation
 echo "`date '+%Y-%m-%d %X'` Beginning post mapping" > logs/postMapping.log 2>&1
