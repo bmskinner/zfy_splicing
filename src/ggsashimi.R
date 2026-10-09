@@ -552,16 +552,12 @@ read_gtf_data <- function(gtf.files, gtf.names) {
 #'
 #' @examples
 get_exon_boundaries <- function(gtf.data, chr, loc.start, loc.end) {
-  cat("Getting exon boundaries\n")
-
   region <- gtf.data |>
     dplyr::filter(
       seqnames == as.character(chr),
       start >= loc.start - 5000 &
         end <= loc.end + 5000
     )
-
-  # cat("Region ", chr, ":", loc.start, "-", loc.end, "contains", nrow(region), "data rows\n")
 
   region.introns <- region |>
     as.data.frame() |>
@@ -581,8 +577,6 @@ get_exon_boundaries <- function(gtf.data, chr, loc.start, loc.end) {
     dplyr::ungroup() |>
     dplyr::arrange(transcript_id, start, end)
 
-  # cat("Region ", chr, ":", loc.start, "-", loc.end, "contains", nrow(region.introns), "intron rows\n")
-
   region.exons <- region |>
     as.data.frame() |>
     dplyr::filter(type == "exon") |>
@@ -592,8 +586,6 @@ get_exon_boundaries <- function(gtf.data, chr, loc.start, loc.end) {
     ) |>
     dplyr::mutate(length = end - start + 1) |>
     dplyr::arrange(transcript_id, start, end)
-
-  # cat("Region ", chr, ":", loc.start, "-", loc.end, "contains", nrow(region.exons), "exon rows\n")
 
   region.junctions <- do.call(rbind, lapply(unique(region.exons$transcript_id), get_transcript_junctions, gtf.data = gtf.data))
 
@@ -647,7 +639,6 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
     gtf.data$end <= end, ]
 
   sashimi.data$reference.gene.id <- reference.gene.id
-  cat("Reference gene id is '", reference.gene.id, "'\n")
 
   # Get the longest transcript in the gene if none specified
   if (is.na(reference.transcript.id)) {
@@ -679,7 +670,7 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
 
   sashimi.data$non.reference.transcript.strand <- ifelse(sashimi.data$reference.transcript.strand == "+", "-", "+")
 
-  cat("Reference transcript is '", reference.transcript.id, "' on strand '", paste(sashimi.data$reference.transcript.strand, collapse = ","), "'\n")
+  cat("Reference gene is '",reference.gene.id, "', transcript is '", reference.transcript.id, "' on strand '", paste(sashimi.data$reference.transcript.strand, collapse = ","), "'\n")
   if (is.null(sashimi.data$reference.transcript.strand)) stop("Unable to find reference strand for", sashimi.data$reference.transcript.id)
 
   sashimi.data$reference.transcript.boundaries <- get_exon_boundaries(sashimi.data$reference.gtf.region, chr, start, end)
@@ -690,8 +681,9 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
     dplyr::distinct() |>
     dplyr::pull()
 
-  cat("Detected", nrow(bam.data$junctions), "splice junctions\n")
+
   if (nrow(bam.data$junctions) > 0) {
+    cat("No splice junctions detected\n")
     sashimi.data$junctions.all <- do.call(rbind, mapply(classify_junction,
       junction.start = bam.data$junctions$start,
       junction.end = bam.data$junctions$end,
