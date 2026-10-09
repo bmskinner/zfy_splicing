@@ -46,8 +46,8 @@ export.novel.transcript.sequences <- function(novel.gtf.file, reference.fasta) {
 }
 
 # Read novel transcript gtf file and plot.
-plot.novel.transcripts <- function(gtf.file, species, tissue, timepoint, sex, gene.id, gene.name) {
-  cat("Plotting", gene.name, "\n")
+plot.novel.transcripts <- function(gtf.file, stringtie.plot.file) {
+  cat("Plotting", gtf.file, "\n")
   
   novel.gtf <- read.novel.transcripts(gtf.file) %>%
     dplyr::group_by(transcript_id) %>%
@@ -103,7 +103,7 @@ plot.novel.transcripts <- function(gtf.file, species, tissue, timepoint, sex, ge
     scale_fill_viridis_c() +
     labs(
       x = "Position", y = "Assembled transcript",
-      title = gene.name, fill = "TPM"
+      title = stringtie.gtf, fill = "TPM"
     ) +
     geom_text(
       data = add_exon_number(novel.gtf.exon, "transcript_id"),
@@ -134,11 +134,7 @@ plot.novel.transcripts <- function(gtf.file, species, tissue, timepoint, sex, ge
       title = element_text(),
       legend.position = "top"
     )
-  
-  
-  stringtie.plot.file <- paste0("report/stringtie/", paste(c(species,tissue, 
-                                                             timepoint, sex, gene.id, gene.name), 
-                                                           collapse = "."), ".png")
+
   save.plot(stringtie.plot.file, transcript.plot,
     width = 170, height = min(1000, 20 + (n.transcripts * 50))
   )
@@ -151,12 +147,14 @@ plot.novel.transcripts <- function(gtf.file, species, tissue, timepoint, sex, ge
 # Find the transcript GTFs
 
 stringtie.gtf.files <- SELECTED.SAMPLES |>
-  merge(GENE.LOCATIONS, by=c("CommonName", "GTF_FILE", "GeneId")) |>
+  merge(GENE.LOCATIONS, by=c("CommonName", "GTF_FILE", "GeneId", "Location")) |>
+  dplyr::filter(!(Group %in% c("RBMX", "RBMY"))) |>
   dplyr::select(Organism, Tissue, Timepoint, CommonName, Sex, GTF_FILE, GeneId, Gene) |>
   dplyr::distinct() |>
   dplyr::mutate(
     stringtie.gtf = paste0("data/merged/", CommonName, ".", Tissue, ".", Timepoint, ".", Sex,".", GeneId,".gtf"),
-    stringtie.gtf.exists = file.exists(stringtie.gtf)
+    stringtie.gtf.exists = file.exists(stringtie.gtf),
+    stringtie.plot.file = paste0("report/stringtie/", CommonName, ".", Tissue, ".", Timepoint, ".", Sex,".", Gene,".png")
   )
 
 stringtie.to.plot <- stringtie.gtf.files |>
@@ -168,12 +166,7 @@ invisible(mcmapply(\(x, ...) tryCatch(plot.novel.transcripts(x,...),
                                         return(FALSE)
                                       }), 
                    stringtie.to.plot$stringtie.gtf, 
-                   stringtie.to.plot$CommonName,
-                   stringtie.to.plot$Tissue,
-                   stringtie.to.plot$Timepoint,
-                   stringtie.to.plot$Sex, 
-                   stringtie.to.plot$GeneId,
-                   stringtie.to.plot$Gene,
+                   stringtie.to.plot$stringtie.plot.file,
                    mc.cores = DEFAULT.MC.CORES))
 
 #### Export FASTA sequence of novel transcripts ####
