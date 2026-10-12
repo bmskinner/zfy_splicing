@@ -26,18 +26,18 @@ echo "`date '+%Y-%m-%d %X'` Plotting transcripts" >> logs/postMapping.log 2>&1
 Rscript src/plotNovelTranscripts.R >> logs/postMapping.log 2>&1
 
 # Count strand ratios across samples
-echo "`date '+%Y-%m-%d %X'` Counting strand ratios" >> logs/postMapping.log 2>&1
-rm report/strand_ratios.txt
-for f in data/*/[SDE]RR*.*.bam; do
-  # Get the read counts from the file with strand info
-  FORWARD=$(samtools view --count --tag XS:+ $f)
-  REVERSE=$(samtools view --count --tag XS:- $f)
-  
-  # Count all reads, whether they have strand tags or not
-  TOTAL=$(samtools view --count $f)
-
-  echo "$f ${FORWARD} ${REVERSE} ${TOTAL}" >> report/strand_ratios.txt
-done
+# echo "`date '+%Y-%m-%d %X'` Counting strand ratios" >> logs/postMapping.log 2>&1
+# rm report/strand_ratios.txt
+# for f in data/*/[SDE]RR*.*.bam; do
+#   # Get the read counts from the file with strand info
+#   FORWARD=$(samtools view --count --tag XS:+ $f)
+#   REVERSE=$(samtools view --count --tag XS:- $f)
+#   
+#   # Count all reads, whether they have strand tags or not
+#   TOTAL=$(samtools view --count $f)
+# 
+#   echo "$f ${FORWARD} ${REVERSE} ${TOTAL}" >> report/strand_ratios.txt
+# done
 
 # Plot splice variation
 echo "`date '+%Y-%m-%d %X'` Plotting splicing" >> logs/postMapping.log 2>&1
