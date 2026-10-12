@@ -715,7 +715,6 @@ read.csv("metadata/cattle.testis.additional.csv") |>
                 Bases>3e10,
                 BioProject=="PRJEB46995"
                 ) |>
-  dplyr::filter(!(Run %in% c1$Run) & !(Run %in% c2$Run))|>
   dplyr::mutate(DevStage="adult",
                 Timepoint="adult",
                 CommonName = "cattle",
