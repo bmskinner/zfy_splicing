@@ -67,7 +67,7 @@ create.sashimi.plot <- function(i){
 
     # Only read the bam file if needed
     
-    flog.info("Detecting splice junctions for %s: %s %s in group %s", i, run, gene_id, group)
+    flog.info("Detecting splice junctions for %s of %s: %s %s in group %s", i, nrow(bam.files), run, gene_id, group)
     
     sashimi.data <- read_sashimi_data(
       bam.file = bam.row$path,

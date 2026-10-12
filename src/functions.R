@@ -13,7 +13,7 @@ suppressPackageStartupMessages({
 })
 
 invisible(flog.layout(layout.format('~t ~m')))
-
+flog.threshold(futile.logger::INFO)
 flog.info("Setup: Defining global functions and variables")
 
 # The file that will contain samples to be processed. Created de novo on each run

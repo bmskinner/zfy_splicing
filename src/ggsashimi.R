@@ -250,7 +250,7 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
       reference.location = coordinate.string
     ))
   } else {
-    flog.info("There are %s valid reads in the bam file %s", total.reads, bam.file)
+    flog.debug("There are %s valid reads in bam file %s", total.reads, bam.file)
   }
 
   #' Count coverage and splice junctions from a cigar string
@@ -302,7 +302,7 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
 
   # Go read by read
   for (i in 1:total.reads) {
-    if (i %% 500 == 0) flog.info("Processed %.2f%% of %s reads", i / total.reads * 100, total.reads)
+    if (i %% 1000 == 0) flog.debug("Processed %.2f%% of %s reads", i / total.reads * 100, total.reads)
     flag <- bam.data$flag[i]
     cigar <- bam.data$cigar[i]
     pos <- bam.data$pos[i]
@@ -669,7 +669,7 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
 
   sashimi.data$non.reference.transcript.strand <- ifelse(sashimi.data$reference.transcript.strand == "+", "-", "+")
 
-  flog.info("Reference gene is '%s', transcript is '%s' on strand '%s'",
+  flog.debug("Reference gene is '%s', transcript is '%s' on strand '%s'",
             reference.gene.id, 
             reference.transcript.id, 
             paste(sashimi.data$reference.transcript.strand, collapse = ","))
@@ -699,7 +699,7 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
     ))
   } else {
     # No junctions detected, return the coverage
-    flog.info("No splice junctions detected\n")
+    flog.info("No splice junctions detected for %s", bam.file)
     sashimi.data$junctions <- data.frame(
       start = c(),
       end = c(),
@@ -811,7 +811,7 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
 
   exon.data <- exon.data[exon.data$strand == strand, ]
   intron.data <- intron.data[intron.data$strand == strand, ]
-  flog.info("Creating intron collapser; detected %s exons and %s introns", nrow(exon.data), nrow(intron.data))
+  flog.debug("Creating intron collapser; detected %s exons and %s introns", nrow(exon.data), nrow(intron.data))
 
   tryCatch({
     exon.ranges <- GenomicRanges::GRanges(
@@ -873,7 +873,7 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
     intron.ranges$overlappingIntrons <- has.overlaps(intron.ranges, intron.ranges)
     
     if(any(intron.ranges$overlappingIntrons>1)){
-      flog.info("Disjoining introns")
+      flog.debug("Disjoining introns")
       intron.ranges <- GenomicRanges::disjoin(intron.ranges)
     }
 
