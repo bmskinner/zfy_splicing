@@ -4,7 +4,7 @@
 source("src/functions.R")
 
 make.aggregate.plot <- function(paths, out.file){
-  if(file.exists(out.file)) return(FALSE)
+  # if(file.exists(out.file)) return(FALSE)
   
   paths <- paths[file.size(paths)>0] # there are some placeholder images of zero size when no reads were in a sample
   
