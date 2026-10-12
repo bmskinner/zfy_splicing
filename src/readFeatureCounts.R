@@ -1,7 +1,7 @@
 # Read featureCounts outputs, combine per species and calculate TPM for genes
 source("src/functions.R")
 flog.info("Beginning TPM calculations")
-dir.create("report/tpm")
+fs::dir_create("report/tpm")
 
 sample.groups <- SELECTED.SAMPLES %>%
   dplyr::group_by(Organism, Tissue, Timepoint, CommonName, Sex) |>
@@ -111,7 +111,7 @@ for (tissue in unique(feature.values$Tissue)) {
         axis.title.y = element_blank(),
         legend.position = "top"
       )
-    save.double.width(paste0("report/tpm/tissue/", tissue, ".zfxy.tpm.png"), plt, height = 50 + n.rows * 5)
+    save.double.width(paste0("report/tpm/tissue/", tissue, ".zfxy.tpm.png"), plt, height = min(1000, 50 + n.rows * 5))
   }
 
   # Mouse specific timepoints
@@ -130,7 +130,7 @@ for (tissue in unique(feature.values$Tissue)) {
         axis.title.y = element_blank(),
         legend.position = "top"
       )
-    save.double.width(paste0("report/tpm/tissue/", tissue, ".zfxy.mouse.tpm.png"), plt, height = 50 + n.rows * 5)
+    save.double.width(paste0("report/tpm/tissue/", tissue, ".zfxy.mouse.tpm.png"), plt, height = min(1000, 50 + n.rows * 5))
   }
 
   # RBMX/Y plot by clade
@@ -149,7 +149,7 @@ for (tissue in unique(feature.values$Tissue)) {
         axis.title.y = element_blank(),
         legend.position = "top"
       )
-    save.double.width(paste0("report/tpm/tissue/", tissue, ".rbmxy.tpm.png"), plt, height = 50 + n.rows * 5)
+    save.double.width(paste0("report/tpm/tissue/", tissue, ".rbmxy.tpm.png"), plt, height = min(1000, 50 + n.rows * 5))
   }
 
   # Mouse specific timepoints
@@ -168,7 +168,7 @@ for (tissue in unique(feature.values$Tissue)) {
         axis.title.y = element_blank(),
         legend.position = "top"
       )
-    save.double.width(paste0("report/tpm/tissue/", tissue, ".rbmy.mouse.tpm.png"), plt, height = 50 + n.rows * 5)
+    save.double.width(paste0("report/tpm/tissue/", tissue, ".rbmy.mouse.tpm.png"), plt, height = min(1000, 50 + n.rows * 5))
   }
 }
 
@@ -206,7 +206,7 @@ for (species in unique(feature.values$CommonName)) {
         axis.title.y = element_blank(),
         legend.position = "top"
       )
-    save.double.width(paste0("report/tpm/species/", species, ".tpm.png"), plt, height = 50 + n.rows * 5)
+    save.double.width(paste0("report/tpm/species/", species, ".tpm.png"), plt, height = min(1000, 50 + n.rows * 5))
   }
 
   # Mouse specific timepoints
@@ -225,7 +225,7 @@ for (species in unique(feature.values$CommonName)) {
         axis.title.y = element_blank(),
         legend.position = "top"
       )
-    save.double.width(paste0("report/tpm/species/", species, ".weeks.tpm.png"), plt, height = 50 + n.rows * 5)
+    save.double.width(paste0("report/tpm/species/", species, ".weeks.tpm.png"), plt, height = min(1000, 50 + n.rows * 5))
   }
 }
 

@@ -2,6 +2,7 @@
 # between mate pairs straddling e2 is longer than expected from the library
 # size. Find paired end reads in bed files with mate1, mate2 coordinates.
 source("src/functions.R")
+source("src/ggsashimi.R")
 
 #### Create bed files with read pair coordinates ####
 
@@ -45,7 +46,7 @@ read.bed <- function(file){
 }
 
 
-bed.data <- do.call(dplyr::bind_rows, lapply(bed.files, read.bed) ) |>
+bed.data <- do.call(dplyr::bind_rows, lapply(bed.files[1:10], read.bed) ) |>
   dplyr::rowwise() |>
   dplyr::mutate(  
     Mate1Size = Mate1End - Mate1Start + 1,
@@ -56,32 +57,36 @@ bed.data <- do.call(dplyr::bind_rows, lapply(bed.files, read.bed) ) |>
     JunctionStart = min(Mate1End, Mate2End),
     JunctionEnd = max(Mate1Start, Mate2Start)
     ) |>
-  merge(SELECTED.SAMPLES, by = c("Run")) |>
-  merge(GENE.LOCATIONS, by = c("CommonName", "GeneId", "GTF_FILE"))
+  merge(SELECTED.SAMPLES, by = c("Run", "GeneId")) |>
+  merge(GENE.LOCATIONS, by = c("CommonName", "GeneId", "GTF_FILE", "Location"))
 
 
 #### Match reads to exon 2 boundaries ####
 
 flog.info("Matching mate coordinates with junction coordinates")
-# junction coordinates are set in plotSashimi
-junction.coordinates <- readr::read_tsv("report/coding_exon_splice_junctions.tsv")
-
 
 splice.data <- bed.data |>
   dplyr::filter(Group %in% c("ZFX", "ZFY"),
-                LibraryLayout = "PAIRED"
+                LibraryLayout == "PAIRED"
                 ) |>
-  merge(junction.coordinates, by = c("CommonName", "GeneId")) |>
+  merge(JUNCTION.COORDINATES, by = c("CommonName", "GeneId")) |>
+  dplyr::filter(Junction == "E1E3") |>
   dplyr::mutate(SpansExon2 = JunctionStart <= start & JunctionEnd >= end) |>
   dplyr::group_by(Run, CommonName, GeneId, Gene, Sex, Tissue, Timepoint) |>
   dplyr::mutate(RunMedianInsertSize = median(InsertSize))
 
 splice.summ <- splice.data |> 
-  dplyr::group_by(CommonName, GeneId, Gene, Sex, Organism_part, Timepoint, SpansExon2) |>
-  dplyr::summarise(GroupInsertSize = median(InsertSize))|>
+  dplyr::group_by(CommonName, GeneId, Gene, Sex, Tissue, Timepoint, SpansExon2) |>
+  dplyr::summarise(GroupInsertSize = median(InsertSize)) |>
   tidyr::pivot_wider(names_from = SpansExon2, names_prefix = "SpansExon2", values_from = c(GroupInsertSize)) |>
   dplyr::filter(!is.na(SpansExon2TRUE)) |>
   as.data.frame()
+
+# Not all the species will be needed here - only load those we need
+gtfs.needed <- GENOME.DATA |>
+  dplyr::filter(CommonName %in% unique(splice.data$CommonName))
+
+GTF.DATA <- read_gtf_data(gtfs.needed$GTF_FILE, gtfs.needed$CommonName)
 
 plot.spanning <- function(i){
 
