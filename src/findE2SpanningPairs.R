@@ -5,6 +5,8 @@ source("src/functions.R")
 
 #### Create bed files with read pair coordinates ####
 
+flog.info("Creating bed files with mate coordinates")
+
 bam.files <- list.files(path = "data", pattern = "[SDE]RR\\d+\\..*\\.bam$", 
                         full.names = TRUE, recursive=TRUE)
 
@@ -18,6 +20,7 @@ for(bam.file in bam.files){
 }
 
 #### Read bed files ####
+flog.info("Reading bed files with mate coordinates")
 
 bed.files <- list.files(path = "data", pattern = "[SDE]RR\\d+\\..*\\.bed$", 
                                           full.names = TRUE, recursive=TRUE)
@@ -59,12 +62,14 @@ bed.data <- do.call(dplyr::bind_rows, lapply(bed.files, read.bed) ) |>
 
 #### Match reads to exon 2 boundaries ####
 
+flog.info("Matching mate coordinates with junction coordinates")
 # junction coordinates are set in plotSashimi
 junction.coordinates <- readr::read_tsv("report/coding_exon_splice_junctions.tsv")
 
 
 splice.data <- bed.data |>
   dplyr::filter(Group %in% c("ZFX", "ZFY"),
+                LibraryLayout = "PAIRED"
                 ) |>
   merge(junction.coordinates, by = c("CommonName", "GeneId")) |>
   dplyr::mutate(SpansExon2 = JunctionStart <= start & JunctionEnd >= end) |>
@@ -138,6 +143,7 @@ plot.spanning <- function(i){
   spanning.plot
 }
 
+flog.info("Creating spanning plots")
 spanning.plots <- lapply(1:nrow(splice.summ), plot.spanning)
 
 save.double.width("report/spanning_pairs/spanning_pairs.png", patchwork::wrap_plots(spanning.plots, ncol = 1), height = 250)

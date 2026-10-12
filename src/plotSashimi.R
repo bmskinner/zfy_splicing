@@ -135,11 +135,6 @@ merged.bam.files <- data.frame(path = list.files(path = "data/merged", pattern =
 
 create.merged.sashimi.plot <- function(i){
 
-# for (i in 1:nrow(merged.bam.files)) {
-  
-  # Error handling
-  skip.file <- FALSE
-  
   tryCatch({
     bam.row <- merged.bam.files[i, ]
     species <- bam.row$CommonName
@@ -154,13 +149,14 @@ create.merged.sashimi.plot <- function(i){
     coords <- parse_coordinates(gene.data$Location)
     group <- gene.data$Group
     if (length(group) == 0) return(FALSE)
-    flog.info("Detecting splice junctions for %s: %s %s in group %s", i, species, gene_id, group)
     
     final.out.file <- paste0("report/merged_sashimi/", paste(c(species,tissue, 
                                                                timepoint, sex, gene_id, gene_name), 
                                                              collapse = "."), ".condensed.png")
     
     if(file.exists(final.out.file) & file.mtime(final.out.file)>bam.mtime){ return(FALSE) }
+    
+    flog.info("Detecting splice junctions for %s: %s %s in group %s", i, species, gene_id, group)
     
     sashimi.data <- read_sashimi_data(
       bam.file = bam.row$path,
@@ -189,15 +185,9 @@ create.merged.sashimi.plot <- function(i){
   }, error=function(e){
     flog.warn("Error making shashimi plot")
     print(e)
-    # tryCatch will return an error object which will quit the loop by default
-    # Set a skip variable instead
-    skip.file <<- TRUE
     return(FALSE)
   })
-  
-  
-  # Skip to next loop iteration if an error was caught
-  # if(skip.file) { next } 
+
   TRUE
 }
 

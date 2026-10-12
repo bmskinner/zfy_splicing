@@ -374,6 +374,22 @@ read.csv("metadata/PRJEB26889.csv") |>
   dplyr::filter(Timepoint != "other") |>
   .append.data()
 
+#### More rat testis - largest PE libraries available ####
+
+rat <- read.csv("metadata/rat.testis.additional.csv")  |>
+  dplyr::arrange(desc(Bases)) |>
+  dplyr::filter(BioProject %in% c("PRJNA516470", "PRJNA703718")) |>
+  dplyr::mutate(
+    DevStage = AGE,
+    Sex = "male",
+    Tissue = "testis",
+    Timepoint = case_when(DevStage == "9 weeks" ~ "adult",
+                          DevStage == "18 months" ~ "adult",
+                          .default = "other"
+    ),
+    CommonName = "rat",
+  ) |>
+  .append.data()
 
 #### Samples from PRJNA889410 - Arvicanthis tissues ####
 # Not enough restis coverage - skip these
