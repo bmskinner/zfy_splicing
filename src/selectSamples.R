@@ -414,11 +414,17 @@ read.csv("metadata/mouse.testis.csv") |>
   dplyr::filter(AgeDays < 28) |>
   dplyr::filter(str_detect(genotype, "[W|w]ild[ |-][T|t]ype") | str_detect(source_name, "[W|w]ild[ |-][T|t]ype") | str_detect(genotype, "[W|w][T|t]")) |>
   dplyr::mutate(
-    Timepoint = case_when(AgeDays < 7 ~ "Day_00-06",
-      AgeDays < 14 ~ "Day_07-13",
-      AgeDays < 21 ~ "Day_14-20",
-      AgeDays < 28 ~ "Day_21-27",
-      .default = "Other"
+    # Timepoint = case_when(AgeDays < 7 ~ "Day_00-06",
+    #   AgeDays < 14 ~ "Day_07-13",
+    #   AgeDays < 21 ~ "Day_14-20",
+    #   AgeDays < 28 ~ "Day_21-27",
+    #   .default = "Other"
+    # ),
+    # Now we have checked the timepoints and confirmed expression, wrap these
+    # back to the basic categories
+    Timepoint = case_when(AgeDays < 10 ~ "birth", # ie 0-10
+                          AgeDays < 24 ~ "adolescence", #ie 11-23
+                          .default = "adult" # >23 days
     ),
     CommonName = "mouse"
   ) |>

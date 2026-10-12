@@ -55,7 +55,7 @@ feature.values <- readr::read_csv("report/tpm.csv", show_col_types = FALSE) |>
   merge(GENOME.DATA, by = c("CommonName", "Genome", "GTF_FILE")) |>
   dplyr::mutate(
     Clade = fct_relevel(Clade, "Outgroup", "Birds", "Monotremes", "Marsupials", "Artiodactyls", "Primates", "Rodents"),
-    Timepoint = fct_relevel(as.factor(Timepoint), "birth", "adolescence", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
+    Timepoint = fct_relevel(as.factor(Timepoint), "birth", "adolescence", "adult")
   ) |>
   dplyr::group_by(Tissue, Timepoint, CommonName, Group, Sex, GeneId) |>
   dplyr::mutate(
@@ -77,20 +77,10 @@ for (tissue in unique(feature.values$Tissue)) {
       Timepoint %in% c("adult", "adolescence", "birth"),
       Group %in% c("ZFX", "ZFY")
     )
-  zfxy.mouse.data <- tissue.data |>
-    dplyr::filter(
-      Timepoint %in% c("Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27"),
-      Group %in% c("ZFX", "ZFY")
-    )
 
   rbmy.data <- tissue.data |>
     dplyr::filter(
       Timepoint %in% c("adult", "adolescence", "birth"),
-      Group %in% c("RBMX", "RBMY")
-    )
-  rbmy.mouse.data <- tissue.data |>
-    dplyr::filter(
-      Timepoint %in% c("Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27"),
       Group %in% c("RBMX", "RBMY")
     )
 
@@ -114,25 +104,6 @@ for (tissue in unique(feature.values$Tissue)) {
     save.double.width(paste0("report/tpm/tissue/", tissue, ".zfxy.tpm.png"), plt, height = min(1000, 50 + n.rows * 5))
   }
 
-  # Mouse specific timepoints
-  if (nrow(zfxy.mouse.data) > 0) {
-    n.rows <- length(unique(interaction(zfxy.mouse.data$Sex, zfxy.mouse.data$Tissue, zfxy.mouse.data$Gene)))
-    plt <- ggplot(
-      zfxy.mouse.data,
-      aes(x = TPM, y = interaction(Gene, Sex, CommonName), fill = Group, col = Group)
-    ) +
-      geom_boxplot() +
-      scale_fill_manual(values = c("lightgreen", "lightblue")) +
-      scale_color_manual(values = c("darkgreen", "darkblue")) +
-      facet_grid(interaction(Clade, sep = "\n") ~ Timepoint, scales = "free_y", space = "free_y") +
-      theme_bw() +
-      theme(
-        axis.title.y = element_blank(),
-        legend.position = "top"
-      )
-    save.double.width(paste0("report/tpm/tissue/", tissue, ".zfxy.mouse.tpm.png"), plt, height = min(1000, 50 + n.rows * 5))
-  }
-
   # RBMX/Y plot by clade
   if (nrow(rbmy.data) > 0) {
     n.rows <- length(unique(interaction(rbmy.data$Sex, rbmy.data$Tissue, rbmy.data$Gene)))
@@ -151,25 +122,6 @@ for (tissue in unique(feature.values$Tissue)) {
       )
     save.double.width(paste0("report/tpm/tissue/", tissue, ".rbmxy.tpm.png"), plt, height = min(1000, 50 + n.rows * 5))
   }
-
-  # Mouse specific timepoints
-  if (nrow(rbmy.mouse.data) > 0) {
-    n.rows <- length(unique(interaction(rbmy.mouse.data$Sex, rbmy.mouse.data$Tissue, rbmy.mouse.data$Gene)))
-    plt <- ggplot(
-      rbmy.mouse.data,
-      aes(x = TPM, y = interaction(Gene, Sex, CommonName), fill = Group, col = Group)
-    ) +
-      geom_boxplot() +
-      scale_fill_manual(values = c("lightgreen", "lightblue")) +
-      scale_color_manual(values = c("darkgreen", "darkblue")) +
-      facet_grid(interaction(Clade, sep = "\n") ~ Timepoint, scales = "free_y", space = "free_y") +
-      theme_bw() +
-      theme(
-        axis.title.y = element_blank(),
-        legend.position = "top"
-      )
-    save.double.width(paste0("report/tpm/tissue/", tissue, ".rbmy.mouse.tpm.png"), plt, height = min(1000, 50 + n.rows * 5))
-  }
 }
 
 
@@ -181,11 +133,6 @@ for (species in unique(feature.values$CommonName)) {
   zfxy.data <- species.data |>
     dplyr::filter(
       Timepoint %in% c("adult", "adolescence", "birth"),
-      Group %in% c("ZFX", "ZFY", "RBMY")
-    )
-  zfxy.mouse.data <- species.data |>
-    dplyr::filter(
-      Timepoint %in% c("Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27"),
       Group %in% c("ZFX", "ZFY", "RBMY")
     )
 
@@ -207,25 +154,6 @@ for (species in unique(feature.values$CommonName)) {
         legend.position = "top"
       )
     save.double.width(paste0("report/tpm/species/", species, ".tpm.png"), plt, height = min(1000, 50 + n.rows * 5))
-  }
-
-  # Mouse specific timepoints
-  if (nrow(zfxy.mouse.data) > 0) {
-    n.rows <- length(unique(interaction(zfxy.mouse.data$Sex, zfxy.mouse.data$Tissue, zfxy.mouse.data$Gene)))
-    plt <- ggplot(
-      zfxy.mouse.data,
-      aes(x = TPM, y = interaction(Gene, Sex), fill = Group, col = Group)
-    ) +
-      geom_boxplot() +
-      scale_fill_manual(values = c("ZFX" = "lightgreen", "ZFY" = "lightblue", "RBMX" = "#F4EA56", "RBMY" = "#c8a2c8")) +
-      scale_color_manual(values = c("ZFX" = "darkgreen", "ZFY" = "darkblue", "RBMX" = "#F6BE00", "RBMY" = "purple")) +
-      facet_grid(interaction(Tissue, sep = "\n") ~ Timepoint, scales = "free_y", space = "free_y") +
-      theme_bw() +
-      theme(
-        axis.title.y = element_blank(),
-        legend.position = "top"
-      )
-    save.double.width(paste0("report/tpm/species/", species, ".weeks.tpm.png"), plt, height = min(1000, 50 + n.rows * 5))
   }
 }
 
@@ -281,7 +209,7 @@ splicing.table <- feature.values |>
   ) |>
   dplyr::mutate(
     Clade = fct_relevel(Clade, "Outgroup", "Birds", "Monotremes", "Marsupials", "Artiodactyls", "Primates", "Rodents"),
-    Timepoint = fct_relevel(as.factor(Timepoint), "birth", "adolescence", "adult", "Day_00-06", "Day_07-13", "Day_14-20", "Day_21-27")
+    Timepoint = fct_relevel(as.factor(Timepoint), "birth", "adolescence", "adult")
   ) |>
   dplyr::arrange(Clade, CommonName, Tissue)
 
