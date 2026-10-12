@@ -283,29 +283,24 @@ zfy.expn.table <- splicing.table |>
   dplyr::mutate(Max_ZFY_TPM = round(Max_ZFY_TPM, digits = 2)) |>
   tidyr::pivot_wider(names_from = Timepoint, values_from = Max_ZFY_TPM) |>
   dplyr::filter(Sex=="male")|>
-  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `adolescence`, adult)
+  dplyr::select(Clade, CommonName, Sex, Tissue, birth, adolescence, adult)
 
 zfx.expn.table <- splicing.table |>
   dplyr::select(Clade:Tissue, Max_ZFX_TPM) |>
   dplyr::mutate(Max_ZFX_TPM = round(Max_ZFX_TPM, digits = 2)) |>
   tidyr::pivot_wider(names_from = Timepoint, values_from = Max_ZFX_TPM) |>
   dplyr::filter(Sex=="male")|>
-  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `adolescence`, adult)
+  dplyr::select(Clade, CommonName, Sex, Tissue, birth, adolescence, adult)
 
 
 splicing.zfy.presentation.table <- splicing.table |>
   dplyr::select(Clade:Tissue, Splice_junctions_ZFY) |>
   tidyr::pivot_wider(names_from = Timepoint, values_from = Splice_junctions_ZFY) |>
   dplyr::filter(Sex=="male")|>
-  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `adolescence`, adult)
+  dplyr::select(Clade, CommonName, Sex, Tissue, birth, adolescence, adult)
 
-splicing.zfy.presentation.table.mouse <- splicing.table |>
-  dplyr::select(Clade:Tissue, Splice_junctions_ZFY) |>
-  tidyr::pivot_wider(names_from = Timepoint, values_from = Splice_junctions_ZFY) |>
-  dplyr::filter(Sex=="male", CommonName=="mouse") |>
-  dplyr::select(Clade, CommonName, Sex, Tissue, `Day_00-06`, `Day_07-13`, `Day_14-20`, `Day_21-27`)
 
 splicing.zfx.presentation.table <- splicing.table |>
   dplyr::select(Clade:Tissue, Splice_junctions_ZFX) |>
   tidyr::pivot_wider(names_from = Timepoint, values_from = Splice_junctions_ZFX) |>
-  dplyr::select(Clade, CommonName, Sex, Tissue, birth, `adolescence`, adult)
+  dplyr::select(Clade, CommonName, Sex, Tissue, birth, adolescence, adult)
