@@ -1,7 +1,7 @@
 # Visualise transcripts from StringTie
 # This expects StringTie binary in ./bin
 source("src/functions.R")
-flog.info("Visualise transcripts: Beginning\n")
+flog.info("Visualise transcripts: Beginning")
 #### Define functions ####
 # Given a gzipped fasta file, read and ensure seqnames are just the chr name
 read.reference.genome <- function(fa.gz.file) {
@@ -46,7 +46,7 @@ export.novel.transcript.sequences <- function(novel.gtf.file, reference.fasta) {
 
 # Read novel transcript gtf file and plot.
 plot.novel.transcripts <- function(gtf.file, stringtie.plot.file) {
-  flog.info("Plotting", gtf.file, "\n")
+  flog.info("Plotting", gtf.file)
   
   novel.gtf <- read.novel.transcripts(gtf.file) %>%
     dplyr::group_by(transcript_id) %>%
@@ -191,4 +191,4 @@ invisible(mcmapply(\(x, ...) tryCatch(plot.novel.transcripts(x,...),
 # cat("Reading genome FASTA\n")
 # chicken.genome <- read.reference.genome("genomes/Gallus_gallus.bGalGal1.mat.broiler.GRCg7b.dna.toplevel.fa.gz")
 # export.novel.transcript.sequences("data/stringtie/chicken.testis.adult.ENSGALG00010003052.gtf", chicken.genome)
-flog.info("Visualise transcripts: Done\n")
+flog.info("Visualise transcripts: Done")

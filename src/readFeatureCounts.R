@@ -17,7 +17,7 @@ feature.data <- SELECTED.SAMPLES |>
   dplyr::mutate(featureCountsFile = paste0("data/", CommonName, "/", Run, ".counts.txt"))
 
 read.feature.count.file <- function(file) {
-  flog.debug("Reading feature counts from", file, "\n")
+  flog.debug("Reading feature counts from", file)
   read_tsv(file,
     skip = 2, show_col_types = FALSE,
     col_names = c("GeneId", "Chr", "Start", "End", "Strand", "Length", "Reads"),
