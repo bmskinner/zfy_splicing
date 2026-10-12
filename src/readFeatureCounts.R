@@ -285,6 +285,8 @@ splicing.table <- feature.values |>
   ) |>
   dplyr::arrange(Clade, CommonName, Tissue)
 
+n.splice.rows <- nrow(splicing.table)+1
+
 
 info <- data.frame(
   Column = c("TotalBases", "Max_<gene>_TPM", "Splice_junctions_<gene>","","","" ,"",""),
@@ -337,12 +339,12 @@ wb <- openxlsx2::wb_workbook() |>
     name = "zfy_maginal_splice", font_color = wb_color("darkblue"),
     bg_fill = wb_color("#bbddff")
   ) |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "F1:F200", type = "dataBar", style = c("darkgreen")) |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "G1:G200", type = "dataBar", style = c("darkblue")) |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "H2:H200", type = "expression",  rule='$J2="Clear"', style = "zfx_splice") |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "I2:I200", type = "expression",  rule='$K2="Clear"', style = "zfy_splice") |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "H2:H200", type = "expression",  rule='$J2="Marginal"', style = "zfx_maginal_splice") |>
-  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = "I2:I200", type = "expression",  rule='$K2="Marginal"', style = "zfy_maginal_splice") |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = sprintf("F2:F%s", n.splice.rows), type = "dataBar", style = c("darkgreen")) |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = sprintf("G2:G%s", n.splice.rows), type = "dataBar", style = c("darkblue")) |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = sprintf("H2:H%s", n.splice.rows), type = "expression",  rule='$J2="Clear"', style = "zfx_splice") |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = sprintf("I2:I%s", n.splice.rows), type = "expression",  rule='$K2="Clear"', style = "zfy_splice") |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = sprintf("H2:H%s", n.splice.rows), type = "expression",  rule='$J2="Marginal"', style = "zfx_maginal_splice") |>
+  openxlsx2::wb_add_conditional_formatting("Splicing summary", dims = sprintf("I2:I%s", n.splice.rows), type = "expression",  rule='$K2="Marginal"', style = "zfy_maginal_splice") |>
   openxlsx2::wb_save(file = "./report/ZFX_ZFY_splicing_summary_tables.xlsx")
 
 
