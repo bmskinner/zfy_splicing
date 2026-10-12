@@ -16,10 +16,10 @@ fs::dir_create("data/merged")
 
 groups <- SELECTED.SAMPLES |>
   merge(GENE.LOCATIONS, by=c("CommonName", "GTF_FILE", "GeneId")) |>
-  dplyr::group_by(Organism, Tissue, Timepoint, CommonName, Sex, GTF_FILE, GeneId, Gene) |>
+  dplyr::group_by(Organism, Tissue, Timepoint, CommonName, Sex, GTF_FILE, GeneId, Gene, Group) |>
   dplyr::mutate(
-    bam.file = paste0("data/", CommonName, "/", Run, ".", GeneId, ".bam"),
-    lock.file = paste0("data/", CommonName, "/", Run, ".lck"),
+    bam.file = sprintf("data/%s/%s.%s.bam", CommonName,  Run, GeneId),
+    lock.file = sprintf("data/%s/%s.lck", CommonName, Run),
     bam.mtime = file.mtime(bam.file)
   ) |>
   dplyr::summarise(
@@ -31,7 +31,7 @@ groups <- SELECTED.SAMPLES |>
     .groups = "drop_last"
   ) |>
   dplyr::mutate(
-    merged.bam = paste0("data/merged/", CommonName, ".", Tissue, ".", Timepoint, ".", Sex,".", GeneId,".bam"),
+    merged.bam = sprintf("data/merged/%s.%s.%s.%s.%s.bam", CommonName, Tissue, Timepoint, Sex, GeneId),
     merged.bam.exists = file.exists(merged.bam),
     is.replace.merged.bam = merged.bam.exists & file.mtime(merged.bam) < max.bam.mtime,
     is.merge  = !lock.files.exist & bams.exist & (!merged.bam.exists | is.replace.merged.bam), # Do not overwrite if no bams have changed
@@ -39,7 +39,10 @@ groups <- SELECTED.SAMPLES |>
     merged.gtf = stringr::str_replace(merged.bam, ".bam", ".gtf"),
     merged.gtf.exists = file.exists(merged.gtf),
     is.replace.merged.gtf = merged.gtf.exists & file.mtime(merged.gtf) < max.bam.mtime,
-    is.stringtie  = !lock.files.exist & bams.exist & (!merged.gtf.exists | is.replace.merged.gtf),
+    is.stringtie  = !lock.files.exist & 
+      bams.exist & 
+      (!merged.gtf.exists | is.replace.merged.gtf) & 
+      Group %in% c("ZFX", "ZFY", "MPV17"), # don't run StringTie on sequences where splicing is irrelevant
     GFF.FILE = stringr::str_replace(GTF_FILE, ".gtf", ".gff"),
     annotation.file = ifelse(file.exists(GFF.FILE), GFF.FILE, GTF_FILE), # only some replaced 
     stringtie.arguments = paste0("-o ", merged.gtf, " -p 1 -l ", CommonName," -G ",annotation.file, " -f 0.01 ", merged.bam),
