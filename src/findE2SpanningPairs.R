@@ -46,7 +46,7 @@ read.bed <- function(file){
 }
 
 
-bed.data <- do.call(dplyr::bind_rows, lapply(bed.files[1:10], read.bed) ) |>
+bed.data <- do.call(dplyr::bind_rows, lapply(bed.files, read.bed) ) |>
   dplyr::rowwise() |>
   dplyr::mutate(  
     Mate1Size = Mate1End - Mate1Start + 1,

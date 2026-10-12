@@ -534,7 +534,7 @@ read_gtf_data <- function(gtf.files, gtf.names) {
   mc.cores = DEFAULT.MC.CORES
   )
   names(gtf.data) <- gtf.names
-  flog.info("Plot sashimi: Read full genome GTF files\n")
+  flog.info("Plot sashimi: Read full genome GTF files")
   gtf.data
 }
 
