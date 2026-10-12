@@ -4,7 +4,7 @@
 packages <- c(
   "parallel", "tidyverse", "GenomicRanges", "grid",
   "fs", "data.table", "rtracklayer", "Rsamtools", "bitops", "rlang",
-  "data.table", "installr"
+  "data.table", "installr", "futile.logger"
 )
 
 suppressPackageStartupMessages({
@@ -214,7 +214,7 @@ find_read_strand <- function(strand.string, samflag) {
 #' read_bam("/path/to/reads.bam", "1:118296484-118319811", "NONE")
 read_bam <- function(bam.file, coordinate.string, strand.string) {
   coordinates <- parse_coordinates(coordinate.string)
-  cat("Reading bam file:", bam.file, "at", coordinates$coord.chr, ":", coordinates$coord.start, "-", coordinates$coord.end, "\n")
+  flog.info("Reading bam file: %s at %s:%s-%s", bam.file, coordinates$coord.chr, coordinates$coord.start, coordinates$coord.end)
   # Initialize empty coverage array and junction maps
   coverage.array <- make_coverage_map(coordinates$coord.start, coordinates$coord.end)
   junction.map <- make_junction_map()
@@ -241,7 +241,7 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
   total.reads <- nrow(bam.data)
 
   if (total.reads == 0) {
-    cat("There are no reads in bam file", bam.file, "\n")
+    flog.info("There are no reads in bam file %s", bam.file)
     return(list(
       total.reads = 0,
       coverage = data.frame(),
@@ -250,7 +250,7 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
       reference.location = coordinate.string
     ))
   } else {
-    cat("There are", total.reads, "valid reads in the bam file\n")
+    flog.info("There are %s valid reads in the bam file %s", total.reads, bam.file)
   }
 
   #' Count coverage and splice junctions from a cigar string
@@ -302,7 +302,7 @@ read_bam <- function(bam.file, coordinate.string, strand.string) {
 
   # Go read by read
   for (i in 1:total.reads) {
-    if (i %% 500 == 0) cat(sprintf("Processed %.2f%% of %s reads\n", i / total.reads * 100, total.reads))
+    if (i %% 500 == 0) flog.info("Processed %.2f%% of %s reads", i / total.reads * 100, total.reads)
     flag <- bam.data$flag[i]
     cigar <- bam.data$cigar[i]
     pos <- bam.data$pos[i]
@@ -519,7 +519,7 @@ classify_junction <- function(reference.gene.id, reference.transcript.id, refere
 #' )
 #' gtf.data[[human]]
 read_gtf_data <- function(gtf.files, gtf.names) {
-  cat("Plot sashimi: Reading full genome GTF files\n")
+  flog.info("Plot sashimi: Reading full genome GTF files")
   gtf.data <- mclapply(gtf.files, \(x){
     df <- as.data.frame(rtracklayer::import(x)) %>%
       # Create gene_name column if missing. Ensembl vs NCBI GTF format
@@ -528,13 +528,13 @@ read_gtf_data <- function(gtf.files, gtf.names) {
         gene_name = if ("gene_name" %in% colnames(.)) gene_name else if ("gene" %in% colnames(.)) gene else gene_id,
         transcript_name = if ("transcript_name" %in% colnames(.)) transcript_name else if ("transcript" %in% colnames(.)) transcript else transcript_id,
       )
-    cat("Plot sashimi: Read", x, "\n")
+    flog.info("Plot sashimi: Read %s", x)
     df
   },
   mc.cores = DEFAULT.MC.CORES
   )
   names(gtf.data) <- gtf.names
-  cat("Plot sashimi: Read full genome GTF files\n")
+  flog.info("Plot sashimi: Read full genome GTF files\n")
   gtf.data
 }
 
@@ -641,7 +641,7 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
 
   # Get the longest transcript in the gene if none specified
   if (is.na(reference.transcript.id)) {
-    cat("No reference transcript given, selecting longest for gene id '", sashimi.data$reference.gene.id, "'\n")
+    flog.warn("No reference transcript given, selecting longest for gene id '%s'", sashimi.data$reference.gene.id)
     reference.transcript.id <- sashimi.data$reference.gtf.region |>
       dplyr::filter(gene_id == sashimi.data$reference.gene.id, type == "transcript") |>
       dplyr::mutate(length = end - start + 1) |>
@@ -669,7 +669,10 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
 
   sashimi.data$non.reference.transcript.strand <- ifelse(sashimi.data$reference.transcript.strand == "+", "-", "+")
 
-  cat("Reference gene is '",reference.gene.id, "', transcript is '", reference.transcript.id, "' on strand '", paste(sashimi.data$reference.transcript.strand, collapse = ","), "'\n")
+  flog.info("Reference gene is '%s', transcript is '%s' on strand '%s'",
+            reference.gene.id, 
+            reference.transcript.id, 
+            paste(sashimi.data$reference.transcript.strand, collapse = ","))
   if (is.null(sashimi.data$reference.transcript.strand)) stop("Unable to find reference strand for", sashimi.data$reference.transcript.id)
 
   sashimi.data$reference.transcript.boundaries <- get_exon_boundaries(sashimi.data$reference.gtf.region, chr, start, end)
@@ -696,7 +699,7 @@ read_sashimi_data <- function(bam.file, gtf.data, chr, start, end,
     ))
   } else {
     # No junctions detected, return the coverage
-    cat("No splice junctions detected\n")
+    flog.info("No splice junctions detected\n")
     sashimi.data$junctions <- data.frame(
       start = c(),
       end = c(),
@@ -808,7 +811,7 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
 
   exon.data <- exon.data[exon.data$strand == strand, ]
   intron.data <- intron.data[intron.data$strand == strand, ]
-  cat("Creating intron collapser; detected", nrow(exon.data), "exons and", nrow(intron.data), "introns\n")
+  flog.info("Creating intron collapser; detected %s exons and %s introns", nrow(exon.data), nrow(intron.data))
 
   tryCatch({
     exon.ranges <- GenomicRanges::GRanges(
@@ -870,7 +873,7 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
     intron.ranges$overlappingIntrons <- has.overlaps(intron.ranges, intron.ranges)
     
     if(any(intron.ranges$overlappingIntrons>1)){
-      cat("Disjoining introns\n")
+      flog.info("Disjoining introns")
       intron.ranges <- GenomicRanges::disjoin(intron.ranges)
     }
 
@@ -932,7 +935,7 @@ create_intron_collapser <- function(exon.data, intron.data, strand, max.intron.l
     
     # cat("Created lookup table\n")
   }, error = \(e){
-    cat("Error creating intron collapser, not collapsing\n")
+    flog.warn("Error creating intron collapser, not collapsing")
     print(e)
     return(list(
       calculate = \(x) x,
@@ -1039,7 +1042,7 @@ make_sashimi_coverage_plot <- function(sashimi.data, min.spanning.reads = 5, lab
   is.x.reverse <- sashimi.data$reference.transcript.strand == "-"
 
   if (any(!is.numeric(anns$exons$end)) | any(!is.numeric(anns$exons$start))) {
-    cat("Error in annotations: at least one start or end is NA\n")
+    flog.warn("Error in annotations: at least one start or end is NA")
     print(anns$exons)
     str(anns$exons)
   }

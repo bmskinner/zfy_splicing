@@ -57,27 +57,36 @@ to.merge <- groups |>
 
 if (nrow(to.merge) > 0) {
   flog.info("Merge samples: Merging bams")
-  mcmapply(system2, command = "samtools", 
+  invisible(mcmapply(system2, command = "samtools", 
            args = to.merge$samtools.merge.arguments, 
-           mc.cores = DEFAULT.MC.CORES)
-} 
+           mc.cores = DEFAULT.MC.CORES))
+} else {
+  flog.info("Merge samples: All merged bams are present")
+}
 
 #### Index the bams ####
-flog.info("Merge samples: Indexing bams")
 
 # Index with CSI since opossum chromosomes are longer than the max for bai
-invisible(mcmapply(system2, command = "samtools", 
-         args = to.merge$samtools.index.arguments,
-         mc.cores = DEFAULT.MC.CORES))
+if (nrow(to.merge) > 0) {
+  flog.info("Merge samples: Indexing bams")
+  invisible(mcmapply(system2, command = "samtools", 
+                     args = to.merge$samtools.index.arguments,
+                     mc.cores = DEFAULT.MC.CORES))
+}
 
 #### Run StringTie on the merged bam if needed ####
-flog.info("Merge samples: Running stringtie on merged bams")
+
 to.stringtie <- groups |>
   dplyr::filter(is.stringtie) 
 
-invisible(mcmapply(system2, command = "stringtie", 
-         args = to.stringtie$stringtie.arguments,
-         mc.cores = DEFAULT.MC.CORES))
+if (nrow(to.stringtie) > 0) {
+  flog.info("Merge samples: Running stringtie on merged bams")
+  invisible(mcmapply(system2, command = "stringtie", 
+                     args = to.stringtie$stringtie.arguments,
+                     mc.cores = DEFAULT.MC.CORES))
+} else {
+  flog.info("Merge samples: All merged StringTie GTFs are present")
+}
 
 #### Make a summary table of which bams were merged ####
 flog.info("Merge samples: Exporting merged bam table to report/merged.bams.xlsx")
