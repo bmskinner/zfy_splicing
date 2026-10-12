@@ -34,7 +34,7 @@ export.novel.transcript.sequences <- function(novel.gtf.file, reference.fasta) {
     }
 
     if (any(strand(exon.gtf) == "*")) {
-      cat("Cannot get transcript sequence with ambiguous strand for ", novel.gtf.file, transcript.id, "\n")
+      flog.warn("Cannot get transcript sequence with ambiguous strand for %s %s", novel.gtf.file, transcript.id)
       next
     }
 
@@ -46,7 +46,7 @@ export.novel.transcript.sequences <- function(novel.gtf.file, reference.fasta) {
 
 # Read novel transcript gtf file and plot.
 plot.novel.transcripts <- function(gtf.file, stringtie.plot.file) {
-  flog.info("Plotting", gtf.file)
+  flog.info("Plotting %s", gtf.file)
   
   novel.gtf <- read.novel.transcripts(gtf.file) %>%
     dplyr::group_by(transcript_id) %>%
@@ -102,7 +102,7 @@ plot.novel.transcripts <- function(gtf.file, stringtie.plot.file) {
     scale_fill_viridis_c() +
     labs(
       x = "Position", y = "Assembled transcript",
-      title = stringtie.gtf, fill = "TPM"
+      title = gtf.file, fill = "TPM"
     ) +
     geom_text(
       data = add_exon_number(novel.gtf.exon, "transcript_id"),

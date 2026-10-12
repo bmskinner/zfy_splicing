@@ -36,6 +36,7 @@ groups <- SELECTED.SAMPLES |>
     is.replace.merged.bam = merged.bam.exists & file.mtime(merged.bam) < max.bam.mtime,
     is.merge  = !lock.files.exist & bams.exist & (!merged.bam.exists | is.replace.merged.bam), # Do not overwrite if no bams have changed
     samtools.merge.arguments = paste("merge -@ 7 -f -r -o", merged.bam, bams),
+    samtools.index.arguments  = paste("index -@ 7 -c ", merged.bam),
     merged.gtf = stringr::str_replace(merged.bam, ".bam", ".gtf"),
     merged.gtf.exists = file.exists(merged.gtf),
     is.replace.merged.gtf = merged.gtf.exists & file.mtime(merged.gtf) < max.bam.mtime,
@@ -66,7 +67,7 @@ flog.info("Merge samples: Indexing bams")
 
 # Index with CSI since opossum chromosomes are longer than the max for bai
 invisible(mcmapply(system2, command = "samtools", 
-         args = paste("index -@ 7 -c ", to.merge$merged.bam),
+         args = to.merge$samtools.index.arguments,
          mc.cores = DEFAULT.MC.CORES))
 
 #### Run StringTie on the merged bam if needed ####
