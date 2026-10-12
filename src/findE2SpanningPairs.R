@@ -40,13 +40,13 @@ read.bed <- function(file){
                   Mate1End != Mate2End) |>
     dplyr::mutate(File = file,
                   Run = str_extract(File, "([SDE]RR\\d+)", group = 1),
-                  GeneId = str_extract(File, "[SDE]RR\\d+\\.([\\w\\d]+)\\.bam.bed$", group = 1)
+                  GeneId = str_extract(File, "[SDE]RR\\d+\\.([\\w\\d]+)\\.bed$", group = 1)
                   ) |>
     dplyr::select(-Seqname2, -File, -Score)
 }
 
 
-bed.data <- do.call(dplyr::bind_rows, lapply(bed.files, read.bed) ) |>
+bed.data <- do.call(dplyr::bind_rows, mclapply(bed.files, read.bed, mc.cores = DEFAULT.MC.CORES) ) |>
   dplyr::rowwise() |>
   dplyr::mutate(  
     Mate1Size = Mate1End - Mate1Start + 1,
