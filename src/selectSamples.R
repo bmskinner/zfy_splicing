@@ -697,6 +697,28 @@ read.csv("metadata/cattle_other.csv") |>
   dplyr::slice_head(n = 10) |>
   .append.data()
 
+# Check other cattle available testis samples. Settled on PRJEB46995: RNA
+# sequencing of mature bulls slaughtered at a regular slaughterhouse to
+# facilitate the mapping of molecular phenotypes.
+read.csv("metadata/cattle.testis.additional.csv") |>
+  dplyr::filter(!(cell_type %in% c("sperm", "epididymis", "vas deferens",
+                                   "pachytene spermatocyte", "round spermatid") ),
+                tissue %in% c("testis", "Testis", "", "mature testes", "Testicular"),
+                AGE !="missing",
+                Assay.Type == "RNA-Seq",
+                Bases>3e10,
+                BioProject=="PRJEB46995"
+                ) |>
+  dplyr::filter(!(Run %in% c1$Run) & !(Run %in% c2$Run))|>
+  dplyr::mutate(DevStage="adult",
+                Timepoint="adult",
+                CommonName = "cattle",
+                Sex="male",
+                Tissue="testis") |>
+  dplyr::arrange(desc(Bases)) |>
+  dplyr::slice_head(n = 10) |>
+  .append.data()
+
 #### Samples from sheep ####
 
 # Hu sheep from PRJNA731673 https://www.sciencedirect.com/science/article/abs/pii/S0093691X22003946
