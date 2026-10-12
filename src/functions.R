@@ -126,26 +126,26 @@ get.gene.locations <- function(genome.data) {
 
     if (!has.raw.gtfs) {
       flog.info(
-        "Setup: Missing coordinates from a GTF file in ./genomes : ",
+        "Setup: Missing coordinates from a GTF file in ./genomes : %s",
         paste(genome.data$GTF_FILE[!genome.data$GTF_FILE %in% existing.coordinates$GTF_FILE], collapse = ", ")
       )
     }
     if (!has.saved.gtfs) {
       flog.info(
-        "Setup: Saved coordinates do not have a GTF file in ./genomes : ",
+        "Setup: Saved coordinates do not have a GTF file in ./genomes : %s",
         paste(existing.coordinates$GTF_FILE[!existing.coordinates$GTF_FILE %in% genome.data$GTF_FILE], collapse = ", ")
       )
     }
     if (!has.raw.genes) {
       flog.info(
-        "Setup: Missing coordinates from a gene in metadata/gene_locations.csv : ",
+        "Setup: Missing coordinates from a gene in metadata/gene_locations.csv : %s",
         paste(gene.ids$GeneId[!gene.ids$GeneId %in% existing.coordinates$GeneId], collapse = ", ")
       )
     }
     if (!has.saved.genes) {
       flog.info("Setup: Saved coordinates from a gene are not found in in metadata/gene_locations.csv")
       flog.info(
-        "Setup: Saved coordinates from a gene are not found in in metadata/gene_locations.csv : ",
+        "Setup: Saved coordinates from a gene are not found in in metadata/gene_locations.csv : %s",
         paste(existing.coordinates$GeneId[!existing.coordinates$GeneId %in% gene.ids$GeneId], collapse = ", ")
       )
     }
@@ -158,7 +158,7 @@ get.gene.locations <- function(genome.data) {
   flog.info("Setup: Finding gene coordinates in GTF")
   # Identify the coordinates of a given gene id from GTF. Expand by size on each flank if desired
   get.gene.coordinates <- function(common.name, gtf.file, size = 1000) {
-    flog.info("Setup: Reading GTF file for", common.name)
+    flog.info("Setup: Reading GTF file for %s", common.name)
     if (!file.exists(gtf.file)) stop("Missing GTF file", gtf.file)
     gtf.data <- rtracklayer::import(gtf.file)
 
@@ -195,7 +195,7 @@ get.gene.locations <- function(genome.data) {
         min(GenomicRanges::start(filt.data) - size), "-",
         max(GenomicRanges::end(filt.data) + size)
       )
-      flog.info("Setup: Found", gene.id, "in", common.name, "at", location.string)
+      flog.info("Setup: Found %s in %s at %s", gene.id, common.name, location.string)
       location.string
     })
 
@@ -277,4 +277,4 @@ SELECTED.SAMPLES <- read.csv(MAPPING.FILE) |>
 # Locations of exon junctions for exon 2 splice detection
 JUNCTION.COORDINATES <- read.csv("metadata/exon_junctions.csv")
 
-flog.info("Setup: Common functions and global variables loaded)
+flog.info("Setup: Common functions and global variables loaded")

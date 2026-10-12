@@ -67,7 +67,7 @@ create.sashimi.plot <- function(i){
 
     # Only read the bam file if needed
     
-    flog.info("Detecting splice junctions for", i, ": ", run, gene_id, "in group", group)
+    flog.info("Detecting splice junctions for %s: %s %s in group %s", i, run, gene_id, group)
     
     sashimi.data <- read_sashimi_data(
       bam.file = bam.row$path,
@@ -80,7 +80,7 @@ create.sashimi.plot <- function(i){
     if (sashimi.data$total.reads == 0){
       fs::file_touch(final.junction.file)
       fs::file_touch(final.out.file)
-      cat("No reads in file for", i, ": ", run, gene_id, "in group", group, "\n")
+      flog.info("No reads in file for %s: %s %s in group %s", i, run, gene_id, group)
       return(TRUE)
     } 
     
@@ -154,7 +154,7 @@ create.merged.sashimi.plot <- function(i){
     coords <- parse_coordinates(gene.data$Location)
     group <- gene.data$Group
     if (length(group) == 0) return(FALSE)
-    flog.info("Detecting splice junctions for", i, ": ", species, gene_id, "in group", group)
+    flog.info("Detecting splice junctions for %s: %s %s in group %s", i, species, gene_id, group)
     
     final.out.file <- paste0("report/merged_sashimi/", paste(c(species,tissue, 
                                                                timepoint, sex, gene_id, gene_name), 
