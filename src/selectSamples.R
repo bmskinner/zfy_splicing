@@ -376,7 +376,7 @@ read.csv("metadata/PRJEB26889.csv") |>
 
 #### More rat testis - largest PE libraries available ####
 
-rat <- read.csv("metadata/rat.testis.additional.csv")  |>
+read.csv("metadata/rat.testis.additional.csv")  |>
   dplyr::arrange(desc(Bases)) |>
   dplyr::filter(BioProject %in% c("PRJNA516470", "PRJNA703718")) |>
   dplyr::mutate(
@@ -444,13 +444,12 @@ read.csv("metadata/mouse.testis.csv") |>
 read.csv("metadata/platypus.csv") |>
   dplyr::rename(
     Tissue = Experimental_Factor._organism_part..exp.,
-    Species = Experimental_Factor._organism..exp., 
-    Sex = sex
+    Species = Experimental_Factor._organism..exp.
   ) |>
+  dplyr::mutate(Sex = ifelse(sex=="", gender, sex))|>
   dplyr::filter(Sex == "male") |>
   dplyr::filter(
     Assay.Type == "RNA-Seq",
-    LibrarySelection != "size fractionation",
     Fraction != "Ribo-seq"
   ) |>
   dplyr::mutate(
@@ -463,11 +462,10 @@ read.csv("metadata/platypus.csv") |>
       Stage != "" ~ Stage,
       .default = NA
     )),
-    Timepoint = DevStage,
+    Timepoint = "adult",
     CommonName = "platypus",
     Tissue = Organism_part
   ) |>
-  dplyr::filter(DevStage != "") |>
   dplyr::filter(Tissue != "fibroblast") |>
   .append.data()
 
