@@ -466,7 +466,9 @@ read.csv("metadata/platypus.csv") |>
     CommonName = "platypus",
     Tissue = Organism_part
   ) |>
-  dplyr::filter(Tissue != "fibroblast") |>
+  dplyr::filter(Tissue != "fibroblast",
+                Experimental_Factor._protocol..exp.!="Ribo-seq",
+                !(BioProject %in% c("PRJNA174234")))|> # an miRNA-seq
   .append.data()
 
 
@@ -477,7 +479,8 @@ read.csv("metadata/platypus_testis.csv") |>
     Sex == "male",
     Assay.Type == "RNA-Seq", Tissue %in% c("testis", ""),
     Experimental_Factor._protocol..exp. != "Ribo-seq",
-    LibrarySelection != "size fractionation"
+    LibrarySelection != "size fractionation",
+    !(BioProject %in% c("PRJNA174234")) # an miRNA-seq
   ) |>
   dplyr::mutate(
     Tissue = "testis", # we know from project these are all testis even if ""
