@@ -82,7 +82,10 @@ splice.summ <- splice.data |>
   dplyr::filter(!is.na(SpansExon2TRUE)) |>
   as.data.frame()
 
+readr::write_csv(splice.summ, "report/E2_pair_spanning.reads.csv", quote = "needed")
+
 # Not all the species will be needed here - only load those we need
+flog.info("Reading GTFs to make pair spanning plots")
 gtfs.needed <- GENOME.DATA |>
   dplyr::filter(CommonName %in% unique(splice.data$CommonName))
 
@@ -151,4 +154,4 @@ plot.spanning <- function(i){
 flog.info("Creating spanning plots")
 spanning.plots <- lapply(1:nrow(splice.summ), plot.spanning)
 
-save.double.width("report/spanning_pairs/spanning_pairs.png", patchwork::wrap_plots(spanning.plots, ncol = 1), height = 250)
+save.double.width("report/spanning_pairs/spanning_pairs.png", patchwork::wrap_plots(spanning.plots, ncol = 1), height = min(1200, length(spanning.plots)*50))
