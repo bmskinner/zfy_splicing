@@ -18,7 +18,7 @@ make.aggregate.plot <- function(paths, out.file){
   ggsave(
     out.file,
     arrangeGrob(grobs = plots, nrow = length(plots), ncol = 1),
-    dpi = 300, units = "mm", width = 170, height = min(1000, 50 * length(plots))
+    dpi = 300, units = "mm", width = 170, height = min(1200, 50 * length(plots))
   )
 }
 
@@ -37,7 +37,7 @@ png.files <- data.frame(path = list.files(path = "report/raw_sashimi", pattern =
 unique.combos <- png.files |>
   dplyr::group_by(CommonName, Tissue, Timepoint, GeneId, Sex) |>
   dplyr::summarise(nPNGs = n(), paths = list(path), .groups = "drop_last") |>
-  dplyr::mutate(out.file = paste0("report/tissues/", CommonName, ".", Sex, ".", Tissue, ".", Timepoint, ".", GeneId , ".png"))
+  dplyr::mutate(out.file = sprintf("report/tissues/%s.%s.%s.%s.%s.png", CommonName, Sex, Tissue, Timepoint, GeneId))
 
 invisible(mcmapply(make.aggregate.plot, unique.combos$paths, unique.combos$out.file))
 
@@ -51,16 +51,16 @@ png.files <- data.frame(path = list.files(path = "report/merged_sashimi", patter
   )
 
 unique.merged.species.combos <- png.files |>
-  dplyr::group_by(CommonName) |>
+  dplyr::group_by(CommonName, Timepoint, GeneId) |>
   dplyr::summarise(nPNGs = n(), paths = list(path), .groups = "drop_last") |>
-  dplyr::mutate(out.file = paste0("report/species/", CommonName, ".png"))
+  dplyr::mutate(out.file = sprintf("report/species/%s.%s.%s.png", CommonName, Timepoint, GeneId))
 
 invisible(mcmapply(make.aggregate.plot, unique.merged.species.combos$paths, unique.merged.species.combos$out.file))
 
 flog.info("Making aggregate plots of merged tissues samples")
 unique.merged.tissues.combos <- png.files |>
-  dplyr::group_by(Tissue) |>
+  dplyr::group_by(Tissue, Timepoint, GeneId) |>
   dplyr::summarise(nPNGs = n(), paths = list(path), .groups = "drop_last") |>
-  dplyr::mutate(out.file = paste0("report/tissues/", Tissue, ".png"))
+  dplyr::mutate(out.file = sprintf("report/tissues/%s.%s.%s.png", Tissue, Timepoint, GeneId))
 
 invisible(mcmapply(make.aggregate.plot, unique.merged.tissues.combos$paths, unique.merged.tissues.combos$out.file))
