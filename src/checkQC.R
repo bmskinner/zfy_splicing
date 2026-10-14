@@ -145,8 +145,19 @@ map.data <- read.table("report/QC/mapping.txt", sep = "$") |> #  sep char does n
   dplyr::select(-GeneId, -Location)|>
   dplyr::distinct()
 
-create.xlsx(map.data, "report/QC/mapping.xlsx")
 
+n.mapping.rows <- nrow(map.data)+1
+wb <- openxlsx2::wb_workbook() |>
+  add.and.freeze(map.data, "Mapping QC") |>
+  openxlsx2::wb_add_dxfs_style(
+    name = "unmapped", font_color = wb_color("darkred"), 
+    bg_fill = wb_color("salmon")
+  ) |>
+  openxlsx2::wb_add_conditional_formatting("Mapping QC", 
+                                           dims = sprintf("T2:T%s", n.mapping.rows), type = "expression",  
+                                           rule='$T2>"25', style = "unmapped") |>
+  openxlsx2::wb_save(file = "report/QC/mapping.xlsx")
+  
 if (any(map.data$Pct_overall_alignment_rate < 80)) flog.warn("QC check: Some samples have poor mapping rates")
 
 # Plot the mapping efficiencies
