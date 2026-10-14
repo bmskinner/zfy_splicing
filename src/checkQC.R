@@ -155,7 +155,7 @@ wb <- openxlsx2::wb_workbook() |>
   ) |>
   openxlsx2::wb_add_conditional_formatting("Mapping QC", 
                                            dims = sprintf("T2:T%s", n.mapping.rows), type = "expression",  
-                                           rule='$T2>25', style = "unmapped") |>
+                                           rule='$T2>"25', style = "unmapped") |>
   openxlsx2::wb_save(file = "report/QC/mapping.xlsx")
   
 if (any(map.data$Pct_overall_alignment_rate < 80)) flog.warn("QC check: Some samples have poor mapping rates")
