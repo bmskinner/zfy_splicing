@@ -69,8 +69,9 @@ invisible(file.remove("report/QC/mapping.txt"))
 if (length(list.files(path = "logs", pattern = "*.mapping.log")) > 0) {
   tryCatch(
     {
-      # Combine all mapping outputs into one file, with one line per sample
-      system("for f in logs/*.mapping.log; do  grep -w -e 'Aligned' -e 'rate' $f | echo $f `tr --delete '\t'`  >> report/QC/mapping.txt; done")
+      # Combine all mapping outputs into one file, with one line per sample.
+      # Tail to last 8 lines in case mapping was repeated
+      system("for f in logs/*.mapping.log; do  grep -w -e 'Aligned' -e 'rate' $f | tail -n 8 | echo $f `tr --delete '\t'`  >> report/QC/mapping.txt; done")
     },
     error = function(e) warning(e)
   )
@@ -143,6 +144,10 @@ map.data <- read.table("report/QC/mapping.txt", sep = "$") |> #  sep char does n
   dplyr::select(-V1) |>
   merge(SELECTED.SAMPLES, by = "Run", all.y = TRUE) |> # Merge in the sample info
   dplyr::select(-GeneId, -Location)|>
+  # There may be repeat mapping runs logged. Keep only the last mapping data
+  # from each run
+  dplyr::group_by(Run)|>
+  dplyr::slice_tail(n=1)
   dplyr::distinct()
 
 
