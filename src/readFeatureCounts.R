@@ -164,14 +164,17 @@ flog.info("Making splicing output tables")
 # median TPM for ZFX and ZFY expression.
 
 junction.data <- readr::read_tsv("report/coding_exon_splice_junctions.tsv", show_col_types = FALSE) |>
-  dplyr::filter(E1E3>0) |>
+  # dplyr::filter(E1E3>0) |>
   merge(SELECTED.SAMPLES, by=c("CommonName", "Sex", "Tissue", "Timepoint", "GeneId")) |>
   merge(GENE.LOCATIONS, by=c("CommonName", "GeneId", "GTF_FILE")) |>
   dplyr::select(CommonName, Sex, Tissue, Timepoint, GeneId, Gene, E1E2, E2E3, E1E3, pctE2Spliced, Group) |>
-  dplyr::group_by(CommonName, Sex, Tissue, Timepoint, Group) |>
+  dplyr::mutate(Mean_E1E2_E2E3 = (E1E2+E2E3)/2)|>
+  dplyr::group_by(CommonName, Sex, Tissue, Timepoint, Group, Mean_E1E2_E2E3) |>
   dplyr::distinct() |>
-  dplyr::mutate(Splicing = paste0(Gene, " (", E1E3, " reads, ", sprintf("%.2f%%)",  pctE2Spliced)),
-                SplicingDetected = case_when( E1E3>=5 & pctE2Spliced>=5 ~ "Clear",
+  dplyr::mutate(Splicing = case_when(E1E3>0 ~ paste0(Gene, " (", E1E3, " reads, ", sprintf("%.2f%%)",  pctE2Spliced)),
+                                     .default = "-"),
+                SplicingDetected = case_when( E1E3 > 50 ~ "Clear",
+                                              E1E3>=5 & pctE2Spliced>=2.5 ~ "Clear",
                                               E1E3>=2 & pctE2Spliced>=10 ~ "Marginal",
                                               E1E3>=1 & pctE2Spliced>=15 ~ "Marginal",
                                               E1E3>=5 & pctE2Spliced>=4 ~ "Marginal",
@@ -184,7 +187,7 @@ junction.data <- readr::read_tsv("report/coding_exon_splice_junctions.tsv", show
                                                 .default = ""
                                                 ),
                    .groups = "drop_last") |>
-  tidyr::pivot_wider(names_from = Group, values_from = c(Splice_junctions, Splice_detected)) |>
+  tidyr::pivot_wider(names_from = Group, values_from = c(Splice_junctions, Splice_detected,Mean_E1E2_E2E3 )) |>
   dplyr::arrange(CommonName, Tissue, Sex)
 
 splicing.table <- feature.values |>
@@ -205,7 +208,8 @@ splicing.table <- feature.values |>
   dplyr::select(Clade, CommonName,
     Sex, Timepoint, Tissue,
     Max_ZFX_TPM = ZFX, Max_ZFY_TPM = ZFY,
-    Splice_junctions_ZFX, Splice_junctions_ZFY, Splice_detected_ZFX, Splice_detected_ZFY
+    Splice_junctions_ZFX, Splice_junctions_ZFY, Splice_detected_ZFX, Splice_detected_ZFY,
+    Mean_E1E2_E2E3_ZFX, Mean_E1E2_E2E3_ZFY
   ) |>
   dplyr::mutate(
     Clade = fct_relevel(Clade, "Outgroup", "Birds", "Monotremes", "Marsupials", "Artiodactyls", "Primates", "Rodents"),
@@ -223,7 +227,8 @@ info <- data.frame(
     "Gene TPM was calculated for each sample. Median TPM was taken across all samples. Paralogues were grouped, and max median TPM was selected, i.e whichever paralogue is most highly expressed",
     "Shows genes with coding exon 2 spliced out. The number of E1E3 junction-spanning reads is shown in parentheses, plus the percentage of E1E3 reads versus the mean of E1E2 and E2E3 spanning reads.",
     "Splicing categories:",
-    "Clear: >=5 E1E3 spanning reads and E1E3 reads are >=5% of mean E1E2 + E2E3 spanning reads",
+    "Insufficient coverage: Fewer than 10 reads spanning either E1E2 or E2E3. Unlikely to detect a rare splice variant",
+    "Clear: >50 E1E3 spanning reads OR >=5 E1E3 spanning reads and E1E3 reads are >=2.5% of mean E1E2 + E2E3 spanning reads",
     "Marginal: >=2 E1E3 spanning reads and E1E3 reads are >=10% of mean E1E2 + E2E3 spanning reads",
     "OR >=1 E1E3 spanning reads and E1E3 reads are >=15% of mean E1E2 + E2E3 spanning reads",
     "OR >=5 E1E3 spanning reads and E1E3 reads are >=4% of mean E1E2 + E2E3 spanning reads"
