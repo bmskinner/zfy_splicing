@@ -111,10 +111,27 @@ map_pe_sample () {
 	fi
 }
 
+# Ensure directories exist
+mkdir -p cds/genomes
+mkdir -p cds/data
+
+# Create indexed genomes for any mRNA or CDS ZFX/Y sequences
+echo "`date '+%Y-%m-%d %X'` Making CDS genomes" >> logs/preMapping.log 2>&1
+pushd cds/genomes
+for f in ../fasta/*.fa; do
+  GENOME=$(basename $f | sed -e 's/.fa//')
+  if [ ! -e ${GENOME}.1.ht2 ]; then
+    hisat2-build ${f} ${GENOME}
+  fi
+done
+popd
+
+Rscript src/selectCDSSamples.R >> logs/cdsMapping.log 2>&1
+
 SE_SAMPLES=$(cat cds/cds.samples.csv | cut -f 1,2,3 -d , | grep -e '[S|E|D]RR' | grep -e 'SINGLE')
 PE_SAMPLES=$(cat cds/cds.samples.csv | cut -f 1,2,3 -d , | grep -e '[S|E|D]RR' | grep -e 'PAIRED')
 
-echo "`date '+%Y-%m-%d %X'` Processing single end CDS samples" >> logs/mapping.log 2>&1
+echo "`date '+%Y-%m-%d %X'` Processing single end CDS samples" >> logs/cdsMapping.log 2>&1
 for LINE in ${SE_SAMPLES}; do
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
 	SPECIES=$(echo ${LINE} | cut -f 2 -d , )
@@ -122,7 +139,7 @@ for LINE in ${SE_SAMPLES}; do
 	map_se_sample ${ERR} ${SPECIES} ${GENOME}
 done
 
-echo "`date '+%Y-%m-%d %X'` Processing paired end CDS samples" >> logs/mapping.log 2>&1
+echo "`date '+%Y-%m-%d %X'` Processing paired end CDS samples" >> logs/cdsMapping.log 2>&1
 for LINE in ${PE_SAMPLES}; do
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
 	SPECIES=$(echo ${LINE} | cut -f 2 -d , )

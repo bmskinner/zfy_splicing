@@ -5,7 +5,7 @@ flog.info("Sample selection: Reading and filtering sample data")
 fs::dir_create(c("data", "report"))
 # These are the filtered samples used for mapping. Recreate each time.
 if(file.exists(MAPPING.FILE)) file.remove(MAPPING.FILE)
-if(file.exists(CDS.MAPPING.FILE)) file.remove(CDS.MAPPING.FILE)
+
 
 # Merge with genome data and append the given data to the mapping file
 .append.data <- function(data){
@@ -30,27 +30,27 @@ if(file.exists(CDS.MAPPING.FILE)) file.remove(CDS.MAPPING.FILE)
   data
 }
 
-.append.cds.data <- function(data){
-  data <- data |>
-
-    # Adjust the library field to note long read sequencing distinct from short
-    # read paired
-    dplyr::mutate(,
-                  LibraryLayout = ifelse(Platform %in% c("PACBIO_SMRT"), "LONG_READ", LibraryLayout)) |>
-    dplyr::select(Run, CommonName, Genome, LibraryLayout,
-                  BioProject, DevStage, Sex, Timepoint, Tissue, Organism, LibrarySelection, 
-                  LibrarySource, Bases
-    )
-  
-  if(file.exists(CDS.MAPPING.FILE)){
-    write.table(data, file = CDS.MAPPING.FILE, row.names = FALSE, quote = TRUE, 
-                append = TRUE, sep = ",", col.names = FALSE)
-  } else {
-    write.table(data, file = CDS.MAPPING.FILE, row.names = FALSE, quote = TRUE, 
-                append = FALSE, sep = ",", col.names = TRUE)
-  }
-  data
-}
+# .append.cds.data <- function(data){
+#   data <- data |>
+# 
+#     # Adjust the library field to note long read sequencing distinct from short
+#     # read paired
+#     dplyr::mutate(,
+#                   LibraryLayout = ifelse(Platform %in% c("PACBIO_SMRT"), "LONG_READ", LibraryLayout)) |>
+#     dplyr::select(Run, CommonName, Genome, LibraryLayout,
+#                   BioProject, DevStage, Sex, Timepoint, Tissue, Organism, LibrarySelection, 
+#                   LibrarySource, Bases
+#     )
+#   
+#   if(file.exists(CDS.MAPPING.FILE)){
+#     write.table(data, file = CDS.MAPPING.FILE, row.names = FALSE, quote = TRUE, 
+#                 append = TRUE, sep = ",", col.names = FALSE)
+#   } else {
+#     write.table(data, file = CDS.MAPPING.FILE, row.names = FALSE, quote = TRUE, 
+#                 append = FALSE, sep = ",", col.names = TRUE)
+#   }
+#   data
+# }
 
 # These are the filtered files used for sample selection
 filt.files <- list.files("metadata", pattern = "*.filt.csv", full.names = TRUE)
@@ -915,30 +915,30 @@ read.csv("metadata/PRJNA516470.csv") |>
 
 
 #### Samples for CDS-only mapping #### 
-#These are samples for which there is not a fully annotated genome assembly. In
-#these cases, we map to just the ZFX/ZFY CDS or mRNA. The FASTA sequence is in 
-# cds/fasta.
-
-read.csv("metadata/Tokudaia_osimensis.csv") |>
-  dplyr::filter(tissue!="Tail") |>
-  dplyr::mutate(
-    Sex = str_replace_all(sex, " ", "-"),
-    Tissue = tissue,
-    Timepoint = AGE,
-    DevStage = dev_stage,
-    CommonName = "tokudaia_osimensis",
-    Genome = "Tokudaia_osimensis_CDS"
-  )|>
-  .append.cds.data()
-
-read.csv("metadata/cat.testis.csv")|>
-  dplyr::filter(BioProject=="PRJEB33381") |>
-  dplyr::mutate(
-    Sex = sex,
-    Tissue = tissue,
-    Timepoint = Developmental_Stage,
-    DevStage = AGE,
-    CommonName = "cat",
-    Genome = "Felis_catus_mRNA"
-  )|>
-  .append.cds.data()
+# #These are samples for which there is not a fully annotated genome assembly. In
+# #these cases, we map to just the ZFX/ZFY CDS or mRNA. The FASTA sequence is in 
+# # cds/fasta.
+# 
+# read.csv("metadata/Tokudaia_osimensis.csv") |>
+#   dplyr::filter(tissue!="Tail") |>
+#   dplyr::mutate(
+#     Sex = str_replace_all(sex, " ", "-"),
+#     Tissue = tissue,
+#     Timepoint = AGE,
+#     DevStage = dev_stage,
+#     CommonName = "tokudaia_osimensis",
+#     Genome = "Tokudaia_osimensis_CDS"
+#   )|>
+#   .append.cds.data()
+# 
+# read.csv("metadata/cat.testis.csv")|>
+#   dplyr::filter(BioProject=="PRJEB33381") |>
+#   dplyr::mutate(
+#     Sex = sex,
+#     Tissue = tissue,
+#     Timepoint = Developmental_Stage,
+#     DevStage = AGE,
+#     CommonName = "cat",
+#     Genome = "Felis_catus_mRNA"
+#   )|>
+#   .append.cds.data()
