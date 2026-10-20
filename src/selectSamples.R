@@ -526,10 +526,11 @@ read.csv("metadata/xenopus.csv") |>
 # Mature at ~3 months
 read.csv("metadata/zebrafish.csv") |>
   dplyr::rename(Sex = sex) |>
-  dplyr::filter(
-    Assay.Type == "RNA-Seq", tissue == "testis", genotype == "wild type"
-  ) |>
-  dplyr::filter(BioProject != "PRJNA540466") |> # skip known single cell
+  dplyr::filter(BioProject %in% c("PRJNA564233", "PRJNA438478",
+                                  "PRJNA879314", "PRJNA1115529"),
+                tissue == "testis",
+                Assay.Type == "RNA-Seq",
+                ) |>
   dplyr::mutate(
     Tissue = str_to_lower(tissue),
     Sex = "male",
