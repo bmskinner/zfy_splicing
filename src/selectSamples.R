@@ -891,7 +891,7 @@ read.csv("metadata/pheasant.csv") |>
   .append.data()
 
 
-#### Samples from PRJNA516470 ####
+#### Samples from PRJNA516470 - mouse and rat tissues ####
 
 # 12-tissue, five-species survey of sex differences in gene expression using
 # both publicly available (human) and newly generated (cynomolgus macaque,
@@ -930,4 +930,15 @@ read.csv("metadata/Tokudaia_osimensis.csv") |>
     Genome = "Tokudaia_osimensis_CDS"
   )|>
   .append.cds.data()
-  
+
+read.csv("metadata/cat.testis.csv")|>
+  dplyr::filter(BioProject=="PRJEB33381") |>
+  dplyr::mutate(
+    Sex = sex,
+    Tissue = tissue,
+    Timepoint = Developmental_Stage,
+    DevStage = AGE,
+    CommonName = "cat",
+    Genome = "Felis_catus_mRNA"
+  )|>
+  .append.cds.data()
