@@ -117,15 +117,16 @@ mkdir -p cds/data
 
 # Create indexed genomes for any mRNA or CDS ZFX/Y sequences
 echo "`date '+%Y-%m-%d %X'` Making CDS genomes" >> logs/preMapping.log 2>&1
-pushd cds/genomes
+cd cds/genomes
 for f in ../fasta/*.fa; do
   GENOME=$(basename $f | sed -e 's/.fa//')
   if [ ! -e ${GENOME}.1.ht2 ]; then
     hisat2-build ${f} ${GENOME}
   fi
 done
-popd
+cd ../..
 
+echo "`date '+%Y-%m-%d %X'` Selecing samples for CDS mapping" >> logs/preMapping.log 2>&1
 Rscript src/selectCDSSamples.R >> logs/cdsMapping.log 2>&1
 
 SE_SAMPLES=$(cat cds/cds.samples.csv | cut -f 1,2,3 -d , | grep -e '[S|E|D]RR' | grep -e 'SINGLE')
@@ -136,6 +137,7 @@ for LINE in ${SE_SAMPLES}; do
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
 	SPECIES=$(echo ${LINE} | cut -f 2 -d , )
 	GENOME=$(echo ${LINE} | cut -f 3 -d , )
+	echo "`date '+%Y-%m-%d %X'` Checking ${SPECIES}: ${ERR}" >> logs/cdsMapping.log 2>&1
 	map_se_sample ${ERR} ${SPECIES} ${GENOME}
 done
 
@@ -144,5 +146,6 @@ for LINE in ${PE_SAMPLES}; do
 	ERR=$(echo ${LINE} | cut -f 1 -d , )
 	SPECIES=$(echo ${LINE} | cut -f 2 -d , )
 	GENOME=$(echo ${LINE} | cut -f 3 -d , )
+	echo "`date '+%Y-%m-%d %X'` Checking ${SPECIES}: ${ERR}" >> logs/cdsMapping.log 2>&1
 	map_pe_sample ${ERR} ${SPECIES} ${GENOME}
 done
