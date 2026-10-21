@@ -31,7 +31,7 @@ map_se_sample () {
 			# Trim
 			if [ ! -e cds/data/${SPECIES}/${ERR}_trimmed.fq.gz ]; then
 				echo "`date '+%Y-%m-%d %X'` ${ERR}: trimming" >> logs/${ERR}.mapping.log 2>&1
-				trim_galore -o data/${SPECIES} --suppress_warn --fastqc --fastqc_args "-t 8 --outdir report/FASTQC --nogroup --extract" cds/data/${SPECIES}/${ERR}.fastq.gz
+				trim_galore -o cds/data/${SPECIES} --suppress_warn --fastqc --fastqc_args "-t 8 --outdir report/FASTQC --nogroup --extract" cds/data/${SPECIES}/${ERR}.fastq.gz
 			fi
 
 			# map
