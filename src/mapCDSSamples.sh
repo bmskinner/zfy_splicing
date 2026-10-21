@@ -129,8 +129,8 @@ cd ../..
 echo "`date '+%Y-%m-%d %X'` Selecing samples for CDS mapping" >> logs/preMapping.log 2>&1
 Rscript src/selectCDSSamples.R >> logs/cdsMapping.log 2>&1
 
-SE_SAMPLES=$(cat cds/cds.samples.csv | cut -f 1,2,3 -d , | grep -e '[S|E|D]RR' | grep -e 'SINGLE')
-PE_SAMPLES=$(cat cds/cds.samples.csv | cut -f 1,2,3 -d , | grep -e '[S|E|D]RR' | grep -e 'PAIRED')
+SE_SAMPLES=$(cat cds/cds.samples.csv | cut -f 1,2,3,4 -d , | grep -e '[S|E|D]RR' | grep -e 'SINGLE')
+PE_SAMPLES=$(cat cds/cds.samples.csv | cut -f 1,2,3,4 -d , | grep -e '[S|E|D]RR' | grep -e 'PAIRED')
 
 echo "`date '+%Y-%m-%d %X'` Processing single end CDS samples" >> logs/cdsMapping.log 2>&1
 for LINE in ${SE_SAMPLES}; do
