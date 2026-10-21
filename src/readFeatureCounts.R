@@ -186,8 +186,11 @@ junction.data <- readr::read_tsv("report/coding_exon_splice_junctions.tsv", show
                                                 any(str_detect(SplicingDetected, "Insufficient coverage")) ~"Insufficient coverage",
                                                 .default = ""
                                                 ),
+                   Mean_E1E2_E2E3 = paste(Mean_E1E2_E2E3, collapse = ", "),
                    .groups = "drop_last") |>
-  tidyr::pivot_wider(names_from = Group, values_from = c(Splice_junctions, Splice_detected,Mean_E1E2_E2E3 )) |>
+  tidyr::pivot_wider(names_from = Group, values_from = c(Splice_junctions, 
+                                                         Splice_detected,
+                                                         Mean_E1E2_E2E3 )) |>
   dplyr::arrange(CommonName, Tissue, Sex)
 
 splicing.table <- feature.values |>
@@ -221,7 +224,7 @@ n.splice.rows <- nrow(splicing.table)+1
 
 
 info <- data.frame(
-  Column = c("TotalBases", "Max_<gene>_TPM", "Splice_junctions_<gene>","","","" ,"",""),
+  Column = c("TotalBases", "Max_<gene>_TPM", "Splice_junctions_<gene>","","","" ,"","", ""),
   Contents = c(
     "The total number of bases in the samples selected for mapping (not the number of mapped reads).",
     "Gene TPM was calculated for each sample. Median TPM was taken across all samples. Paralogues were grouped, and max median TPM was selected, i.e whichever paralogue is most highly expressed",
