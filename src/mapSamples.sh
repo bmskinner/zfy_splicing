@@ -48,7 +48,7 @@ map_se_sample () {
 			# Trim
 			if [ ! -e data/${SPECIES}/${ERR}_trimmed.fq.gz ]; then
 				echo "`date '+%Y-%m-%d %X'` ${ERR}: trimming" >> logs/${ERR}.mapping.log 2>&1
-				trim_galore -o data/${SPECIES} --suppress_warn --fastqc --fastqc_args "-t 8 --outdir report/FASTQC --nogroup --extract" data/${SPECIES}/${ERR}.fastq.gz
+				trim_galore -o data/${SPECIES} --suppress_warn --fastqc --fastqc_args "-t 8 --outdir report/FASTQC --nogroup --extract" data/${SPECIES}/${ERR}.fastq.gz >> logs/${ERR}.mapping.log 2>&1
 			fi
 
 			# map
@@ -69,7 +69,7 @@ map_se_sample () {
 			
 			# Run feature counts for expression quantification
 			if [ ! -e data/${SPECIES}/${ERR}.counts.txt ]; then
-		  	featureCounts -t exon -g gene_id -a ${GTF_FILE} -o data/${SPECIES}/${ERR}.counts.txt data/${SPECIES}/${ERR}.bam
+		  	featureCounts -t exon -g gene_id -a ${GTF_FILE} -o data/${SPECIES}/${ERR}.counts.txt data/${SPECIES}/${ERR}.bam >> logs/${ERR}.mapping.log 2>&1
 		  fi
 		  
 		  # Extract the region of interest only and index
@@ -77,7 +77,7 @@ map_se_sample () {
 		  samtools index -c -@ 7 data/${SPECIES}/${ERR}.${GENE_ID}.bam
 		  
 		  # Assemble transcripts with Stringtie
-		  stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE} -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam
+		  stringtie -o data/${SPECIES}/${ERR}.${GENE_ID}.gtf -p 1 -l ${SPECIES} -G ${GTF_FILE} -f 0.01 data/${SPECIES}/${ERR}.${GENE_ID}.bam >> logs/${ERR}.mapping.log 2>&1
 		  
 		  # If stringtie fails, the usual reason is failure to parse the gtf file
 		  # - most common reason is rows with an empty transcript_id field. Try a GFF 
@@ -152,7 +152,7 @@ map_pe_sample () {
 			# Trim
 			if [ ! -e data/${SPECIES}/${ERR}_1_val_1.fq.gz ]; then
 				echo "`date '+%Y-%m-%d %X'` ${ERR}: trimming" >> logs/${ERR}.mapping.log 2>&1
-				trim_galore -o data/${SPECIES} --paired --suppress_warn --fastqc --fastqc_args "-t 8 --outdir report/FASTQC --nogroup --extract" data/${SPECIES}/${ERR}_1.fastq.gz data/${SPECIES}/${ERR}_2.fastq.gz
+				trim_galore -o data/${SPECIES} --paired --suppress_warn --fastqc --fastqc_args "-t 8 --outdir report/FASTQC --nogroup --extract" data/${SPECIES}/${ERR}_1.fastq.gz data/${SPECIES}/${ERR}_2.fastq.gz >> logs/${ERR}.mapping.log 2>&1
 			fi
 
 			# map
@@ -167,7 +167,7 @@ map_pe_sample () {
 			
 			# Run feature counts for expression quantification
 			if [ ! -e data/${SPECIES}/${ERR}.counts.txt ]; then
-			  featureCounts -p --countReadPairs -t exon -g gene_id -a ${GTF_FILE} -o data/${SPECIES}/${ERR}.counts.txt data/${SPECIES}/${ERR}.bam
+			  featureCounts -p --countReadPairs -t exon -g gene_id -a ${GTF_FILE} -o data/${SPECIES}/${ERR}.counts.txt data/${SPECIES}/${ERR}.bam >> logs/${ERR}.mapping.log 2>&1
 			fi
 			
 			# Extract the region of interest only and index
@@ -247,7 +247,7 @@ map_long_read_sample () {
 				# Trim and QC
 			if [ ! -e data/${SPECIES}/${ERR}_trimmed.fq.gz ]; then
 				echo "`date '+%Y-%m-%d %X'` ${ERR}: QC and trimming" >> logs/${ERR}.mapping.log 2>&1
-				fastplong --in data/${SPECIES}/${ERR}.fastq.gz --out data/${SPECIES}/${ERR}_trimmed.fq.gz --thread 6 --qualified_quality_phred 9 --json report/QC/fastp/${ERR}.json --report_title "${ERR} ${SPECIES}"
+				fastplong --in data/${SPECIES}/${ERR}.fastq.gz --out data/${SPECIES}/${ERR}_trimmed.fq.gz --thread 6 --qualified_quality_phred 9 --json report/QC/fastp/${ERR}.json --report_title "${ERR} ${SPECIES}" >> logs/${ERR}.mapping.log 2>&1
 				if [ $? -ne 0 ]; then
 			    echo "`date '+%Y-%m-%d %X'` Error running fastplong, exiting" >> logs/${ERR}.mapping.log 2>&1
 			    exit 1
@@ -265,7 +265,7 @@ map_long_read_sample () {
 			
 			# Run feature counts for expression quantification
 			if [ ! -e data/${SPECIES}/${ERR}.counts.txt ]; then
-			  featureCounts -p --countReadPairs -t exon -g gene_id -a ${GTF_FILE} -o data/${SPECIES}/${ERR}.counts.txt data/${SPECIES}/${ERR}.bam
+			  featureCounts -p --countReadPairs -t exon -g gene_id -a ${GTF_FILE} -o data/${SPECIES}/${ERR}.counts.txt data/${SPECIES}/${ERR}.bam >> logs/${ERR}.mapping.log 2>&1
 			fi
 			
 			# Extract the region of interest only and index
