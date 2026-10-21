@@ -147,7 +147,7 @@ map.data <- read.table("report/QC/mapping.txt", sep = "$") |> #  sep char does n
   # There may be repeat mapping runs logged. Keep only the last mapping data
   # from each run
   dplyr::group_by(Run)|>
-  dplyr::slice_tail(n=1)
+  dplyr::slice_tail(n=1) |>
   dplyr::distinct()
 
 
