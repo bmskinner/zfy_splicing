@@ -13,3 +13,4 @@ genomes/*
 report/*
 metadata/*.filt.csv
 cds/cds.samples.csv
+cds/data/*

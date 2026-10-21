@@ -73,3 +73,16 @@ read.csv("metadata/dog.testis.csv")|>
   )|>
   .append.cds.data()
 
+
+##### Peromyscus #####
+read.csv("metadata/PRJNA1068126.csv")|>
+  dplyr::filter(tissue=="testis") |>
+  dplyr::mutate(
+    Sex = sex,
+    Tissue = tissue,
+    Timepoint = dev_stage,
+    DevStage = dev_stage,
+    CommonName = "peromyscus",
+    Genome = "Peromyscus_maniculatus_CDS"
+  )|>
+  .append.cds.data()
