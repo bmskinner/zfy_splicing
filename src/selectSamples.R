@@ -871,7 +871,19 @@ read.csv("metadata/PRJNA813137.csv") |>
   ) |>
   .append.data()
 
+# And another PRJNA1268351 looking at effects of HYDIN2 KO
+# https://pmc.ncbi.nlm.nih.gov/articles/PMC8346437/
 
+read.csv("metadata/PRJNA1268351.csv") |>
+  dplyr::mutate(
+    Sex = "male",
+    Tissue = stringr::str_replace_all(paste0("NT2-",genotype), " ", "-"),
+    Tissue = stringr::str_replace_all(Tissue, "%", ""),
+    Timepoint = "adult",
+    DevStage = stringr::str_replace_all(cell_type, " ", "-"),
+    CommonName = "human"
+  ) |>
+  .append.data()
 
 
 #### Samples from ring-necked pheasant ####
