@@ -33,6 +33,7 @@ if(file.exists(CDS.MAPPING.FILE)) file.remove(CDS.MAPPING.FILE)
 }
 #### Select samples ####
 
+##### Tokudaia #####
 read.csv("metadata/Tokudaia_osimensis.csv") |>
   dplyr::filter(tissue!="Tail") |>
   dplyr::mutate(
@@ -45,6 +46,7 @@ read.csv("metadata/Tokudaia_osimensis.csv") |>
   )|>
   .append.cds.data()
 
+##### Cat #####
 read.csv("metadata/cat.testis.csv")|>
   dplyr::filter(BioProject=="PRJEB33381") |>
   dplyr::mutate(
@@ -56,3 +58,18 @@ read.csv("metadata/cat.testis.csv")|>
     Genome = "Felis_catus_mRNA"
   )|>
   .append.cds.data()
+
+##### Dog #####
+
+read.csv("metadata/dog.testis.csv")|>
+  dplyr::filter(BioProject=="PRJEB33381") |>
+  dplyr::mutate(
+    Sex = sex,
+    Tissue = tissue,
+    Timepoint = Developmental_Stage,
+    DevStage = AGE,
+    CommonName = "dog",
+    Genome = "Canis_lupus_mRNA"
+  )|>
+  .append.cds.data()
+
