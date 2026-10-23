@@ -885,6 +885,22 @@ read.csv("metadata/PRJNA1268351.csv") |>
   ) |>
   .append.data()
 
+# Further NT2 samples - aka ATCC CRR-1973
+# Includes some of those selected above. Will be skipped in the analysis step
+nt2 <- read.csv("metadata/ntera2.csv") |>
+  dplyr::filter(Organism=="Homo sapiens",
+                Assay.Type =="RNA-Seq",
+                !(cell_line %in% c("HeLa", "TIB-152")) ) |>
+  dplyr::mutate(
+    Sex = "male",
+    Tissue = stringr::str_replace_all(paste0("NT2-",genotype), " ", "-"),
+    Tissue = stringr::str_replace_all(Tissue, "%", ""),
+    Timepoint = "adult",
+    DevStage = stringr::str_replace_all(cell_type, " ", "-"),
+    CommonName = "human"
+  ) |>
+  .append.data()
+
 
 #### Samples from ring-necked pheasant ####
 
@@ -924,33 +940,3 @@ read.csv("metadata/PRJNA516470.csv") |>
     )
   )|>
   .append.data()
-
-
-#### Samples for CDS-only mapping #### 
-# #These are samples for which there is not a fully annotated genome assembly. In
-# #these cases, we map to just the ZFX/ZFY CDS or mRNA. The FASTA sequence is in 
-# # cds/fasta.
-# 
-# read.csv("metadata/Tokudaia_osimensis.csv") |>
-#   dplyr::filter(tissue!="Tail") |>
-#   dplyr::mutate(
-#     Sex = str_replace_all(sex, " ", "-"),
-#     Tissue = tissue,
-#     Timepoint = AGE,
-#     DevStage = dev_stage,
-#     CommonName = "tokudaia_osimensis",
-#     Genome = "Tokudaia_osimensis_CDS"
-#   )|>
-#   .append.cds.data()
-# 
-# read.csv("metadata/cat.testis.csv")|>
-#   dplyr::filter(BioProject=="PRJEB33381") |>
-#   dplyr::mutate(
-#     Sex = sex,
-#     Tissue = tissue,
-#     Timepoint = Developmental_Stage,
-#     DevStage = AGE,
-#     CommonName = "cat",
-#     Genome = "Felis_catus_mRNA"
-#   )|>
-#   .append.cds.data()
