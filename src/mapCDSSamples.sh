@@ -38,7 +38,7 @@ map_se_sample () {
 			if [ ! -e cds/data/${SPECIES}/${ERR}.bam.csi ]; then
   			echo "`date '+%Y-%m-%d %X'` ${ERR}: mapping" >> logs/${ERR}.mapping.log 2>&1
 
-      	hisat2 -x cds/genomes/${GENOME} --threads 8 -U cds/data/${SPECIES}/${ERR}_trimmed.fq.gz --new-summary --no-unal -S cds/data/${SPECIES}/${ERR}.sam >> logs/${ERR}.mapping.log 2>&1
+      	hisat2 -x cds/genomes/${GENOME} --threads 8 -U cds/data/${SPECIES}/${ERR}_trimmed.fq.gz --new-summary --no-unal --novel-splicesite-outfile cds/data/${SPECIES}/${ERR}.splice.tab -S cds/data/${SPECIES}/${ERR}.sam >> logs/${ERR}.mapping.log 2>&1
   			samtools sort -T cds/data/${SPECIES}/${ERR} -@ 8 -o cds/data/${SPECIES}/${ERR}.bam cds/data/${SPECIES}/${ERR}.sam
   			samtools index -c -@ 7 cds/data/${SPECIES}/${ERR}.bam # index with csi due to long chromosomes in opossum
   			rm cds/data/${SPECIES}/${ERR}.sam
@@ -94,7 +94,7 @@ map_pe_sample () {
 			if [ ! -e cds/data/${SPECIES}/${ERR}.bam.csi ]; then
   			echo "`date '+%Y-%m-%d %X'` ${ERR}: mapping against ${GENOME}" >> logs/${ERR}.mapping.log 2>&1
   			# -k controls number of multimapping locations (default 5 for linear index)
-  			hisat2 -x cds/genomes/${GENOME} --threads 8 -1 cds/data/${SPECIES}/${ERR}_1_val_1.fq.gz -2 cds/data/${SPECIES}/${ERR}_2_val_2.fq.gz --new-summary --no-unal -S cds/data/${SPECIES}/${ERR}.sam >> logs/${ERR}.mapping.log 2>&1
+  			hisat2 -x cds/genomes/${GENOME} --threads 8 -1 cds/data/${SPECIES}/${ERR}_1_val_1.fq.gz -2 cds/data/${SPECIES}/${ERR}_2_val_2.fq.gz --new-summary --no-unal --novel-splicesite-outfile cds/data/${SPECIES}/${ERR}.splice.tab -S cds/data/${SPECIES}/${ERR}.sam >> logs/${ERR}.mapping.log 2>&1
   			samtools sort -T cds/data/${SPECIES}/${ERR} -@ 8 -o cds/data/${SPECIES}/${ERR}.bam cds/data/${SPECIES}/${ERR}.sam
   			samtools index -c -@ 7 cds/data/${SPECIES}/${ERR}.bam # index with csi due to long chromosomes in opossum
   			rm cds/data/${SPECIES}/${ERR}.sam
