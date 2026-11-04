@@ -74,7 +74,7 @@ map_pe_sample () {
 			echo "`date '+%Y-%m-%d %X'` ${ERR}: bam not found" >> logs/${ERR}.mapping.log 2>&1
 
 			# Check for existing downloads before running fasterq-dump
-			if [ ! -e cds/data/${SPECIES}/${ERR}_2.fastq.gz ] && [ ! -e data/${SPECIES}/${ERR}_2_val_2.fq.gz ]; then
+			if [ ! -e cds/data/${SPECIES}/${ERR}_2.fastq.gz ] && [ ! -e cds/data/${SPECIES}/${ERR}_2_val_2.fq.gz ]; then
 				# Fetch data
 				if [ ! -e cds/data/${SPECIES}/${ERR}_2.fastq ]; then
 					echo "`date '+%Y-%m-%d %X'` ${ERR}: downloading fastq" >> logs/${ERR}.mapping.log 2>&1
